@@ -56,3 +56,5 @@ Inline-Render as:
 
 
 - [ ] check command injection safety
+
+- [ ] consider `glob` instead of `regex`
