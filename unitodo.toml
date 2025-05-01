@@ -1,0 +1,24 @@
+output_file = "unitodo.md"
+
+[ag]
+# Paths to search for TODOs (defaults to [\".\"] if empty or not present)
+paths = ["/Users/asc/repo", "/Users/asc/Documents/Obsidian/alpha-vault"] # Example path, adjust as needed
+
+# Patterns/directories to ignore (uses ag's --ignore flag)
+ignore = [
+    ".git",
+    "target",
+    "node_modules",
+    "build",
+    "dist",
+    "_cloned_/**", # Relative path
+    "_study_/**", # Relative path
+    "tmp/**", # Relative path
+    "_archive_/**", # Relative path
+    # Example pattern: "*_generated.rs",
+    # Example pattern: "temp_*.txt"
+]
+
+# File types to search (uses ag's file type detection, e.g., --rust, --py)
+# Leave empty or omit to search all supported file types
+# file_types = ["rust", "python", "markdown"]
