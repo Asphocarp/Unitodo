@@ -24,3 +24,8 @@ ignore = [
 # File types to search (uses ag's file type detection, e.g., --rust, --py)
 # Leave empty or omit to search all supported file types
 # file_types = ["rust", "python", "markdown"]
+
+
+[projects]
+# project name = "regex of relative path"
+ceal = "*/Ceal.md"

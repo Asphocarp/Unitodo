@@ -267,8 +267,8 @@ fn main() -> io::Result<()> {
                 for repo_name_opt in repo_keys {
                     if let Some(todos) = grouped_todos.get(&repo_name_opt) {
                         let header = match &repo_name_opt {
-                            Some(name) => format!("[{}]", name),
-                            None => "[No Repo]".to_string(), // Section for TODOs outside git
+                            Some(name) => format!("[git:{}]", name),
+                            None => "[other]".to_string(), // Section for TODOs outside git
                         };
                         final_output.push_str(&header);
                         final_output.push('\n');
