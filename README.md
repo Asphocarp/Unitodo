@@ -56,9 +56,3 @@ Inline-Render as:
 
 
 - [ ] check command injection safety
-
-```
-what if a repo is called "No Repo"? decide a better placeholder name, that won't raise such concerns.
-
-remove all unitodo.md in git history
-```
