@@ -1,4 +1,4 @@
-output_file = "unitodo.md"
+output_file = "/Users/asc/Documents/Obsidian/alpha-vault/Life/unitodo.sync.md"
 
 [ag]
 pattern = "TODO|- \\[ \\]"
@@ -13,20 +13,18 @@ ignore = [
     "node_modules",
     "build",
     "dist",
-    "_cloned_/**", # Relative path
-    "_study_/**", # Relative path
-    "tmp/**", # Relative path
-    "_archive_/**", # Relative path
-    # Example pattern: "*_generated.rs",
-    # Example pattern: "temp_*.txt"
+    # mine:
+    "_cloned_", # Relative path
+    "_study_", # Relative path
+    "tmp", # Relative path
+    "_archive_", # Relative path
+    "unitodo.sync.md",
+    "*.temp.*",
 ]
-
-# File types to search (uses ag's file type detection, e.g., --rust, --py)
-# Leave empty or omit to search all supported file types
-# file_types = ["rust", "python", "markdown"]
 
 
 [projects]
 # project_name = "regex_of_relative_path"
+
 Unitodo = ".*/Unitodo.*"
 Ceal = ".*/Ceal.*"

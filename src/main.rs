@@ -42,7 +42,7 @@ struct AgConfig {
 }
 
 fn default_output_file() -> String {
-    "unitodo.md".to_string()
+    "unitodo.sync.md".to_string()
 }
 
 fn default_ag_pattern() -> String {
@@ -209,17 +209,17 @@ fn main() -> io::Result<()> {
     }
 
     // --- Debug Mode: Write raw ag output ---
-    if args.debug {
-        let write_raw_start = Instant::now();
-        println!("[{:.2?}] Writing raw ag output to ag-output.temp.md", start_time.elapsed());
-        let mut debug_file = File::create("ag-output.temp.md")?;
-        debug_file.write_all(&output.stdout)?;
-        if !output.stderr.is_empty() {
-            debug_file.write_all(b"\n\n--- STDERR ---\n")?;
-            debug_file.write_all(&output.stderr)?;
-        }
-        println!("[{:.2?}] Raw ag output written in {:.2?}", start_time.elapsed(), write_raw_start.elapsed());
-    }
+    // if args.debug {
+    //     let write_raw_start = Instant::now();
+    //     println!("[{:.2?}] Writing raw ag output to ag-output.temp.md", start_time.elapsed());
+    //     let mut debug_file = File::create("ag-output.temp.md")?;
+    //     debug_file.write_all(&output.stdout)?;
+    //     if !output.stderr.is_empty() {
+    //         debug_file.write_all(b"\n\n--- STDERR ---\n")?;
+    //         debug_file.write_all(&output.stderr)?;
+    //     }
+    //     println!("[{:.2?}] Raw ag output written in {:.2?}", start_time.elapsed(), write_raw_start.elapsed());
+    // }
     // --- End Debug Mode Section ---
 
     // Check if the command executed successfully
