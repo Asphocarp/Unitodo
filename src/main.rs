@@ -300,7 +300,11 @@ fn main() -> io::Result<()> {
                 categories.sort(); // Uses the derived Ord for TodoCategory
 
                 for category in categories {
-                    if let Some(todos) = grouped_todos.get(&category) {
+                    // Get mutable access to the vector for sorting
+                    if let Some(todos) = grouped_todos.get_mut(&category) {
+                        // Sort the TODO items alphabetically by content
+                        todos.sort();
+
                         let header = match &category {
                             TodoCategory::Project(name) => format!("[ {}]", name), // Nerd Font icon for project
                             TodoCategory::GitRepo(name) => format!("[󰊢 {}]", name), // Nerd Font icon for git repo
@@ -308,7 +312,7 @@ fn main() -> io::Result<()> {
                         };
                         final_output.push_str(&header);
                         final_output.push('\n');
-                        for todo_line in todos {
+                        for todo_line in todos { // Iterate over the now-sorted vector
                             final_output.push_str(todo_line);
                             final_output.push('\n');
                         }
