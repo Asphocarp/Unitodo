@@ -29,4 +29,4 @@ ignore = [
 [projects]
 # project_name = "regex_of_relative_path"
 Unitodo = ".*/Unitodo.*"
-Ceal = ".*/Ceal.md"
+Ceal = ".*/Ceal.*"
