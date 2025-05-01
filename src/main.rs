@@ -1,10 +1,20 @@
+use clap::Parser;
 use std::process::Command;
 use std::str;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::Deserialize;
+
+// --- CLI Arguments ---
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Enable debug mode
+    #[arg(short, long, default_value_t = false)]
+    debug: bool,
+}
 
 // --- Configuration Structure ---
 #[derive(Deserialize, Debug, Default)] // Added Default
@@ -26,7 +36,7 @@ struct AgConfig {
 }
 
 fn default_output_file() -> String {
-    "all.todo".to_string()
+    "unitodo.md".to_string()
 }
 
 fn default_search_paths() -> Vec<String> {
@@ -113,8 +123,15 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
 
 // --- Main Logic ---
 fn main() -> io::Result<()> {
+    let args = Args::parse(); // Parse CLI arguments
+    if args.debug {
+        println!("Debug mode enabled.");
+    }
+
     let config = load_config()?;
-    println!("Using config: {:?}", config);
+    if args.debug {
+         println!("Using config: {:?}", config); // Moved debug print here
+    }
 
     // Construct the command to run `ag`
     let mut command = Command::new("ag");
@@ -142,8 +159,22 @@ fn main() -> io::Result<()> {
     }
 
     // Execute the command and capture its output
-    println!("Running command: {:?}", command);
+    if args.debug {
+        println!("Running command: {:?}", command); // Moved debug print here
+    }
     let output = command.output()?;
+
+    // --- Debug Mode: Write raw ag output ---
+    if args.debug {
+        println!("Writing raw ag output to ag-output.temp.md");
+        let mut debug_file = File::create("ag-output.temp.md")?;
+        debug_file.write_all(&output.stdout)?;
+        if !output.stderr.is_empty() {
+            debug_file.write_all(b"\n\n--- STDERR ---\n")?;
+            debug_file.write_all(&output.stderr)?;
+        }
+    }
+    // --- End Debug Mode Section ---
 
     // Check if the command executed successfully
     if output.status.success() {
@@ -168,7 +199,10 @@ fn main() -> io::Result<()> {
                             let repo_name_opt = match find_git_repo_name(file_path) {
                                 Ok(name) => name,
                                 Err(e) => {
-                                    eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+                                    // Don't print warning if debug mode is off, as stderr will be shown anyway
+                                    if args.debug {
+                                        eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+                                    }
                                     None // Treat as outside repo on error
                                 }
                             };
@@ -179,6 +213,11 @@ fn main() -> io::Result<()> {
                             grouped_todos.entry(repo_name_opt)
                                          .or_insert_with(Vec::new)
                                          .push(formatted_line);
+                        } else if !line.trim().is_empty() { // Don't warn for empty lines often output by ag
+                             // Don't print warning if debug mode is off, as stderr will be shown anyway
+                             if args.debug {
+                                eprintln!("Warning: Skipping malformed line: {}", line);
+                             }
                         }
                     } else {
                          eprintln!("Warning: Skipping malformed line: {}", line);
@@ -216,26 +255,33 @@ fn main() -> io::Result<()> {
                 }
 
                 // Create/open the output file using the name from config
-                let mut file = File::create(&config.output_file)?;
+                let output_file_path = Path::new(&config.output_file); // Create Path for display
+                let mut file = File::create(&output_file_path)?;
                 // Write the grouped and formatted output to the file
                 file.write_all(final_output.as_bytes())?;
                 println!(
                     "Successfully wrote grouped TODOs to {}",
-                    config.output_file
+                    output_file_path.display() // Use display for path
                 );
             }
             Err(e) => {
-                eprintln!("Error converting ag output to UTF-8: {}", e);
+                // Only print this specific error if debug is on, otherwise stderr below covers it
+                if args.debug {
+                    eprintln!("Error converting ag output to UTF-8: {}", e);
+                }
+                // Still return an error regardless of debug mode
+                return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert ag stdout to UTF-8: {}", e)));
             }
         }
     } else {
         // If the command failed, print the error output (stderr)
+        // This should always be printed if the command fails, regardless of debug mode
         match str::from_utf8(&output.stderr) {
             Ok(stderr_str) => {
                 eprintln!("ag command failed:\n{}", stderr_str);
             }
             Err(e) => {
-                eprintln!("Error converting ag stderr to UTF-8: {}", e);
+                eprintln!("ag command failed and error converting ag stderr to UTF-8: {}", e);
             }
         }
         return Err(io::Error::new(io::ErrorKind::Other, "ag command failed"));
