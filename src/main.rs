@@ -302,9 +302,9 @@ fn main() -> io::Result<()> {
                 for category in categories {
                     if let Some(todos) = grouped_todos.get(&category) {
                         let header = match &category {
-                            TodoCategory::Project(name) => format!("[project:{}]", name),
-                            TodoCategory::GitRepo(name) => format!("[git:{}]", name),
-                            TodoCategory::Other => "[other]".to_string(), // Section for TODOs outside git/projects
+                            TodoCategory::Project(name) => format!("[ {}]", name), // Nerd Font icon for project
+                            TodoCategory::GitRepo(name) => format!("[󰊢 {}]", name), // Nerd Font icon for git repo
+                            TodoCategory::Other => "[ Other]".to_string(), // Nerd Font icon for other files
                         };
                         final_output.push_str(&header);
                         final_output.push('\n');
