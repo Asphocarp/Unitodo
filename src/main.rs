@@ -6,6 +6,7 @@ use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::Deserialize;
+use regex::Regex;
 
 // --- CLI Arguments ---
 #[derive(Parser, Debug)]
@@ -27,6 +28,8 @@ struct Config {
 
 #[derive(Deserialize, Debug, Default)]
 struct AgConfig {
+    #[serde(default = "default_ag_pattern")]
+    pattern: String,
     #[serde(default = "default_search_paths")]
     paths: Vec<String>,
     #[serde(default)]
@@ -37,6 +40,10 @@ struct AgConfig {
 
 fn default_output_file() -> String {
     "unitodo.md".to_string()
+}
+
+fn default_ag_pattern() -> String {
+    "TODO".to_string()
 }
 
 fn default_search_paths() -> Vec<String> {
@@ -136,7 +143,7 @@ fn main() -> io::Result<()> {
     // Construct the command to run `ag`
     let mut command = Command::new("ag");
     command.arg("--noheading"); // Prevent ag from printing filename headers
-    command.arg("TODO");       // The search pattern
+    command.arg(&config.ag.pattern); // Use the pattern from config
 
     // Add ignored patterns/directories
     if let Some(items_to_ignore) = &config.ag.ignore {
@@ -183,6 +190,17 @@ fn main() -> io::Result<()> {
                 // Group TODOs by repository
                 let mut grouped_todos: HashMap<Option<String>, Vec<String>> = HashMap::new();
 
+                // Compile the regex pattern from the config
+                let pattern_re = match Regex::new(&config.ag.pattern) {
+                    Ok(re) => re,
+                    Err(e) => {
+                        eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
+                        // Return an error indicating invalid config data
+                        return Err(io::Error::new(io::ErrorKind::InvalidData,
+                            format!("Invalid regex pattern in config: {}", e)));
+                    }
+                };
+
                 for line in stdout_str.lines() {
                     // Expected format with --noheading: path:line[:column]:content
                     // Split into path, line, and the rest (content, possibly prefixed by column)
@@ -191,10 +209,12 @@ fn main() -> io::Result<()> {
                         let file_path_str = parts[0];
                         let line_number_str = parts[1]; // Line number
                         // Content is the 3rd part; might start with column number, trim whitespace
-                        let content_part = parts[2].trim_start(); 
+                        let content_part = parts[2].trim_start();
 
-                        if let Some(todo_index) = content_part.find("TODO") {
-                            let todo_content = content_part[todo_index..].trim();
+                        // Use regex to find the *first* match of the pattern in the content
+                        if let Some(mat) = pattern_re.find(content_part) {
+                            // Extract the content *after* the matched pattern
+                            let todo_content = content_part[mat.start()..].trim(); 
                             let file_path = Path::new(file_path_str);
 
                             // Find the git repo name for this file
@@ -216,15 +236,16 @@ fn main() -> io::Result<()> {
                                          .or_insert_with(Vec::new)
                                          .push(formatted_line);
                         } else if !line.trim().is_empty() { // Don't warn for empty lines often output by ag
-                             // Don't print warning if debug mode is off, as stderr will be shown anyway
-                             if args.debug {
-                                eprintln!("Warning: Skipping line without TODO: {}", line); // Modified warning message
-                             }
+                            // Don't print warning if debug mode is off, as stderr will be shown anyway
+                            if args.debug {
+                                // This warning might indicate an issue if ag returned a line not matching the pattern
+                                eprintln!("Warning: Skipping line where pattern '{}' was not found (ag output discrepancy?): {}", config.ag.pattern, line); 
+                            }
                         }
                     } else if !line.trim().is_empty() { // Handle lines that don't even have path:line:content
                          // Don't print warning if debug mode is off, as stderr will be shown anyway
                          if args.debug {
-                            eprintln!("Warning: Skipping malformed line (unexpected format): {}", line);
+                            eprintln!("Warning: Skipping line that might be empty or unexpectedly formatted: {}", line); 
                          }
                     }
                 }

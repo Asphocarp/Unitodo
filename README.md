@@ -39,8 +39,8 @@ Inline-Render as:
     - 0 format, elegant even in text form
         - type-able. short; unique (rg-able), abnormal
             - better: data all simply text; one-line?
-        - `TOD0#A7g193O (uuid)`
-        - `TOD0@A7g193O (timestamp)`
+        - `TOD0#A7g3O (uuid)`
+        - `TOD0@A7g3O (timestamp)`
         - `- [ ] TOD0#A7g193O do abc and abc`
         - hash: time-inc, how about simply timestamp (start from 25)
     - [ ] 0 how to mark
