@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::Deserialize;
 use regex::Regex;
+use std::time::Instant;
 
 // --- CLI Arguments ---
 #[derive(Parser, Debug)]
@@ -141,16 +142,20 @@ enum TodoCategory {
 // --- Main Logic ---
 fn main() -> io::Result<()> {
     let args = Args::parse(); // Parse CLI arguments
+    let start_time = Instant::now(); // Record start time
+
     if args.debug {
         println!("Debug mode enabled.");
+        println!("[{:.2?}] Starting execution", start_time.elapsed());
     }
 
     let config = load_config()?;
     if args.debug {
-         println!("Using config: {:?}", config); // Moved debug print here
+         println!("[{:.2?}] Config loaded: {:?}", start_time.elapsed(), config); // Moved debug print here
     }
 
     // Compile project regexes
+    let compile_regex_start = Instant::now();
     let project_regexes: Vec<(String, Regex)> = config.projects.iter().filter_map(|(name, pattern)| {
         match Regex::new(pattern) {
             Ok(re) => Some((name.clone(), re)),
@@ -160,8 +165,12 @@ fn main() -> io::Result<()> {
             }
         }
     }).collect();
+    if args.debug {
+        println!("[{:.2?}] Project regexes compiled in {:.2?}", start_time.elapsed(), compile_regex_start.elapsed());
+    }
 
     // Construct the command to run `ag`
+    let build_command_start = Instant::now();
     let mut command = Command::new("ag");
     command.arg("--noheading"); // Prevent ag from printing filename headers
     command.arg(&config.ag.pattern); // Use the pattern from config
@@ -185,27 +194,40 @@ fn main() -> io::Result<()> {
     for path in &config.ag.paths {
         command.arg(path);
     }
+    if args.debug {
+        println!("[{:.2?}] Command constructed in {:.2?}", start_time.elapsed(), build_command_start.elapsed());
+    }
 
     // Execute the command and capture its output
+    let run_ag_start = Instant::now();
     if args.debug {
-        println!("Running command: {:?}", command); // Moved debug print here
+        println!("[{:.2?}] Running command: {:?}", start_time.elapsed(), command); // Moved debug print here
     }
     let output = command.output()?;
+    if args.debug {
+        println!("[{:.2?}] ag command finished in {:.2?}", start_time.elapsed(), run_ag_start.elapsed());
+    }
 
     // --- Debug Mode: Write raw ag output ---
     if args.debug {
-        println!("Writing raw ag output to ag-output.temp.md");
+        let write_raw_start = Instant::now();
+        println!("[{:.2?}] Writing raw ag output to ag-output.temp.md", start_time.elapsed());
         let mut debug_file = File::create("ag-output.temp.md")?;
         debug_file.write_all(&output.stdout)?;
         if !output.stderr.is_empty() {
             debug_file.write_all(b"\n\n--- STDERR ---\n")?;
             debug_file.write_all(&output.stderr)?;
         }
+        println!("[{:.2?}] Raw ag output written in {:.2?}", start_time.elapsed(), write_raw_start.elapsed());
     }
     // --- End Debug Mode Section ---
 
     // Check if the command executed successfully
     if output.status.success() {
+        let process_output_start = Instant::now();
+        if args.debug {
+            println!("[{:.2?}] Processing ag output...", start_time.elapsed());
+        }
         match str::from_utf8(&output.stdout) {
             Ok(stdout_str) => {
                 // Group TODOs by category (Project > Git Repo > Other)
@@ -293,6 +315,7 @@ fn main() -> io::Result<()> {
                 }
 
                 // Format the final output string
+                let format_output_start = Instant::now();
                 let mut final_output = String::new();
                 let mut categories: Vec<TodoCategory> = grouped_todos.keys().cloned().collect();
 
@@ -319,8 +342,13 @@ fn main() -> io::Result<()> {
                         final_output.push('\n'); // Add blank line between sections
                     }
                 }
+                if args.debug {
+                    println!("[{:.2?}] Output processed and formatted in {:.2?}", start_time.elapsed(), process_output_start.elapsed()); // Combined processing and formatting time
+                    println!("[{:.2?}] Formatting took {:.2?}", start_time.elapsed(), format_output_start.elapsed()); // Specific formatting time
+                }
 
                 // Create/open the output file using the name from config
+                let write_output_start = Instant::now();
                 let output_file_path = Path::new(&config.output_file); // Create Path for display
                 let mut file = File::create(&output_file_path)?;
                 // Write the grouped and formatted output to the file
@@ -329,6 +357,9 @@ fn main() -> io::Result<()> {
                     "Successfully wrote grouped TODOs to {}",
                     output_file_path.display() // Use display for path
                 );
+                 if args.debug {
+                    println!("[{:.2?}] Output file written in {:.2?}", start_time.elapsed(), write_output_start.elapsed());
+                }
             }
             Err(e) => {
                 // Only print this specific error if debug is on, otherwise stderr below covers it
@@ -353,5 +384,8 @@ fn main() -> io::Result<()> {
         return Err(io::Error::new(io::ErrorKind::Other, "ag command failed"));
     }
 
+    if args.debug {
+        println!("[{:.2?}] Total execution time: {:.2?}", start_time.elapsed(), start_time.elapsed());
+    }
     Ok(())
 } 
