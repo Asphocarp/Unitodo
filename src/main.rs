@@ -184,12 +184,14 @@ fn main() -> io::Result<()> {
                 let mut grouped_todos: HashMap<Option<String>, Vec<String>> = HashMap::new();
 
                 for line in stdout_str.lines() {
-                    // Expected format with --noheading: path:line:column:content
-                    let parts: Vec<&str> = line.splitn(4, ':').collect(); // Split into 4 parts now
-                    if parts.len() >= 4 { // Need at least path, line, col, and some content
+                    // Expected format with --noheading: path:line[:column]:content
+                    // Split into path, line, and the rest (content, possibly prefixed by column)
+                    let parts: Vec<&str> = line.splitn(3, ':').collect();
+                    if parts.len() == 3 { // Need at least path, line, and some content
                         let file_path_str = parts[0];
-                        let line_number_str = parts[1]; // Line number is now needed for the output string
-                        let content_part = parts[3].trim_start(); // Content is the 4th part
+                        let line_number_str = parts[1]; // Line number
+                        // Content is the 3rd part; might start with column number, trim whitespace
+                        let content_part = parts[2].trim_start(); 
 
                         if let Some(todo_index) = content_part.find("TODO") {
                             let todo_content = content_part[todo_index..].trim();
@@ -216,11 +218,14 @@ fn main() -> io::Result<()> {
                         } else if !line.trim().is_empty() { // Don't warn for empty lines often output by ag
                              // Don't print warning if debug mode is off, as stderr will be shown anyway
                              if args.debug {
-                                eprintln!("Warning: Skipping malformed line: {}", line);
+                                eprintln!("Warning: Skipping line without TODO: {}", line); // Modified warning message
                              }
                         }
-                    } else {
-                         eprintln!("Warning: Skipping malformed line: {}", line);
+                    } else if !line.trim().is_empty() { // Handle lines that don't even have path:line:content
+                         // Don't print warning if debug mode is off, as stderr will be shown anyway
+                         if args.debug {
+                            eprintln!("Warning: Skipping malformed line (unexpected format): {}", line);
+                         }
                     }
                 }
 
