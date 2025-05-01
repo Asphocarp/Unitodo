@@ -24,6 +24,8 @@ struct Config {
     output_file: String,
     #[serde(default)]
     ag: AgConfig,
+    #[serde(default)] // Add projects map, default to empty
+    projects: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -128,6 +130,14 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
     Ok(None) // No .git directory found in ancestor paths
 }
 
+// --- TODO Category Enum ---
+#[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
+enum TodoCategory {
+    Project(String), // Highest priority: Belongs to a defined project
+    GitRepo(String), // Medium priority: Belongs to a git repo, but no project
+    Other,           // Lowest priority: Not in a project or known git repo
+}
+
 // --- Main Logic ---
 fn main() -> io::Result<()> {
     let args = Args::parse(); // Parse CLI arguments
@@ -139,6 +149,17 @@ fn main() -> io::Result<()> {
     if args.debug {
          println!("Using config: {:?}", config); // Moved debug print here
     }
+
+    // Compile project regexes
+    let project_regexes: Vec<(String, Regex)> = config.projects.iter().filter_map(|(name, pattern)| {
+        match Regex::new(pattern) {
+            Ok(re) => Some((name.clone(), re)),
+            Err(e) => {
+                eprintln!("Warning: Invalid regex for project '{}' ('{}'): {}", name, pattern, e);
+                None // Skip invalid regexes
+            }
+        }
+    }).collect();
 
     // Construct the command to run `ag`
     let mut command = Command::new("ag");
@@ -187,11 +208,11 @@ fn main() -> io::Result<()> {
     if output.status.success() {
         match str::from_utf8(&output.stdout) {
             Ok(stdout_str) => {
-                // Group TODOs by repository
-                let mut grouped_todos: HashMap<Option<String>, Vec<String>> = HashMap::new();
+                // Group TODOs by category (Project > Git Repo > Other)
+                let mut grouped_todos: HashMap<TodoCategory, Vec<String>> = HashMap::new();
 
-                // Compile the regex pattern from the config
-                let pattern_re = match Regex::new(&config.ag.pattern) {
+                // Compile the todo pattern regex from the config
+                let todo_pattern_re = match Regex::new(&config.ag.pattern) {
                     Ok(re) => re,
                     Err(e) => {
                         eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
@@ -212,27 +233,48 @@ fn main() -> io::Result<()> {
                         let content_part = parts[2].trim_start();
 
                         // Use regex to find the *first* match of the pattern in the content
-                        if let Some(mat) = pattern_re.find(content_part) {
+                        if let Some(mat) = todo_pattern_re.find(content_part) {
                             // Extract the content *after* the matched pattern
                             let todo_content = content_part[mat.start()..].trim(); 
                             let file_path = Path::new(file_path_str);
 
-                            // Find the git repo name for this file
-                            let repo_name_opt = match find_git_repo_name(file_path) {
-                                Ok(name) => name,
-                                Err(e) => {
-                                    // Don't print warning if debug mode is off, as stderr will be shown anyway
-                                    if args.debug {
-                                        eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
-                                    }
-                                    None // Treat as outside repo on error
+                            // Determine category: Project > Git Repo > Other
+                            let mut category = TodoCategory::Other; // Default category
+
+                            // 1. Check projects first
+                            let mut project_match = false;
+                            for (project_name, project_re) in &project_regexes {
+                                // Use the relative path string for matching project patterns
+                                if project_re.is_match(file_path_str) {
+                                    category = TodoCategory::Project(project_name.clone());
+                                    project_match = true;
+                                    break; // Assign to the first matching project
                                 }
-                            };
+                            }
+
+                            // 2. If no project matched, check git repo
+                            if !project_match {
+                                match find_git_repo_name(file_path) {
+                                    Ok(Some(repo_name)) => {
+                                        category = TodoCategory::GitRepo(repo_name);
+                                    }
+                                    Ok(None) => {
+                                        // Already defaults to TodoCategory::Other
+                                    }
+                                    Err(e) => {
+                                        if args.debug {
+                                            eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+                                        }
+                                        // Keep TodoCategory::Other on error
+                                    }
+                                }
+                            }
 
                             // Format the line including the line number
                             let formatted_line = format!("{} @ {}:{}", todo_content, file_path_str, line_number_str);
 
-                            grouped_todos.entry(repo_name_opt)
+                            // Add to the corresponding category group
+                            grouped_todos.entry(category)
                                          .or_insert_with(Vec::new)
                                          .push(formatted_line);
                         } else if !line.trim().is_empty() { // Don't warn for empty lines often output by ag
@@ -252,23 +294,17 @@ fn main() -> io::Result<()> {
 
                 // Format the final output string
                 let mut final_output = String::new();
-                let mut repo_keys: Vec<Option<String>> = grouped_todos.keys().cloned().collect();
-                
-                // Sort keys: Some("name") alphabetically, None at the end
-                repo_keys.sort_by(|a, b| {
-                    match (a, b) {
-                        (Some(name_a), Some(name_b)) => name_a.cmp(name_b),
-                        (Some(_), None) => std::cmp::Ordering::Less,    // Repos first
-                        (None, Some(_)) => std::cmp::Ordering::Greater, // No Repo last
-                        (None, None) => std::cmp::Ordering::Equal,
-                    }
-                });
+                let mut categories: Vec<TodoCategory> = grouped_todos.keys().cloned().collect();
 
-                for repo_name_opt in repo_keys {
-                    if let Some(todos) = grouped_todos.get(&repo_name_opt) {
-                        let header = match &repo_name_opt {
-                            Some(name) => format!("[git:{}]", name),
-                            None => "[other]".to_string(), // Section for TODOs outside git
+                // Sort categories: Project(A-Z), GitRepo(A-Z), Other
+                categories.sort(); // Uses the derived Ord for TodoCategory
+
+                for category in categories {
+                    if let Some(todos) = grouped_todos.get(&category) {
+                        let header = match &category {
+                            TodoCategory::Project(name) => format!("[project:{}]", name),
+                            TodoCategory::GitRepo(name) => format!("[git:{}]", name),
+                            TodoCategory::Other => "[other]".to_string(), // Section for TODOs outside git/projects
                         };
                         final_output.push_str(&header);
                         final_output.push('\n');
