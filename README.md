@@ -17,7 +17,7 @@ https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plu
 
 Everything after TODO is optional.
 ```bash
-TODO#fffff!NANFfffff content
+T0DO#fffff!NANFfffff content
 where:
 `fffff` is my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`.
 f means a char from URL-safe base64 char set, N means a char 0-9s.
@@ -25,13 +25,13 @@ f means a char from URL-safe base64 char set, N means a char 0-9s.
 ```
 EG:
 ```bash
-TODO#AlscR!0ANF161616 eat well
-- [ ] TODO#AlscR!0ANF161616 eat well again
+T0DO#AlscR!0ANF161616 eat well
+- [ ] T0DO#AlscR!0ANF161616 eat well again
 ```
 Inline-Render as:
 ```bash
-- [ ] TODO#[]!0ANF161616 eat well
-- [ ] TODO#AlscR!0ANF161616 eat well again
+- [ ] T0DO#[]!0ANF161616 eat well
+- [ ] T0DO#AlscR!0ANF161616 eat well again
 ```
 
 
@@ -39,9 +39,9 @@ Inline-Render as:
     - 0 format, elegant even in text form
         - type-able. short; unique (rg-able), abnormal
             - better: data all simply text; one-line?
-        - `TODO#A7g193O (uuid)`
-        - `TODO@A7g193O (timestamp)`
-        - `- [ ] TODO#A7g193O do abc and abc`
+        - `TOD0#A7g193O (uuid)`
+        - `TOD0@A7g193O (timestamp)`
+        - `- [ ] TOD0#A7g193O do abc and abc`
         - hash: time-inc, how about simply timestamp (start from 25)
     - [ ] 0 how to mark
     - [ ] 0 see from cease plugin, how to inline-render a string

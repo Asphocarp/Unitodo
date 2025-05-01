@@ -1,6 +1,8 @@
 output_file = "unitodo.md"
 
 [ag]
+patterns = ["TODO", "- [ ] "]
+
 # Paths to search for TODOs (defaults to [\".\"] if empty or not present)
 paths = ["/Users/asc/repo", "/Users/asc/Documents/Obsidian/alpha-vault"] # Example path, adjust as needed
 
