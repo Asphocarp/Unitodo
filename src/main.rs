@@ -6,6 +6,7 @@ use std::io::{self, Write, Read};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::Deserialize;
+use glob::Pattern;
 use regex::Regex;
 use std::time::Instant;
 
@@ -25,8 +26,8 @@ struct Config {
     output_file: String,
     #[serde(default)]
     ag: AgConfig,
-    #[serde(default)] // Add projects map, default to empty
-    projects: HashMap<String, String>,
+    #[serde(default)] // Projects map: Project name -> List of glob patterns
+    projects: HashMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -154,21 +155,6 @@ fn main() -> io::Result<()> {
          println!("[{:.2?}] Config loaded: {:?}", start_time.elapsed(), config); // Moved debug print here
     }
 
-    // Compile project regexes
-    let compile_regex_start = Instant::now();
-    let project_regexes: Vec<(String, Regex)> = config.projects.iter().filter_map(|(name, pattern)| {
-        match Regex::new(pattern) {
-            Ok(re) => Some((name.clone(), re)),
-            Err(e) => {
-                eprintln!("Warning: Invalid regex for project '{}' ('{}'): {}", name, pattern, e);
-                None // Skip invalid regexes
-            }
-        }
-    }).collect();
-    if args.debug {
-        println!("[{:.2?}] Project regexes compiled in {:.2?}", start_time.elapsed(), compile_regex_start.elapsed());
-    }
-
     // Construct the command to run `ag`
     let build_command_start = Instant::now();
     let mut command = Command::new("ag");
@@ -262,15 +248,32 @@ fn main() -> io::Result<()> {
 
                             // Determine category: Project > Git Repo > Other
                             let mut category = TodoCategory::Other; // Default category
-
-                            // 1. Check projects first
                             let mut project_match = false;
-                            for (project_name, project_re) in &project_regexes {
-                                // Use the relative path string for matching project patterns
-                                if project_re.is_match(file_path_str) {
-                                    category = TodoCategory::Project(project_name.clone());
-                                    project_match = true;
-                                    break; // Assign to the first matching project
+
+                            // 1. Check projects first using glob patterns
+                            for (project_name, glob_patterns) in &config.projects {
+                                for pattern_str in glob_patterns {
+                                    match Pattern::new(pattern_str) {
+                                        Ok(pattern) => {
+                                            // Use the relative path string for matching project patterns
+                                            if pattern.matches(file_path_str) {
+                                                category = TodoCategory::Project(project_name.clone());
+                                                project_match = true;
+                                                break; // Assign to the first matching project pattern
+                                            }
+                                        }
+                                        Err(e) => {
+                                            // Warn only once per invalid pattern maybe? Or just on load?
+                                            // For now, warn every time it's used if debug is on.
+                                            if args.debug {
+                                                eprintln!("Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
+                                            }
+                                            // Continue checking other patterns for the same project
+                                        }
+                                    }
+                                }
+                                if project_match {
+                                    break; // Exit the outer loop once a project match is found
                                 }
                             }
 

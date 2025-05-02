@@ -1,4 +1,5 @@
-output_file = "/Users/asc/Documents/Obsidian/alpha-vault/Life/unitodo.sync.md"
+# output_file = "/Users/asc/Documents/Obsidian/alpha-vault/Life/unitodo.sync.md"
+output_file = "unitodo.sync.md"
 
 [ag]
 pattern = "TODO|- \\[ \\]"
@@ -13,6 +14,7 @@ ignore = [
     "node_modules",
     "build",
     "dist",
+    "*.toml",
     # mine:
     "_cloned_", # Relative path
     "_study_", # Relative path
@@ -24,7 +26,8 @@ ignore = [
 
 
 [projects]
-# project_name = "regex_of_relative_path"
+# project_name = ["glob_pattern_1", "glob_pattern_2"]
 
-Unitodo = ".*/Unitodo.*"
-Ceal = ".*/Ceal.*"
+Unitodo = ["**/Unitodo.md", "**/Unitodo/**"] # Example: Match any path containing Unitodo
+Ceal = ["**/Ceal.*", "**/Ceal/**"]       # Example: Match any path containing Ceal
+# Add more projects and their glob patterns here

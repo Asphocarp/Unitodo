@@ -58,3 +58,5 @@ Inline-Render as:
 - [ ] check command injection safety
 
 - [ ] consider `glob` instead of `regex`
+
+- [ ] TODO include? / file types?
