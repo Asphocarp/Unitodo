@@ -1,5 +1,5 @@
 # Unitodo
-
+- **Unifying Distributed TODOs**
 
 ## idea
 
@@ -12,54 +12,56 @@
 ## related work:
 https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
 
+- key diff:
+  - with key features, but not disturbingly long even in plain text (in code)
+
 
 ## format / parsing
 
-Everything after TODO is optional.
+EGs:
 ```bash
-T0DO#fffff!NANFfffff content
+T0DO1@fffff content
+T0DO1#Jl_obVmSA7XCwzp7hkT2r content
+T0DO1##12 content
+T0DO1@fffff@@eeeee content
+
+T0DO 1@fffff content
+T0DO: 1@fffff content
+- [ ] 1@fffff content
+```
 where:
-`fffff` is my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`.
-f means a char from URL-safe base64 char set, N means a char 0-9s.
-#fffff for created at `fffff` timestamp, !N for tier(0-3), AN for actionable(0-3), Ffffff for finished at `fffff` timestamp, content is the rest of the line.
-```
-EG:
-```bash
-T0DO#AlscR!0ANF161616 eat well
-- [ ] T0DO#AlscR!0ANF161616 eat well again
-```
-Inline-Render as:
-```bash
-- [ ] T0DO#[]!0ANF161616 eat well
-- [ ] T0DO#AlscR!0ANF161616 eat well again
-```
-
-
-- todo
-    - 0 format, elegant even in text form
-        - type-able. short; unique (rg-able), abnormal
-            - better: data all simply text; one-line?
-        - `TOD0#A7g3O (uuid)`
-        - `TOD0@A7g3O (timestamp)`
-        - `- [ ] TOD0#A7g193O do abc and abc`
-        - hash: time-inc, how about simply timestamp (start from 25)
-    - [ ] 0 how to mark
-    - [ ] 0 see from cease plugin, how to inline-render a string
+- At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list.
+    - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
+- `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`.
+    - `@@eeeee` is a timestamp indicating when the TODO was done.
+- `#Jl_obVmSA7XCwzp7hkT2r` is a unique nanoid of 20 chars.
+- `##12` is a unique incremented number id, assigned by unitodo system.
+- Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
+- We only match all of above stuff in the first word of the line, excluding all leading blanks and `:`.
 
 
 
-- [ ] 1 polish readme/intro of Mira.vsix ← record a gif 
+## TODO
 
-
-
-- TODO 2 make this repo public
-
-
+- [ ] 0 copy sync file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
+- [ ] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
+  - [ ] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only, and with buttons to insert a nanoid/incremented-id for it.
+- [ ] TODO include / file types? for ag
 - [ ] check command injection safety
+- [ ] 0 see from cease plugin, how to inline-render a string
+- [ ] 1 polish readme/intro of Mira.vsix ← record a gif 
+- [ ] 2 make this repo public
 
-- [ ] consider `glob` instead of `regex`
 
-- [ ] TODO include? / file types?
+## Best practices
+
+[TODO: simply put a 0/1/2/3 in the front of the line, to indicate the priority, when alphabetically sorted]
+
+## Known issues
+
+- support one-line TODO only
+- to bi-directional sync, for now, we assume that the input TODOs are edited 
+
 
 ## Frontend
 
