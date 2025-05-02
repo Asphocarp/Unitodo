@@ -1,0 +1,197 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { TodoCategory as TodoCategoryType } from '../types';
+import { fetchTodoData } from '../services/todoService';
+import TodoCategory from './TodoCategory';
+
+export default function Todo() {
+  const [categories, setCategories] = useState<TodoCategoryType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState('all'); // 'all', 'completed', 'active'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const data = await fetchTodoData();
+        setCategories(data);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load todo data. Please try again later.');
+        console.error('Error loading todo data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [refreshKey]);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Filter todos based on filter state and search query
+  const filteredCategories = categories.map(category => {
+    const filteredTodos = category.todos.filter(todo => {
+      let matchesFilter = true;
+      if (filter === 'completed') matchesFilter = todo.completed;
+      if (filter === 'active') matchesFilter = !todo.completed;
+
+      // If we have a search query, match against content or location
+      const matchesSearch = !searchQuery || 
+        todo.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        todo.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesFilter && matchesSearch;
+    });
+
+    return {
+      ...category,
+      todos: filteredTodos
+    };
+  }).filter(category => category.todos.length > 0);
+
+  // Calculate total counts
+  const totalTodos = categories.reduce((acc, category) => acc + category.todos.length, 0);
+  const completedTodos = categories.reduce(
+    (acc, category) => acc + category.todos.filter(todo => todo.completed).length,
+    0
+  );
+  const activeTodos = totalTodos - completedTodos;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">Error</h3>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Unitodo</h1>
+          <p className="text-gray-500 mt-1">
+            {totalTodos} tasks · {completedTodos} completed · {activeTodos} active
+          </p>
+        </div>
+        
+        <div className="w-full md:w-auto flex flex-col md:flex-row gap-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search todos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full md:w-64 pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <svg
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                onClick={() => setSearchQuery('')}
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </div>
+          
+          <div className="flex space-x-2">
+            <button 
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+              onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+            <button 
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'active' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+              onClick={() => setFilter('active')}
+            >
+              Active
+            </button>
+            <button 
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'completed' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+              onClick={() => setFilter('completed')}
+            >
+              Completed
+            </button>
+            <button
+              className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-200 hover:bg-gray-300 transition-colors"
+              onClick={handleRefresh}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {filteredCategories.length > 0 ? (
+        filteredCategories.map((category, index) => (
+          <TodoCategory key={index} category={category} />
+        ))
+      ) : (
+        <div className="text-center p-8 bg-gray-50 rounded-lg">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+          <p className="mt-4 text-lg font-medium text-gray-900">No todos found</p>
+          <p className="text-gray-500">Try changing your search or filter.</p>
+        </div>
+      )}
+    </div>
+  );
+} 
