@@ -51,6 +51,7 @@ where:
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
+- [ ] 2 switch to SolidJS (for better performance), instead of RaectJS
 - [ ] 2 make this repo public
 - [ ] 2 check command injection safety
 - [ ] 2 show dependency of todos?
