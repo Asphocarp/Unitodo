@@ -3,6 +3,7 @@
 import React from 'react';
 import { TodoItem as TodoItemType } from '../types';
 import { parseTodoContent } from '../utils';
+import LexicalTodoEditor from './LexicalTodoEditor';
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -49,6 +50,13 @@ export default function TodoItem({ todo }: TodoItemProps) {
 
   const readOnly = !parsed.isUnique;
   
+  // TODO: Add state and onChange handler for editor content
+  const handleEditorChange = (editorState: any) => {
+    // We'll need to implement saving logic later
+    // For now, maybe log the state
+    // console.log(JSON.stringify(editorState));
+  };
+  
   return (
     <div 
       className={`flex items-start gap-2 p-3 border-b border-gray-200 ${hovered ? 'bg-gray-50' : ''} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -67,24 +75,24 @@ export default function TodoItem({ todo }: TodoItemProps) {
       <div className="min-w-0 flex-1">
         <div className={`text-sm ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
           {parsed.isValidTodoFormat ? (
-            <>
-              {parsed.prefix && <span className="mr-1 opacity-60">{parsed.prefix.trim()}</span>}
+            <div className="flex items-baseline">
+              {parsed.prefix && <span className="mr-1 opacity-60 select-none">{parsed.prefix.trim()}</span>}
               <span 
-                className="inline-flex items-center rounded-md px-1 py-0.5 text-xs font-medium ring-1 ring-inset mr-1"
+                className="inline-flex items-center rounded-md px-1 py-0.5 text-xs font-medium ring-1 ring-inset mr-1 select-none flex-shrink-0"
               >
                  {parsed.priority && <span className="font-bold text-blue-700 ring-blue-600/20 bg-blue-50 mr-0.5">{parsed.priority}</span>}
                  {parsed.idPart && <span className="text-purple-700 ring-purple-600/20 bg-purple-50">{parsed.idPart}</span>}
                  {parsed.donePart && <span className="ml-0.5 text-green-700 ring-green-600/20 bg-green-50">{parsed.donePart}</span>}
-                 {!parsed.priority && !parsed.idPart && !parsed.donePart && <span>{/* Placeholder or indicator? */}</span>} 
+                 {!parsed.priority && !parsed.idPart && !parsed.donePart && <span>{/* Maybe show a placeholder if needed? */}</span>} 
               </span>
-              <span 
-                contentEditable={!readOnly} 
-                suppressContentEditableWarning={true}
-                className={`outline-none focus:ring-1 focus:ring-blue-300 ${readOnly ? '' : 'cursor-text'}`}
-              >
-                {parsed.mainContent}
-              </span>
-            </>
+              <div className="flex-grow min-w-0">
+                <LexicalTodoEditor
+                  initialContent={parsed.mainContent}
+                  isReadOnly={readOnly}
+                  onChange={handleEditorChange} 
+                />
+              </div>
+            </div>
           ) : (
             <span>{todo.content}</span>
           )}
