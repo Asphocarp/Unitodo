@@ -28,3 +28,5 @@ Thumbs.db
 
 unitodo.sync.md
 *.temp.md
+node_modules
+.next

@@ -60,3 +60,32 @@ Inline-Render as:
 - [ ] consider `glob` instead of `regex`
 
 - [ ] TODO include? / file types?
+
+## Frontend
+
+A React frontend has been added to display the todo items in a web interface:
+
+- Display todos grouped by categories (Project, Git Repo, Other)
+- Filter todos by status (All/Active/Completed)
+- Responsive design with modern UI
+
+See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
+
+### Running the Frontend
+
+1. First run the Rust backend to generate the todo data:
+   ```bash
+   cargo run
+   ```
+
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the frontend development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.

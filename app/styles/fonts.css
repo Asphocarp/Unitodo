@@ -1,0 +1,60 @@
+/* Font Import from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* Font Awesome for reliable icons */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+/* Nerd Font Symbols */
+@font-face {
+  font-family: 'Symbols Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.0.2/patched-fonts/NerdFontsSymbolsOnly/SymbolsNerdFont-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Apply fonts to icon elements */
+.nerd-font-icon {
+  font-family: 'Symbols Nerd Font', 'JetBrains Mono', monospace;
+  display: inline-block;
+}
+
+/* Fallback mechanism: if Nerd Font character doesn't display properly */
+@supports not (font-family: 'Symbols Nerd Font') {
+  .nerd-font-icon {
+    font-size: 0; /* Hide the original Nerd Font icon */
+  }
+  
+  .nerd-font-icon + i {
+    opacity: 1 !important; /* Show Font Awesome icon */
+    font-size: 1.25rem;
+  }
+}
+
+/* Category specific styles */
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Define icon classes for specific category icons */
+.icon-project::before {
+  content: "\f0ae"; /* Font Awesome project icon */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+.icon-git::before {
+  content: "\f1d3"; /* Font Awesome git icon */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+.icon-other::before {
+  content: "\f15b"; /* Font Awesome file icon */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+} 
