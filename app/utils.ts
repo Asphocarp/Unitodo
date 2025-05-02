@@ -132,11 +132,11 @@ const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+
 
 export interface ParsedTodo {
   priority: string | null;
-  idPart: string | null;      // Includes the marker (@, #, ##)
-  donePart: string | null;    // Includes the marker (@@)
+  idPart: string | null;
+  donePart: string | null;
   mainContent: string;
   isUnique: boolean;
-  isValidTodoFormat: boolean; // Indicates if the line matches the basic structure
+  isValidTodoFormat: boolean;
 }
 
 /**
@@ -149,23 +149,20 @@ export function parseTodoContent(content: string): ParsedTodo {
 
   if (match) {
     console.log("TODO PARSER MATCH (Allow Leading Space):", match);
-    // Adjusted group indices AGAIN
-    // Group 1: leadingWhitespace? 
-    // Group 2: firstWord       
-    const priority = match[3] || null; // Optional priority (Group 3 now)
-    const idPart = match[4] || null;   // ID part (@..., #..., ##...) (Group 4 now)
-    const donePart = match[6] || null; // Optional done timestamp (@@...) (Group 6 now)
-    const mainContent = match[8] || ''; // The actual todo text content (Group 8 now)
+    // Corrected group indices
+    const priority = match[3] || null; // Optional priority (Group 3)
+    const idPart = match[4] || null;   // ID part (@..., #..., ##...) (Group 4)
+    const donePart = match[5] || null; // Optional done timestamp (@@...) (Corrected: Group 5)
+    const mainContent = match[7] || ''; // The actual todo text content (Corrected: Group 7)
 
-    // Re-check group indices based on new regex structure
+    // Corrected Group Indices Explanation:
     // Group 1: leadingWhitespace?                  e.g., '   '
     // Group 2: firstWord                           e.g., '1@abcde@@fghij'
     // Group 3:   priority?                          e.g., '1'
     // Group 4:   idPart (@ | ## | #)                e.g., '@abcde'
-    // Group 5:     (internal to idPart options)
-    // Group 6:   donePart? (@@...)                  e.g., '@@fghij'
-    // Group 7: separatorAndContent? (s+ .*)        e.g., '  the content'
-    // Group 8:   mainContent? (.*)                  e.g., 'the content'
+    // Group 5:   donePart? (@@...)                  e.g., '@@fghij'
+    // Group 6: separatorAndContent? (\s+ .*)        e.g., '  the content'
+    // Group 7:   mainContent? (.*)                  e.g., 'the content'
 
     const isUnique = !!idPart && (idPart.startsWith('#') || idPart.startsWith('@')); 
 

@@ -20,14 +20,14 @@ https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plu
 
 EGs:
 ```bash
-T0DO1@fffff content
-T0DO1#Jl_obVmSA7XCwzp7hkT2r content
-T0DO1##12 content
-T0DO1@fffff@@eeeee content
+T0DO1@fffff content lalalaa
+T0DO1#Jl_obVmSA7XCwzp7hkT2r content lalalaa
+T0DO1##12 content lalalaa
+T0DO1@fffff@@eeeee content lalalaa
 
-T0DO 1@fffff content
-T0DO: 1@fffff content
-- [ ] 1@fffff content
+T0DO 1@fffff content lalalaa
+T0DO: 1@fffff content lalalaa
+- [ ] 1@fffff content lalalaa
 ```
 where:
 - At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list.
