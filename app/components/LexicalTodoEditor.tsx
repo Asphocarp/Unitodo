@@ -1,52 +1,106 @@
 'use client';
 
-import { $getRoot, $getSelection, EditorState, $createParagraphNode, $createTextNode } from 'lexical';
+import {
+  $getRoot,
+  $getSelection,
+  EditorState,
+  $createParagraphNode,
+  $createTextNode,
+  LexicalNode,
+  ParagraphNode,
+  TextNode,
+} from 'lexical';
 import React, { useEffect, Component, ErrorInfo, ReactNode, ReactElement } from 'react';
 
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin';
+import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 
+import {
+  PriorityNode,
+  $createPriorityNode,
+  IdNode,
+  $createIdNode,
+  DoneNode,
+  $createDoneNode,
+} from './LexicalNodes';
+
+import { parseTodoContent } from '../utils';
+
 const theme = {
-  // Placeholder styling if needed
-  placeholder: 'editor-placeholder',
   paragraph: 'editor-paragraph',
+  text: {
+    bold: 'editor-text-bold',
+    italic: 'editor-text-italic',
+    underline: 'editor-text-underline',
+    strikethrough: 'editor-text-strikethrough',
+    code: 'editor-text-code',
+  },
+  priority: 'unitodo-priority-node',
+  id: 'unitodo-id-node',
+  done: 'unitodo-done-node',
 };
 
-// Lexical React plugins are React components, so they emit errors if they are
-// thrown during execution. LexicalErrorBoundary converts errors into useful error
-// messages.
 function onError(error: Error) {
   console.error(error);
 }
 
 interface LexicalTodoEditorProps {
-  initialContent: string;
+  initialFullContent: string;
   isReadOnly: boolean;
   onChange?: (editorState: EditorState) => void;
 }
 
-// Plugin to set initial editor state from props
-function PrepopulatedTextPlugin({ initialContent }: { initialContent: string }) {
+function InitialStatePlugin({ initialFullContent }: { initialFullContent: string }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editor.update(() => {
       const root = $getRoot();
-      if (root.getChildrenSize() === 0 || root.getTextContent() !== initialContent) {
+      if (root.getChildrenSize() === 0 || root.getTextContent() !== initialFullContent) {
         root.clear();
-        const paragraphNode = $createParagraphNode();
-        paragraphNode.append($createTextNode(initialContent));
-        root.append(paragraphNode);
+        const parsed = parseTodoContent(initialFullContent);
+        
+        const nodesToAppend: LexicalNode[] = [];
+
+        if (parsed.priority) {
+          nodesToAppend.push($createPriorityNode(parsed.priority));
+        }
+        if (parsed.idPart) {
+          nodesToAppend.push($createIdNode(parsed.idPart));
+          if (parsed.mainContent || parsed.donePart) {
+             nodesToAppend.push($createTextNode(' '));
+          }
+        }
+        if (parsed.donePart) {
+          nodesToAppend.push($createDoneNode(parsed.donePart));
+          if (parsed.mainContent) {
+             nodesToAppend.push($createTextNode(' '));
+          }
+        }
+        if (parsed.mainContent) {
+          nodesToAppend.push($createTextNode(parsed.mainContent));
+        }
+
+        if (!parsed.isValidTodoFormat) {
+           root.clear();
+           const paragraph = $createParagraphNode();
+           paragraph.append($createTextNode(initialFullContent));
+           root.append(paragraph);
+        } else {
+          const paragraph = $createParagraphNode();
+          nodesToAppend.forEach(node => paragraph.append(node));
+          root.append(paragraph);
+        }
+
       }
     });
-  }, [editor, initialContent]); 
+  }, [editor, initialFullContent]); 
   return null;
 }
 
-// Standard React Error Boundary Class Component
 interface Props {
   children: ReactElement;
   onError: (error: Error) => void;
@@ -83,29 +137,29 @@ class StandardErrorBoundary extends Component<Props, State> {
 }
 
 export default function LexicalTodoEditor({
-  initialContent,
+  initialFullContent,
   isReadOnly,
   onChange,
 }: LexicalTodoEditorProps) {
   const initialConfig = {
     namespace: 'UnitodoEditor',
     theme,
-    onError, // This onError will be passed via context, not directly to StandardErrorBoundary here
+    onError,
     editable: !isReadOnly,
-    editorState: null, // Start with empty and populate via plugin
+    nodes: [PriorityNode, IdNode, DoneNode, ParagraphNode, TextNode],
   };
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="editor-container relative">
-        <PlainTextPlugin
+        <RichTextPlugin
           contentEditable={<ContentEditable className="outline-none focus:ring-1 focus:ring-blue-300 p-1 -m-1 rounded min-h-[20px]" />}
           placeholder={<div className="editor-placeholder absolute top-0 left-0 text-gray-400 pointer-events-none p-1">Enter todo...</div>}
-          ErrorBoundary={StandardErrorBoundary} // Should now match the expected type
+          ErrorBoundary={StandardErrorBoundary}
         />
         <OnChangePlugin onChange={onChange ? onChange : () => {}} />
         <HistoryPlugin />
-        <PrepopulatedTextPlugin initialContent={initialContent} />
+        <InitialStatePlugin initialFullContent={initialFullContent} />
       </div>
     </LexicalComposer>
   );

@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add styles for custom Lexical nodes */
+.unitodo-priority-node,
+.unitodo-id-node,
+.unitodo-done-node {
+  display: inline-block; /* Or inline-flex if more complex content */
+  padding: 1px 4px;
+  margin: 0 2px;
+  border-radius: 4px;
+  font-size: 0.8em; /* Slightly smaller */
+  font-weight: 500; /* Medium weight */
+  line-height: 1.4; /* Adjust for vertical alignment */
+  cursor: default; /* Indicate non-editable */
+  user-select: none; /* Prevent text selection */
+  vertical-align: baseline; /* Align with surrounding text */
+}
+
+.unitodo-priority-node {
+  background-color: #e0f2fe; /* Light blue */
+  color: #0c4a6e; /* Darker blue */
+  border: 1px solid #bae6fd;
+}
+
+.unitodo-id-node {
+  background-color: #f3e8ff; /* Light purple */
+  color: #6b21a8; /* Darker purple */
+  border: 1px solid #e9d5ff;
+}
+
+.unitodo-done-node {
+  background-color: #dcfce7; /* Light green */
+  color: #166534; /* Darker green */
+  border: 1px solid #bbf7d0;
+}
+
+/* Optional: Placeholder styling for the editor */
+.editor-placeholder {
+  color: #a0aec0; /* Tailwind gray-500 */
+  font-style: italic;
+  position: absolute;
+  top: 0; /* Adjust as needed based on ContentEditable padding/position */
+  left: 0; /* Adjust as needed */
+  pointer-events: none;
+  padding: inherit; /* Inherit padding from ContentEditable if possible */
+}
+
+/* Ensure ContentEditable has relative position if placeholder uses absolute */
+[contenteditable] {
+  position: relative;
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
