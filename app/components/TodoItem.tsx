@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TodoItem as TodoItemType } from '../types';
+import { parseTodoContent } from '../utils';
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -42,12 +43,18 @@ export default function TodoItem({ todo }: TodoItemProps) {
     }
     return url;
   };
+
+  // Parse the todo content
+  const parsed = parseTodoContent(todo.content);
+
+  const readOnly = !parsed.isUnique;
   
   return (
     <div 
-      className={`flex items-start gap-2 p-3 border-b border-gray-200 ${hovered ? 'bg-gray-50' : ''}`}
+      className={`flex items-start gap-2 p-3 border-b border-gray-200 ${hovered ? 'bg-gray-50' : ''} ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={readOnly ? 'This TODO cannot be edited here because it lacks a unique ID (#... or ##...). Edit the original source file.' : undefined}
     >
       <div className="flex-shrink-0 mt-0.5">
         <input 
@@ -58,9 +65,30 @@ export default function TodoItem({ todo }: TodoItemProps) {
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-medium ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-          {todo.content}
-        </p>
+        <div className={`text-sm ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+          {parsed.isValidTodoFormat ? (
+            <>
+              {parsed.prefix && <span className="mr-1 opacity-60">{parsed.prefix.trim()}</span>}
+              <span 
+                className="inline-flex items-center rounded-md px-1 py-0.5 text-xs font-medium ring-1 ring-inset mr-1"
+              >
+                 {parsed.priority && <span className="font-bold text-blue-700 ring-blue-600/20 bg-blue-50 mr-0.5">{parsed.priority}</span>}
+                 {parsed.idPart && <span className="text-purple-700 ring-purple-600/20 bg-purple-50">{parsed.idPart}</span>}
+                 {parsed.donePart && <span className="ml-0.5 text-green-700 ring-green-600/20 bg-green-50">{parsed.donePart}</span>}
+                 {!parsed.priority && !parsed.idPart && !parsed.donePart && <span>{/* Placeholder or indicator? */}</span>} 
+              </span>
+              <span 
+                contentEditable={!readOnly} 
+                suppressContentEditableWarning={true}
+                className={`outline-none focus:ring-1 focus:ring-blue-300 ${readOnly ? '' : 'cursor-text'}`}
+              >
+                {parsed.mainContent}
+              </span>
+            </>
+          ) : (
+            <span>{todo.content}</span>
+          )}
+        </div>
         {todo.location && (
           <a 
             href={getVSCodeUrl() || '#'} 

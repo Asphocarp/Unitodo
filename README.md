@@ -70,7 +70,7 @@ where:
 
 - support one-line TODO only
 - to bi-directional sync, for now, we assume that the input TODOs are edited 
-
+- we assume all created timestamps are unique. (you do not create more than 1 todo within 1 second)
 
 ## Frontend
 
