@@ -8,7 +8,7 @@
 .unitodo-done-node {
   display: inline-block; /* Or inline-flex if more complex content */
   padding: 1px 4px;
-  margin: 0 2px;
+  margin: 0 0.5px;
   border-radius: 4px;
   font-size: 0.8em; /* Slightly smaller */
   font-weight: 500; /* Medium weight */

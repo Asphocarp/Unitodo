@@ -2,7 +2,7 @@
 output_file = "unitodo.sync.json"
 
 [ag]
-pattern = "TODO|- \\[ \\] "
+pattern = "TODO:|TODO|- \\[ \\] "
 
 # Paths to search for TODOs (defaults to [\".\"] if empty or not present)
 paths = ["/Users/asc/repo", "/Users/asc/Documents/Obsidian/alpha-vault"] # Example path, adjust as needed
