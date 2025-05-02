@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { TodoCategory as TodoCategoryType } from '../types';
 import { fetchTodoData } from '../services/todoService';
 import TodoCategory from './TodoCategory';
+import TodoItem from './TodoItem';
 import isEqual from 'lodash/isEqual'; // Import lodash for deep comparison
 
 export default function Todo() {
@@ -13,6 +14,8 @@ export default function Todo() {
   const [filter, setFilter] = useState('all'); // 'all', 'completed', 'active'
   const [searchQuery, setSearchQuery] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [displayMode, setDisplayMode] = useState<'section' | 'tab'>('section'); // Add display mode state
+  const [activeTabIndex, setActiveTabIndex] = useState(0); // Track the active tab
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
 
@@ -30,6 +33,11 @@ export default function Todo() {
           console.log("Data changed, updating state..."); // Debug log
           setCategories(newData);
           setLastUpdated(new Date());
+          
+          // Reset active tab index if categories change and the current one no longer exists
+          if (activeTabIndex >= newData.length) {
+            setActiveTabIndex(0);
+          }
       } else {
            console.log("Data unchanged, skipping state update."); // Debug log
       }
@@ -119,6 +127,55 @@ export default function Todo() {
     );
   }
 
+  // Toggle between section and tab mode
+  const toggleDisplayMode = () => {
+    setDisplayMode(prev => prev === 'section' ? 'tab' : 'section');
+  };
+
+  // Render tabs for tab mode
+  const renderTabs = () => {
+    return (
+      <div className="mb-4">
+        <div className="flex border-b border-gray-200">
+          {filteredCategories.map((category, index) => (
+            <button
+              key={index}
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTabIndex === index
+                ? 'border-b-2 border-indigo-500 text-indigo-600'
+                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } flex items-center gap-2`}
+              onClick={() => setActiveTabIndex(index)}
+            >
+              <span className="text-xl">
+                {category.icon}
+              </span>
+              {category.name}
+              <span className="ml-1 bg-gray-200 text-xs rounded-full px-2 py-0.5">
+                {category.todos.filter(todo => todo.completed).length}/{category.todos.length}
+              </span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Display active tab content */}
+        {filteredCategories.length > 0 && (
+          <div className="mt-4 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div className="divide-y divide-gray-200">
+              {filteredCategories[activeTabIndex]?.todos.map((todo, index) => (
+                <TodoItem key={index} todo={todo} />
+              )) || (
+                <div className="p-4 text-center text-gray-500">
+                  No todos in this category
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -199,14 +256,39 @@ export default function Todo() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
+            
+            {/* Display mode toggle button */}
+            <button
+              className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                displayMode === 'tab' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+              } transition-colors`}
+              onClick={toggleDisplayMode}
+              title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode`}
+            >
+              {displayMode === 'section' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
       
       {filteredCategories.length > 0 ? (
-        filteredCategories.map((category, index) => (
-          <TodoCategory key={index} category={category} />
-        ))
+        displayMode === 'section' ? (
+          // Section mode (original layout)
+          filteredCategories.map((category, index) => (
+            <TodoCategory key={index} category={category} />
+          ))
+        ) : (
+          // Tab mode
+          renderTabs()
+        )
       ) : (
         <div className="text-center p-8 bg-gray-50 rounded-lg">
           <svg
