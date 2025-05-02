@@ -2,27 +2,17 @@ import { TodoCategory } from '../types';
 
 export async function fetchTodoData(): Promise<TodoCategory[]> {
   try {
-    // Try to fetch from API first
+    // Always use the API endpoint which now runs the Rust program
     const response = await fetch('/api/todos');
     
-    if (response.ok) {
-      const data = await response.json();
-      return data.categories || [];
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
     
-    // Fallback to direct file fetch if API fails
-    const fileResponse = await fetch('/unitodo.sync.md');
-    if (!fileResponse.ok) {
-      throw new Error('Failed to fetch todo data');
-    }
-    
-    const markdown = await fileResponse.text();
-    
-    // Import the parser dynamically to avoid issues with SSR
-    const { parseTodoMarkdown } = await import('../utils');
-    return parseTodoMarkdown(markdown);
+    const data = await response.json();
+    return data.categories || [];
   } catch (error) {
     console.error('Error fetching todo data:', error);
-    return [];
+    throw error; // Re-throw to allow component to handle the error
   }
 } 

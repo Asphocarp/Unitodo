@@ -1,5 +1,5 @@
 # output_file = "/Users/asc/Documents/Obsidian/alpha-vault/Life/unitodo.sync.md"
-output_file = "unitodo.sync.md"
+output_file = "unitodo.sync.json"
 
 [ag]
 pattern = "TODO|- \\[ \\] "
@@ -20,7 +20,7 @@ ignore = [
     "_study_", # Relative path
     "tmp", # Relative path
     "_archive_", # Relative path
-    "unitodo.sync.md",
+    "unitodo.sync.*",
     "*.temp.*",
 ]
 
