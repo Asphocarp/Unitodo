@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TodoCategory as TodoCategoryType } from '../types';
 import { fetchTodoData } from '../services/todoService';
 import TodoCategory from './TodoCategory';
+import isEqual from 'lodash/isEqual'; // Import lodash for deep comparison
 
 export default function Todo() {
   const [categories, setCategories] = useState<TodoCategoryType[]>([]);
@@ -11,28 +12,56 @@ export default function Todo() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all'); // 'all', 'completed', 'active'
   const [searchQuery, setSearchQuery] = useState('');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
+  async function loadData() {
+    try {
+      // Only show loading indicator on initial mount
+      if (isInitialMount.current) {
         setLoading(true);
-        const data = await fetchTodoData();
-        setCategories(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load todo data. Please try again later.');
-        console.error('Error loading todo data:', err);
-      } finally {
+      }
+      
+      const newData = await fetchTodoData();
+      
+      // Compare new data with current data before setting state
+      if (!isEqual(categories, newData)) {
+          console.log("Data changed, updating state..."); // Debug log
+          setCategories(newData);
+          setLastUpdated(new Date());
+      } else {
+           console.log("Data unchanged, skipping state update."); // Debug log
+      }
+      setError(null);
+    } catch (err) {
+      setError('Failed to load todo data. Please try again later.');
+      console.error('Error loading todo data:', err);
+    } finally {
+      if (isInitialMount.current) {
         setLoading(false);
+        isInitialMount.current = false; // Mark initial mount as complete
       }
     }
+  }
 
+  useEffect(() => {
+    // Initial load
     loadData();
-  }, [refreshKey]);
+    
+    // Set up polling interval
+    intervalRef.current = setInterval(loadData, 5000);
+    
+    // Clean up interval on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []); // Use empty dependency array to run only on mount/unmount
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    loadData(); // Trigger a manual data load
   };
 
   // Filter todos based on filter state and search query
@@ -97,6 +126,11 @@ export default function Todo() {
           <h1 className="text-3xl font-bold">Unitodo</h1>
           <p className="text-gray-500 mt-1">
             {totalTodos} tasks · {completedTodos} completed · {activeTodos} active
+            {lastUpdated && (
+              <span className="ml-2 text-xs text-gray-400">
+                Updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         

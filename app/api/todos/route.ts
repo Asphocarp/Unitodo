@@ -1,23 +1,31 @@
 import { NextResponse } from 'next/server';
+import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
-import { parseTodoMarkdown } from '@/app/utils';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 export async function GET() {
   try {
-    // Read the markdown file
-    const filePath = path.join(process.cwd(), 'public', 'unitodo.sync.md');
-    const data = await fs.readFile(filePath, 'utf-8');
+    // Run the Rust program to generate fresh todo data
+    await execPromise('cargo run', { cwd: process.cwd() });
     
-    // Parse the markdown to get the categories
-    const categories = parseTodoMarkdown(data);
+    // Read the generated JSON file
+    const filePath = path.join(process.cwd(), 'unitodo.sync.json');
+    const jsonData = await fs.readFile(filePath, 'utf-8');
     
-    // Return the parsed data
-    return NextResponse.json({ categories });
+    // Parse the JSON data
+    const data = JSON.parse(jsonData);
+    
+    // Return the parsed data directly
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error reading todo data:', error);
+    console.error('Error generating or reading todo data:', error);
+    // Check if error is an object and has a message property before accessing it
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to load todo data' },
+      { error: 'Failed to load todo data', details: errorMessage },
       { status: 500 }
     );
   }

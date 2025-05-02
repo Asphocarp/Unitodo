@@ -3,7 +3,7 @@
 
 ## idea
 
-- give every TODO a unique ID while distributing them everywhere
+- give every todo a unique ID while distributing them everywhere
 - collect them in real time at one place 
     - obsidian (simply a markdown file)?
     - webview? notion? terminal?
@@ -41,16 +41,19 @@ where:
 
 
 
-## TODO
+## todo
 
-- [ ] 0 copy sync file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
+- [ ] show as tabs instead of sections
 - [ ] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
   - [ ] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only, and with buttons to insert a nanoid/incremented-id for it.
+- [ ] editable
+
 - [ ] TODO include / file types? for ag
 - [ ] check command injection safety
 - [ ] 0 see from cease plugin, how to inline-render a string
 - [ ] 1 polish readme/intro of Mira.vsix ← record a gif 
 - [ ] 2 make this repo public
+- [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
 
 
 ## Best practices
