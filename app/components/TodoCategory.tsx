@@ -1,18 +1,26 @@
 'use client';
 
 import React from 'react';
-import { TodoCategory as TodoCategoryType } from '../types';
+import { TodoCategory as TodoCategoryType, TodoItem as TodoItemType } from '../types';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
 
 interface TodoCategoryProps {
   category: TodoCategoryType;
+  onTodoUpdate?: (updatedTodo: TodoItemType) => void;
 }
 
-export default function TodoCategory({ category }: TodoCategoryProps) {
+export default function TodoCategory({ category, onTodoUpdate }: TodoCategoryProps) {
   const [expanded, setExpanded] = React.useState(true);
   const completedCount = category.todos.filter(todo => todo.completed).length;
   const totalCount = category.todos.length;
+  
+  // Handle todo updates
+  const handleTodoUpdate = (updatedTodo: TodoItemType) => {
+    if (onTodoUpdate) {
+      onTodoUpdate(updatedTodo);
+    }
+  };
   
   // Function to get appropriate icon class based on category name
   const getIconClass = () => {
@@ -48,7 +56,11 @@ export default function TodoCategory({ category }: TodoCategoryProps) {
         <div className="divide-y divide-gray-200">
           {category.todos.length > 0 ? (
             category.todos.map((todo, index) => (
-              <TodoItem key={index} todo={todo} />
+              <TodoItem 
+                key={`${todo.location}-${index}`} 
+                todo={todo} 
+                onEditSuccess={handleTodoUpdate}
+              />
             ))
           ) : (
             <div className="p-4 text-center text-gray-500">
