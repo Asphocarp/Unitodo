@@ -44,15 +44,15 @@ where:
 ## todo
 
 - [ ] 1 add a button to insert a nanoid/incremented-id for the-first-word, for those without unique-ensured id
-- [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
+- [ ] 1#jvxJSUV_L1VgU5c3uleQ 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
 - [ ] 2 make this repo public
-- [ ] 2 check command injection safety
+- [ ] 2#wTzSLqzruFudt5f7Sf0W check command injection safety
 - [ ] 2 show dependency of todos?
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
-- [ ] 2 ag: include / file types?
+- [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
 - [ ] 2 polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
 - [ ] 3 see from cease plugin, how to inline-render a string
 - [ ] 3 more hotkeys, even for vim users.

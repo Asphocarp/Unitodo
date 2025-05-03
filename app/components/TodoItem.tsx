@@ -148,13 +148,13 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     try {
       // Generate a unique nanoid (20 characters)
       const id = nanoid(20);
-      
-      // Parse current content to extract parts
-      const parsed = parseTodoContent(todo.content);
-      
-      // Create new content with the unique ID
-      // Format: [priority]#[nanoid] [mainContent]
-      const newContent = parsed.priority ? `${parsed.priority}#${id} ${parsed.mainContent.replace(parsed.priority, '').trim()}` : `1#${id} ${parsed.mainContent}`;
+      const literal_first_word = todo.content.split(' ')[0];
+      // Check if literal_first_word is alphanumeric
+      const isAlphanumeric = literal_first_word && /^[a-zA-Z0-9]+$/.test(literal_first_word);
+      // If literal_first_word is not alphanumeric, use "1" as the priority and don't replace anything
+      const newContent = isAlphanumeric 
+        ? `${literal_first_word}#${id} ${todo.content.replace(literal_first_word, '').trim()}`
+        : `1#${id} ${todo.content}`;
       setEditedContent(newContent);
       
       // Save the updated todo
