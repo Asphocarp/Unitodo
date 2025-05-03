@@ -14,9 +14,19 @@ export default function NerdFontIcon({ icon, category, className = '' }: NerdFon
   useEffect(() => {
     // Check if the Nerd Font is loaded
     document.fonts.ready.then(() => {
-      setFontLoaded(true);
+      // Try to detect if the font is actually loaded and rendered correctly
+      const testElement = document.createElement('span');
+      testElement.style.fontFamily = '"Hack", monospace';
+      testElement.textContent = icon;
+      document.body.appendChild(testElement);
+      
+      // If the width is extremely small, the font likely isn't being rendered correctly
+      const isRendered = testElement.offsetWidth > 0;
+      document.body.removeChild(testElement);
+      
+      setFontLoaded(isRendered);
     });
-  }, []);
+  }, [icon]);
   
   // Map category names to appropriate fallback icons
   const getFallbackIcon = () => {
