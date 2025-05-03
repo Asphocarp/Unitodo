@@ -1,4 +1,5 @@
-use clap::Parser;
+use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middleware, error::ErrorInternalServerError, HttpResponse};
+use std::sync::Arc;
 use std::process::Command;
 use std::str;
 use std::fs::File;
@@ -11,17 +12,8 @@ use glob::Pattern;
 use regex::Regex;
 use std::time::Instant;
 
-// --- CLI Arguments ---
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Enable debug mode
-    #[arg(short, long, default_value_t = false)]
-    debug: bool,
-}
-
 // --- Configuration Structure ---
-#[derive(Deserialize, Debug, Default)] // Added Default
+#[derive(Deserialize, Debug, Default, Clone)] // Added Clone
 struct Config {
     #[serde(default = "default_output_file")]
     output_file: String,
@@ -31,7 +23,7 @@ struct Config {
     projects: HashMap<String, Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)] // Add Clone here
 struct AgConfig {
     #[serde(default = "default_ag_pattern")]
     pattern: String,
@@ -167,6 +159,14 @@ struct OutputData {
     categories: Vec<TodoCategoryData>,
 }
 
+// --- Request Payload for Editing ---
+#[derive(Deserialize, Debug)]
+struct EditTodoPayload {
+    location: String, // "path/to/file.rs:123"
+    new_content: String, // The new text content for the TODO item
+    completed: bool, // The new completion status
+}
+
 // --- TODO Category Enum ---
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 enum TodoCategory {
@@ -186,19 +186,12 @@ impl TodoCategory {
     }
 }
 
-// --- Main Logic ---
-fn main() -> io::Result<()> {
-    let args = Args::parse(); // Parse CLI arguments
-    let start_time = Instant::now(); // Record start time
+// --- Core TODO Finding Logic ---
+fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
+    let start_time = Instant::now();
 
-    if args.debug {
-        println!("Debug mode enabled.");
-        println!("[{:.2?}] Starting execution", start_time.elapsed());
-    }
-
-    let config = load_config()?;
-    if args.debug {
-         println!("[{:.2?}] Config loaded: {:?}", start_time.elapsed(), config); // Moved debug print here
+    if debug {
+        println!("[{:.2?}] Starting TODO processing", start_time.elapsed());
     }
 
     // Construct the command to run `ag`
@@ -226,24 +219,22 @@ fn main() -> io::Result<()> {
     for path in &config.ag.paths {
         command.arg(path);
     }
-    if args.debug {
+    if debug {
         println!("[{:.2?}] Command constructed in {:.2?}", start_time.elapsed(), build_command_start.elapsed());
+        println!("[{:.2?}] Running command: {:?}", start_time.elapsed(), command);
     }
 
     // Execute the command and capture its output
     let run_ag_start = Instant::now();
-    if args.debug {
-        println!("[{:.2?}] Running command: {:?}", start_time.elapsed(), command); // Moved debug print here
-    }
     let output = command.output()?;
-    if args.debug {
+    if debug {
         println!("[{:.2?}] ag command finished in {:.2?}", start_time.elapsed(), run_ag_start.elapsed());
     }
 
     // Check if the command executed successfully
     if output.status.success() {
         let process_output_start = Instant::now();
-        if args.debug {
+        if debug {
             println!("[{:.2?}] Processing ag output...", start_time.elapsed());
         }
         match str::from_utf8(&output.stdout) {
@@ -300,7 +291,7 @@ fn main() -> io::Result<()> {
                                             }
                                         }
                                         Err(e) => {
-                                            if args.debug {
+                                            if debug {
                                                 eprintln!("Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
                                             }
                                         }
@@ -313,7 +304,7 @@ fn main() -> io::Result<()> {
                                     Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
                                     Ok(None) => {} // Stays Other
                                     Err(e) => {
-                                        if args.debug {
+                                        if debug {
                                             eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
                                         }
                                     }
@@ -331,12 +322,12 @@ fn main() -> io::Result<()> {
                                          .push(todo_item);
                         } // ... (rest of line parsing warnings) ...
                         else if !line.trim().is_empty() {
-                            if args.debug {
+                            if debug {
                                 eprintln!("Warning: Skipping line where pattern '{}' was not found (ag output discrepancy?): {}", config.ag.pattern, line);
                             }
                         }
                     } else if !line.trim().is_empty() {
-                         if args.debug {
+                         if debug {
                             eprintln!("Warning: Skipping line that might be empty or unexpectedly formatted: {}", line);
                          }
                     }
@@ -374,40 +365,23 @@ fn main() -> io::Result<()> {
                     categories: output_categories,
                 };
 
-                if args.debug {
+                if debug {
                     println!("[{:.2?}] Output processed and structured in {:.2?}", start_time.elapsed(), process_output_start.elapsed());
                     println!("[{:.2?}] Structuring/sorting took {:.2?}", start_time.elapsed(), format_output_start.elapsed());
+                    println!("[{:.2?}] Total processing time: {:.2?}", start_time.elapsed(), start_time.elapsed());
                 }
 
-                // Write JSON output
-                let write_output_start = Instant::now();
-                let output_file_path = Path::new(&config.output_file);
-                let file = File::create(&output_file_path)?;
-
-                // Use serde_json to write pretty-printed JSON
-                match serde_json::to_writer_pretty(file, &final_data) {
-                    Ok(_) => {
-                        println!("Successfully wrote JSON TODOs to {}", output_file_path.display());
-                        if args.debug {
-                             println!("[{:.2?}] JSON output file written in {:.2?}", start_time.elapsed(), write_output_start.elapsed());
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error writing JSON to {}: {}", output_file_path.display(), e);
-                        return Err(io::Error::new(io::ErrorKind::Other, format!("Failed to write JSON: {}", e)));
-                    }
-                }
+                Ok(final_data)
             }
             Err(e) => {
-                if args.debug {
+                if debug {
                     eprintln!("Error converting ag output to UTF-8: {}", e);
                 }
-                return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert ag stdout to UTF-8: {}", e)));
+                Err(io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert ag stdout to UTF-8: {}", e)))
             }
         }
     } else {
         // If the command failed, print the error output (stderr)
-        // This should always be printed if the command fails, regardless of debug mode
         match str::from_utf8(&output.stderr) {
             Ok(stderr_str) => {
                 eprintln!("ag command failed:\n{}", stderr_str);
@@ -416,11 +390,179 @@ fn main() -> io::Result<()> {
                 eprintln!("ag command failed and error converting ag stderr to UTF-8: {}", e);
             }
         }
-        return Err(io::Error::new(io::ErrorKind::Other, "ag command failed"));
+        Err(io::Error::new(io::ErrorKind::Other, "ag command failed"))
+    }
+}
+
+// --- Core TODO Editing Logic ---
+fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<()> {
+    // 1. Parse location
+    let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
+    if location_parts.len() != 2 {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format. Expected 'path/to/file:line_number'"));
+    }
+    let file_path_str = location_parts[0];
+    let line_number: usize = match location_parts[1].parse() {
+        Ok(num) if num > 0 => num,
+        _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid line number in location")),
+    };
+    let line_index = line_number - 1; // Convert to 0-based index
+
+    let file_path = Path::new(file_path_str);
+    if !file_path.exists() || !file_path.is_file() {
+         return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
     }
 
-    if args.debug {
-        println!("[{:.2?}] Total execution time: {:.2?}", start_time.elapsed(), start_time.elapsed());
+    // 2. Read the file content
+    let original_content = std::fs::read_to_string(file_path)?;
+    let mut lines: Vec<String> = original_content.lines().map(String::from).collect();
+
+    // 3. Find and modify the line
+    if line_index >= lines.len() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Line number {} is out of bounds for file {}", line_number, file_path_str)));
     }
+
+    let original_line = &lines[line_index];
+
+    // Re-compile the todo pattern regex from the config to find the start of the todo text
+    let todo_pattern_re = match Regex::new(&config.ag.pattern) {
+        Ok(re) => re,
+        Err(e) => {
+            // Use eprintln for internal errors, let handler return generic server error
+            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern in config"));
+        }
+    };
+
+    // Find the match of the TODO pattern on the target line
+    if let Some(mat) = todo_pattern_re.find(original_line) {
+        let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
+        let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME")
+        // Find the index of the first non-whitespace character after the pattern match
+        let content_start_index = original_line[mat.end()..]
+            .find(|c: char| !c.is_whitespace())
+            .map(|i| mat.end() + i)
+            .unwrap_or(original_line.len()); // Use end of line if only whitespace follows pattern
+        // Capture the original spacing between the pattern and the content/checkbox
+        let original_spacing = &original_line[mat.end()..content_start_index];
+
+        // Construct the new line using the captured original spacing and the new content
+        // Format: prefix + pattern + original_spacing + new_content
+        let new_line_content = format!("{}{}{}{}",
+            prefix,
+            pattern_match,
+            original_spacing,
+            payload.new_content.trim() // Directly use the new content
+        );
+
+        lines[line_index] = new_line_content;
+    } else {
+        // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
+        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.ag.pattern, line_number, file_path_str)));
+    }
+
+    // 4. Write the modified content back to the file
+    let new_file_content = lines.join("\n");
+    // Add a trailing newline if the original file had one (important for many tools)
+    let final_content = if original_content.ends_with('\n') && !new_file_content.is_empty() {
+        format!("{}\n", new_file_content)
+    } else {
+        new_file_content
+    };
+
+    // Use write which truncates/overwrites
+    std::fs::write(file_path, final_content)?;
+
     Ok(())
+}
+
+// --- API Handler ---
+async fn get_todos_handler(config: web::Data<Arc<Config>>) -> ActixResult<impl Responder> {
+    // For simplicity, always run in non-debug mode for the API
+    // Could make this configurable later if needed
+    let debug_mode = false;
+
+    // Run the core logic
+    // Use web::block for potentially blocking operations like running `ag`
+    let result = web::block(move || find_and_process_todos(&config, debug_mode)).await;
+
+    match result {
+        Ok(output_data_result) => match output_data_result {
+             Ok(data) => Ok(web::Json(data)),
+             Err(e) => {
+                 eprintln!("Error processing TODOs: {}", e);
+                 // Convert the io::Error into an Actix error
+                 Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))
+             }
+        },
+        Err(e) => {
+             eprintln!("Error running blocking task: {}", e);
+             Err(ErrorInternalServerError(format!("Internal server error: {}", e)))
+        }
+    }
+}
+
+// --- API Handler for Editing TODOs ---
+async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<EditTodoPayload>) -> ActixResult<impl Responder> {
+    let config_clone = config.clone();
+    let payload_inner = payload.into_inner(); // Move payload into the closure
+
+    // Use web::block for file system operations
+    let result = web::block(move || edit_todo_in_file(&config_clone, &payload_inner)).await;
+
+    match result {
+        Ok(Ok(())) => Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))),
+        Ok(Err(e)) => {
+            eprintln!("Error editing TODO in file: {}", e);
+            // Map specific IO errors to HTTP status codes
+            let status_code = match e.kind() {
+                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
+                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
+                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
+                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            Err(actix_web::error::InternalError::new(e.to_string(), status_code).into())
+        },
+        Err(e) => {
+            eprintln!("Error running blocking task for edit: {}", e);
+            Err(ErrorInternalServerError(format!("Internal server error during edit task: {}", e)))
+        }
+    }
+}
+
+// --- Main Function (Actix Server Setup) ---
+#[actix_web::main]
+async fn main() -> io::Result<()> {
+    // Initialize logging
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    println!("Loading configuration...");
+    let config = match load_config() {
+        Ok(cfg) => Arc::new(cfg), // Wrap config in Arc for sharing across threads
+        Err(e) => {
+            eprintln!("Fatal: Failed to load configuration: {}", e);
+            return Err(e);
+        }
+    };
+    println!("Configuration loaded successfully.");
+    //println!("Config loaded: {:?}", *config); // Debug print if needed
+
+    let server_address = "127.0.0.1";
+    let server_port = 8080; // Example port, make configurable later if needed
+
+    println!("Starting server at http://{}:{}", server_address, server_port);
+
+    HttpServer::new(move || {
+        App::new()
+            // Enable logger middleware
+            .wrap(middleware::Logger::default())
+            // Share config with handlers
+            .app_data(web::Data::new(config.clone()))
+            // Define API routes
+            .route("/todos", web::get().to(get_todos_handler))       // Route to get all todos
+            .route("/edit-todo", web::post().to(edit_todo_handler))  // Route to edit a todo
+    })
+    .bind((server_address, server_port))?
+    .run()
+    .await
 }

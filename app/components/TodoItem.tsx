@@ -1,43 +1,51 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TodoItem as TodoItemType } from '../types';
+import { editTodoItem } from '../services/todoService';
 import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
+import { EditorState, $getRoot } from 'lexical'; // Import EditorState and $getRoot
+import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/solid';
 
 interface TodoItemProps {
   todo: TodoItemType;
+  onEditSuccess?: () => void;
 }
 
-export default function TodoItem({ todo }: TodoItemProps) {
-  const [hovered, setHovered] = React.useState(false);
-  
-  // If the location contains a file path, extract just the filename and line number
+export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
+  const [hovered, setHovered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(todo.content);
+  const [isCompleted, setIsCompleted] = useState(todo.completed);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedContent(todo.content);
+      setIsCompleted(todo.completed);
+    }
+  }, [todo.content, todo.completed, isEditing]);
+
   const { formattedLocation, fullPath, lineNumber } = React.useMemo(() => {
     if (!todo.location) return { formattedLocation: '', fullPath: '', lineNumber: '' };
-    
-    // Extract line number if present
     let line = '';
     const lineMatch = todo.location.match(/\:(\d+)$/);
     if (lineMatch) {
       line = lineMatch[1];
     }
-    
-    // If we have a full file path, extract just the filename
     const match = todo.location.match(/([^\/\\]+)(\:\d+)?$/);
     const formatted = match ? match[0] : todo.location;
-    
-    return { 
+    return {
       formattedLocation: formatted,
-      fullPath: todo.location.replace(/\:\d+$/, ''), // Remove line number for path
+      fullPath: todo.location.replace(/\:\d+$/, ''),
       lineNumber: line
     };
   }, [todo.location]);
-  
-  // Create VSCode URL to open the file directly
+
   const getVSCodeUrl = () => {
     if (!fullPath) return null;
-    
     let url = `cursor://file/${fullPath}`;
     if (lineNumber) {
       url += `:${lineNumber}`;
@@ -45,46 +53,111 @@ export default function TodoItem({ todo }: TodoItemProps) {
     return url;
   };
 
-  // Parse only to determine read-only status and validity
   const parsed = parseTodoContent(todo.content);
   const isReadOnly = !parsed.isUnique;
-  const isValidTodoFormat = parsed.isValidTodoFormat; // Keep track of validity
+  const isValidTodoFormat = parsed.isValidTodoFormat;
 
-  const handleEditorChange = (editorState: any) => {
-    // TODO: Implement saving logic
-    // console.log(JSON.stringify(editorState));
+  const handleSave = async () => {
+    if (isSaving || isReadOnly) return;
+    setError(null);
+    setIsSaving(true);
+    try {
+      await editTodoItem({
+        location: todo.location,
+        new_content: editedContent,
+        completed: isCompleted,
+      });
+      setIsEditing(false);
+      if (onEditSuccess) onEditSuccess();
+    } catch (err: any) {
+      console.error('Error saving todo:', err);
+      setError(err.message || 'Failed to save changes.');
+    } finally {
+      setIsSaving(false);
+    }
   };
-  
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedContent(todo.content);
+    setIsCompleted(todo.completed);
+    setError(null);
+  };
+
+  const handleEditorContentChange = (editorState: EditorState) => {
+    if (!isReadOnly) {
+      editorState.read(() => {
+        const root = $getRoot();
+        const text = root.getTextContent();
+        setEditedContent(text);
+      });
+    }
+  };
+
+  const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
+    const newCompletedStatus = e.target.checked;
+    setIsCompleted(newCompletedStatus);
+    setError(null);
+    setIsSaving(true);
+    try {
+      const contentToSave = isEditing ? editedContent : todo.content;
+      await editTodoItem({
+        location: todo.location,
+        new_content: contentToSave,
+        completed: newCompletedStatus,
+      });
+      if (onEditSuccess) onEditSuccess();
+    } catch (err: any) {
+      console.error('Error saving checkbox state:', err);
+      setError(err.message || 'Failed to save completion status.');
+      setIsCompleted(!newCompletedStatus);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div 
-      className={`flex items-start gap-2 p-3 border-b border-gray-200 ${hovered ? 'bg-gray-50' : ''} ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
+    <div
+      className={`flex items-start gap-3 p-3 border-b border-gray-200 group relative ${
+        hovered ? 'bg-gray-50' : ''
+      } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={isReadOnly ? 'This TODO cannot be edited here. Edit the original source file.' : undefined}
+      title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : undefined}
     >
-      <div className="flex-shrink-0 mt-0.5">
-        <input 
-          type="checkbox" 
-          checked={todo.completed}
-          readOnly
-          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+      {/* Checkbox */}
+      <div className="flex-shrink-0 mt-1">
+        <input
+          type="checkbox"
+          checked={isCompleted}
+          onChange={handleCheckboxChange}
+          disabled={isReadOnly || isSaving}
+          className={`h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         />
       </div>
+
+      {/* Content Area (Editor or Display) */}
       <div className="min-w-0 flex-1">
-        <div className={`text-sm ${todo.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-          {isValidTodoFormat ? (
-            <LexicalTodoEditor
-              initialFullContent={todo.content}
-              isReadOnly={isReadOnly}
-              onChange={handleEditorChange} 
-            />
-          ) : (
-            <span className="text-gray-400 italic">{todo.content}</span>
-          )}
+        <div
+          className={`text-sm ${isCompleted && !isEditing ? 'line-through text-gray-500' : 'text-gray-900'} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
+          onClick={() => {
+            if (!isEditing && !isReadOnly) {
+              setIsEditing(true);
+            }
+          }}
+        >
+          <LexicalTodoEditor
+            initialFullContent={editedContent}
+            isReadOnly={!isEditing || isReadOnly}
+            onChange={handleEditorContentChange}
+          />
         </div>
+
+        {/* Location Link */}
         {todo.location && (
-          <a 
-            href={getVSCodeUrl() || '#'} 
+          <a
+            href={getVSCodeUrl() || '#'}
             className="text-xs text-gray-500 mt-1 flex items-center hover:text-indigo-600 group"
             title={todo.location}
             target="_blank"
@@ -101,14 +174,47 @@ export default function TodoItem({ todo }: TodoItemProps) {
             {formattedLocation}
           </a>
         )}
+
+        {/* Error Message */}
+        {error && (
+          <p className="mt-1 text-xs text-red-600">Error: {error}</p>
+        )}
       </div>
-      {hovered && (
-        <div className="flex-shrink-0 text-gray-400 cursor-pointer">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-          </svg>
-        </div>
-      )}
+
+      {/* Action Buttons (Edit/Save/Cancel) - Show on hover or when editing */}
+      <div className={`absolute top-2 right-2 flex items-center gap-2 transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+        {isEditing ? (
+          <>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              title="Save changes"
+            >
+              <CheckIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="p-1 text-red-600 hover:text-red-800 disabled:opacity-50"
+              title="Cancel edit"
+            >
+              <XCircleIcon className="h-5 w-5" />
+            </button>
+          </>
+        ) : (
+          !isReadOnly && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-1 text-gray-500 hover:text-indigo-600"
+              title="Edit todo"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+          )
+        )}
+        {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500"></div>}
+      </div>
     </div>
   );
 } 
