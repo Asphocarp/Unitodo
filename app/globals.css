@@ -192,4 +192,16 @@ body {
 .hn-completed {
   color: var(--subtle-color);
   text-decoration: line-through;
+}
+
+/* Tab styles */
+.flex.flex-wrap button {
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+
+/* Ensure nerd font icons display correctly */
+.nerd-font-icon {
+  font-family: 'Hack', monospace;
+  display: inline-block;
 } 

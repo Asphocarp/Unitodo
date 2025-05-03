@@ -6,6 +6,7 @@ import { fetchTodoData } from '../services/todoService';
 import TodoCategory from './TodoCategory';
 import TodoItem from './TodoItem';
 import isEqual from 'lodash/isEqual'; // Import lodash for deep comparison
+import NerdFontIcon from './NerdFontIcon';
 
 export default function Todo() {
   const [categories, setCategories] = useState<TodoCategoryType[]>([]);
@@ -149,18 +150,22 @@ export default function Todo() {
   const renderTabs = () => {
     return (
       <div>
-        <div className="flex border-b border-border-color text-xs">
+        <div className="flex flex-wrap border-b border-border-color text-xs overflow-visible">
           {filteredCategories.map((category, index) => (
             <button
               key={index}
-              className={`px-2 py-1 font-medium ${
+              className={`px-2 py-1 my-1 mr-1 font-medium ${
                 activeTabIndex === index
                 ? 'border-b-2 border-accent-color font-bold'
                 : 'text-subtle-color'
               }`}
               onClick={() => setActiveTabIndex(index)}
             >
-              <span className="text-sm">{category.icon}</span>
+              <NerdFontIcon 
+                icon={category.icon} 
+                category={category.name} 
+                className="text-sm"
+              />
               {category.name}
               <span className="ml-1 text-subtle-color">
                 ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
