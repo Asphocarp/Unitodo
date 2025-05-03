@@ -157,8 +157,8 @@ export function parseTodoContent(content: string): ParsedTodo {
 
     // Corrected Group Indices Explanation:
     // Group 1: leadingWhitespace?                  e.g., '   '
-    // Group 2: firstWord                           e.g., '1@abcde@@fghij'
-    // Group 3:   priority?                          e.g., '1'
+    // Group 2: firstWord                           e.g., '123@abcde@@fghij'
+    // Group 3:   priority?                          e.g., '123'
     // Group 4:   idPart (@ | ## | #)                e.g., '@abcde'
     // Group 5:   donePart? (@@...)                  e.g., '@@fghij'
     // Group 6: separatorAndContent? (\s+ .*)        e.g., '  the content'

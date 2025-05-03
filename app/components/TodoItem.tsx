@@ -6,7 +6,8 @@ import { editTodoItem } from '../services/todoService';
 import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical'; // Import EditorState and $getRoot
-import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon, KeyIcon } from '@heroicons/react/24/solid';
+import { nanoid } from 'nanoid';
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -123,6 +124,41 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     }
   };
 
+  const addUniqueId = async () => {
+    if (isSaving || !isReadOnly) return;
+    setError(null);
+    setIsSaving(true);
+    
+    try {
+      // Generate a unique nanoid (20 characters)
+      const id = nanoid(20);
+      
+      // Parse current content to extract parts
+      const parsed = parseTodoContent(todo.content);
+      
+      // Create new content with the unique ID
+      // Format: [priority]#[nanoid] [mainContent]
+      const priority = parsed.priority || '1'; // Default priority to 1 if not present
+      const newContent = `${priority}#${id} ${parsed.mainContent}`;
+      setEditedContent(newContent);
+      
+      // Save the updated todo
+      await editTodoItem({
+        location: todo.location,
+        new_content: newContent,
+        completed: isCompleted,
+      });
+      
+      if (onEditSuccess) onEditSuccess();
+    } catch (err: any) {
+      console.error('Error adding unique ID:', err);
+      setError(err.message || 'Failed to add unique ID.');
+      setEditedContent(todo.content);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div
       className={`flex items-start gap-3 p-3 border-b border-gray-200 group relative ${
@@ -210,15 +246,27 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
             </button>
           </>
         ) : (
-          !isReadOnly && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-1 text-gray-500 hover:text-indigo-600"
-              title="Edit todo"
-            >
-              <PencilIcon className="h-4 w-4" />
-            </button>
-          )
+          <>
+            {isReadOnly && (
+              <button
+                onClick={addUniqueId}
+                disabled={isSaving}
+                className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                title="Add unique ID to make editable"
+              >
+                <KeyIcon className="h-4 w-4" />
+              </button>
+            )}
+            {!isReadOnly && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1 text-gray-500 hover:text-indigo-600"
+                title="Edit todo"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+            )}
+          </>
         )}
         {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500"></div>}
       </div>
