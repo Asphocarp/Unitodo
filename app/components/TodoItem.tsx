@@ -6,8 +6,39 @@ import { editTodoItem } from '../services/todoService';
 import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical'; // Import EditorState and $getRoot
-import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon, KeyIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon, KeyIcon, ClockIcon } from '@heroicons/react/24/solid';
 import { nanoid } from 'nanoid';
+
+// Function to generate a 5-character timestamp in URL-safe base64 format
+// Starting from 25.1.1 (as specified in the README)
+function generateTimestamp(): string {
+  // Custom Epoch: January 1, 2025 00:00:00 UTC
+  const now = new Date();
+  const currentUnixTimestamp = Math.floor(now.getTime() / 1000);
+  const customEpoch = Math.floor(new Date('2025-01-01T00:00:00Z').getTime() / 1000);
+  const secondsSinceCustomEpoch = currentUnixTimestamp - customEpoch;
+  // const secondsSinceCustomEpoch = currentUnixTimestamp;
+
+  // Ensure the timestamp is non-negative (for dates before 2025)
+  const timestampValue = Math.max(0, secondsSinceCustomEpoch);
+
+  // --- Direct 30-bit Number to 5 URL-Safe Base64 Chars ---
+  const urlSafeBase64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let base64Timestamp = '';
+
+  // Extract 5x 6-bit chunks directly from the 30-bit timestampValue
+  // (Assuming timestampValue fits within 30 bits for the next ~34 years; 2025-2059)
+  const mask6bit = 0x3F; // === 63 === 111111 in binary
+
+  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 24) & mask6bit); // Bits 29-24
+  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 18) & mask6bit); // Bits 23-18
+  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 12) & mask6bit); // Bits 17-12
+  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 6) & mask6bit);  // Bits 11-6
+  base64Timestamp += urlSafeBase64Chars.charAt(timestampValue & mask6bit);        // Bits 5-0
+  // --- End of Direct Encoding ---
+
+  return base64Timestamp;
+}
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -180,6 +211,47 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     }
   };
 
+  const addTimestamp = async () => {
+    if (isSaving || !isReadOnly) return;
+    setError(null);
+    setIsSaving(true);
+    
+    try {
+      // Generate a 5-character timestamp
+      const timestamp = generateTimestamp();
+      
+      const literal_first_word = todo.content.split(' ')[0];
+      // Check if literal_first_word is alphanumeric
+      const isAlphanumeric = literal_first_word && /^[a-zA-Z0-9]+$/.test(literal_first_word);
+      // If literal_first_word is not alphanumeric, use "1" as the priority and don't replace anything
+      const newContent = isAlphanumeric 
+        ? `${literal_first_word}@${timestamp} ${todo.content.replace(literal_first_word, '').trim()}`
+        : `1@${timestamp} ${todo.content}`;
+      setEditedContent(newContent);
+      
+      // Save the updated todo
+      await editTodoItem({
+        location: todo.location,
+        new_content: newContent,
+        completed: isCompleted,
+      });
+      
+      // Create updated todo object with the new content that includes timestamp
+      const updatedTodo = {
+        ...todo,
+        content: newContent
+      };
+      
+      if (onEditSuccess) onEditSuccess(updatedTodo);
+    } catch (err: any) {
+      console.error('Error adding timestamp:', err);
+      setError(err.message || 'Failed to add timestamp.');
+      setEditedContent(todo.content);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div
       className={`flex items-start gap-3 p-3 border-b border-gray-200 group relative ${
@@ -269,14 +341,24 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
         ) : (
           <>
             {isReadOnly && (
-              <button
-                onClick={addUniqueId}
-                disabled={isSaving}
-                className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                title="Add unique ID to make editable"
-              >
-                <KeyIcon className="h-4 w-4" />
-              </button>
+              <>
+                <button
+                  onClick={addUniqueId}
+                  disabled={isSaving}
+                  className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                  title="Add unique ID to make editable"
+                >
+                  <KeyIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={addTimestamp}
+                  disabled={isSaving}
+                  className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                  title="Add timestamp to make editable"
+                >
+                  <ClockIcon className="h-4 w-4" />
+                </button>
+              </>
             )}
             {!isReadOnly && (
               <button
