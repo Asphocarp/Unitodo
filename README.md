@@ -43,8 +43,13 @@ where:
 
 ## todo
 
+- [ ] 0 now that it works, i need:
+    - [ ] 2@AoVtC polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
+    - [ ] 3@AoVsT more hotkeys, even for vim users.
+
+- [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [ ] 1 add a button to insert a nanoid/incremented-id for the-first-word, for those without unique-ensured id
-- [ ] 1#jvxJSUV_L1VgU5c3uleQ 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
+- [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
@@ -53,9 +58,7 @@ where:
 - [ ] 2@AoVtD show dependency of todos?
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
 - [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
-- [ ] 2@AoVtC polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
-- [ ] 3@AoVsT more hotkeys, even for vim users.
 
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
 - [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
