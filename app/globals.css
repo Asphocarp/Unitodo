@@ -62,7 +62,7 @@
   --border-color: #eaeaea;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 230, 230, 230;
     --background-rgb: 25, 25, 25;
@@ -72,7 +72,7 @@
     --subtle-color: #828282;
     --border-color: #444444;
   }
-}
+} */
 
 body {
   color: rgb(var(--foreground-rgb));
@@ -205,4 +205,38 @@ body {
 .nerd-font-icon {
   font-family: 'Hack', monospace;
   display: inline-block;
+}
+
+/* Add styles for keyboard focus */
+.focused {
+  outline: 2px solid #4f46e5 !important; /* Accent color for focus */
+  outline-offset: 1px;
+  position: relative;
+  z-index: 10;
+}
+
+/* Style for keyboard navigation */
+.hn-todo-item:focus,
+.hn-category-header:focus {
+  outline: 2px solid #4f46e5;
+  outline-offset: 1px;
+}
+
+/* Ensure focused element is visible */
+.hn-todo-item.focused {
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+/* Style for keyboard shortcut display */
+kbd {
+  background-color: #f1f1f1;
+  border: 1px solid #d3d3d3;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  display: inline-block;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.1rem 0.4rem;
+  margin: 0 0.1rem;
+  vertical-align: middle;
 } 
