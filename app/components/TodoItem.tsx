@@ -5,8 +5,7 @@ import { TodoItem as TodoItemType } from '../types';
 import { editTodoItem } from '../services/todoService';
 import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
-import { EditorState, $getRoot } from 'lexical'; // Import EditorState and $getRoot
-import { CheckCircleIcon, XCircleIcon, PencilIcon, CheckIcon, KeyIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
 
 // Function to generate a 5-character timestamp in URL-safe base64 format
@@ -225,7 +224,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 p-3 border-b border-gray-200 group relative ${
+      className={`hn-todo-item ${
         hovered ? 'bg-gray-50' : ''
       } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'pointer-events-none' : ''}`}
       onMouseEnter={() => setHovered(true)}
@@ -233,20 +232,20 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
       title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : undefined}
     >
       {/* Checkbox */}
-      <div className="flex-shrink-0 mt-1">
+      <div>
         <input
           type="checkbox"
           checked={isCompleted}
           onChange={handleCheckboxChange}
           disabled={isReadOnly || isSaving}
-          className={`h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`hn-checkbox ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         />
       </div>
 
-      {/* Content Area (Editor or Display) */}
-      <div className="min-w-0 flex-1">
+      {/* Content Area */}
+      <div className="hn-todo-content">
         <div
-          className={`text-sm ${isCompleted && !isEditing ? 'line-through text-gray-500' : 'text-gray-900'} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
+          className={`${isCompleted && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
           onClick={() => {
             if (!isEditing && !isReadOnly) {
               setIsEditing(true);
@@ -265,7 +264,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
         {todo.location && (
           <a
             href={getVSCodeUrl() || '#'}
-            className="text-xs text-gray-500 mt-1 flex items-center hover:text-indigo-600 group"
+            className="hn-todo-location"
             title={todo.location}
             target="_blank"
             rel="noopener noreferrer"
@@ -275,38 +274,35 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
               }
             }}
           >
-            <svg className="h-3 w-3 mr-1 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
             {formattedLocation}
           </a>
         )}
 
         {/* Error Message */}
         {error && (
-          <p className="mt-1 text-xs text-red-600">Error: {error}</p>
+          <div className="text-xs text-red-600">Error: {error}</div>
         )}
       </div>
 
-      {/* Action Buttons (Edit/Save/Cancel) - Show on hover or when editing */}
-      <div className={`absolute top-2 right-2 flex items-center gap-2 transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+      {/* Action Buttons */}
+      <div className={`flex items-center transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0'}`}>
         {isEditing ? (
           <>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              className="hn-action-button"
               title="Save changes"
             >
-              <CheckIcon className="h-5 w-5" />
+              save
             </button>
             <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="p-1 text-red-600 hover:text-red-800 disabled:opacity-50"
+              className="hn-action-button"
               title="Cancel edit"
             >
-              <XCircleIcon className="h-5 w-5" />
+              cancel
             </button>
           </>
         ) : (
@@ -316,33 +312,33 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
                 <button
                   onClick={addUniqueId}
                   disabled={isSaving}
-                  className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                  className="hn-action-button"
                   title="Add unique ID to make editable"
                 >
-                  <KeyIcon className="h-4 w-4" />
+                  id
                 </button>
                 <button
                   onClick={addTimestamp}
                   disabled={isSaving}
-                  className="p-1 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                  className="hn-action-button"
                   title="Add timestamp to make editable"
                 >
-                  <ClockIcon className="h-4 w-4" />
+                  time
                 </button>
               </>
             )}
             {!isReadOnly && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1 text-gray-500 hover:text-indigo-600"
+                className="hn-action-button"
                 title="Edit todo"
               >
-                <PencilIcon className="h-4 w-4" />
+                edit
               </button>
             )}
           </>
         )}
-        {isSaving && <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500"></div>}
+        {isSaving && <div className="animate-spin h-3 w-3 border-t-2 border-b-2 border-accent-color ml-1"></div>}
       </div>
     </div>
   );

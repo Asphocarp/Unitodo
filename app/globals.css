@@ -6,45 +6,45 @@
 .unitodo-priority-node,
 .unitodo-id-node,
 .unitodo-done-node {
-  display: inline-block; /* Or inline-flex if more complex content */
-  padding: 1px 4px;
+  display: inline-block;
+  padding: 0 1px;
   margin: 0 0.5px;
-  border-radius: 4px;
-  font-size: 0.8em; /* Slightly smaller */
-  font-weight: 500; /* Medium weight */
-  line-height: 1.4; /* Adjust for vertical alignment */
-  cursor: default; /* Indicate non-editable */
-  user-select: none; /* Prevent text selection */
-  vertical-align: baseline; /* Align with surrounding text */
+  border-radius: 2px;
+  font-size: 0.75em;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: default;
+  user-select: none;
+  vertical-align: baseline;
 }
 
 .unitodo-priority-node {
-  background-color: #e0f2fe; /* Light blue */
-  color: #0c4a6e; /* Darker blue */
+  background-color: #e0f2fe;
+  color: #0c4a6e;
   border: 1px solid #bae6fd;
 }
 
 .unitodo-id-node {
-  background-color: #f3e8ff; /* Light purple */
-  color: #6b21a8; /* Darker purple */
+  background-color: #f3e8ff;
+  color: #6b21a8;
   border: 1px solid #e9d5ff;
 }
 
 .unitodo-done-node {
-  background-color: #dcfce7; /* Light green */
-  color: #166534; /* Darker green */
+  background-color: #dcfce7;
+  color: #166534;
   border: 1px solid #bbf7d0;
 }
 
 /* Optional: Placeholder styling for the editor */
 .editor-placeholder {
-  color: #a0aec0; /* Tailwind gray-500 */
+  color: #a0aec0;
   font-style: italic;
   position: absolute;
-  top: 0; /* Adjust as needed based on ContentEditable padding/position */
-  left: 0; /* Adjust as needed */
+  top: 0;
+  left: 0;
   pointer-events: none;
-  padding: inherit; /* Inherit padding from ContentEditable if possible */
+  padding: inherit;
 }
 
 /* Ensure ContentEditable has relative position if placeholder uses absolute */
@@ -55,16 +55,141 @@
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
+  --accent-color: #ff6600;
+  --link-color: #000000;
+  --link-hover-color: #ff6600;
+  --subtle-color: #828282;
+  --border-color: #eaeaea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-rgb: 30, 30, 30;
+    --foreground-rgb: 230, 230, 230;
+    --background-rgb: 25, 25, 25;
+    --accent-color: #ff6600;
+    --link-color: #dddddd;
+    --link-hover-color: #ff6600;
+    --subtle-color: #828282;
+    --border-color: #444444;
   }
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.hn-style {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem;
+}
+
+.hn-header {
+  background-color: var(--accent-color);
+  color: white;
+  padding: 0.15rem 0.5rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.hn-title {
+  font-weight: bold;
+  font-size: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.hn-meta {
+  font-size: 0.8rem;
+  color: var(--subtle-color);
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+
+.hn-compact-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hn-filter-button {
+  font-size: 0.8rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 0.1rem 0.3rem;
+  cursor: pointer;
+}
+
+.hn-filter-button.active {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.hn-search {
+  font-size: 0.8rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--border-color);
+}
+
+.hn-category {
+  border-top: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.hn-category-header {
+  font-size: 0.9rem;
+  font-weight: bold;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.hn-todo-item {
+  padding: 0.25rem 0;
+  display: flex;
+  border-top: 1px solid var(--border-color);
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.hn-todo-content {
+  flex: 1;
+  margin-left: 0.3rem;
+}
+
+.hn-todo-location {
+  font-size: 0.7rem;
+  color: var(--subtle-color);
+}
+
+.hn-checkbox {
+  width: 12px;
+  height: 12px;
+}
+
+.hn-action-button {
+  padding: 0;
+  margin: 0 0.1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: var(--subtle-color);
+}
+
+.hn-action-button:hover {
+  color: var(--link-hover-color);
+}
+
+.hn-completed {
+  color: var(--subtle-color);
+  text-decoration: line-through;
 } 

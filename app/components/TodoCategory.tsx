@@ -31,29 +31,27 @@ export default function TodoCategory({ category, onTodoUpdate }: TodoCategoryPro
   };
   
   return (
-    <div className="mb-6 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className="hn-category">
       <div 
-        className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100"
+        className="hn-category-header"
         onClick={() => setExpanded(!expanded)}
       >
-        <h2 className="text-lg font-medium flex items-center gap-2">
-          <NerdFontIcon 
-            icon={category.icon} 
-            category={category.name} 
-            className="text-xl"
-          />
-          <span>{category.name}</span>
-          <span className="ml-2 text-xs bg-gray-200 rounded-full px-2 py-0.5">
-            {completedCount}/{totalCount}
-          </span>
-        </h2>
-        <span className="text-gray-500">
+        <NerdFontIcon 
+          icon={category.icon} 
+          category={category.name} 
+          className="text-sm mr-1"
+        />
+        {category.name}
+        <span className="ml-1 text-subtle-color text-xs">
+          ({completedCount}/{totalCount})
+        </span>
+        <span className="ml-1 text-subtle-color text-xs">
           {expanded ? '▼' : '►'}
         </span>
       </div>
       
       {expanded && (
-        <div className="divide-y divide-gray-200">
+        <div>
           {category.todos.length > 0 ? (
             category.todos.map((todo, index) => (
               <TodoItem 
@@ -63,7 +61,7 @@ export default function TodoCategory({ category, onTodoUpdate }: TodoCategoryPro
               />
             ))
           ) : (
-            <div className="p-4 text-center text-gray-500">
+            <div className="text-center p-1 text-subtle-color text-xs">
               No todos in this category
             </div>
           )}

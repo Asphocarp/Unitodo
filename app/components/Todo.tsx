@@ -126,26 +126,16 @@ export default function Todo() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="flex justify-center items-center h-24">
+        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-accent-color"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 p-4 rounded-md">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">Error</h3>
-            <p className="text-sm text-red-700 mt-1">{error}</p>
-          </div>
-        </div>
+      <div className="bg-red-50 p-2 text-xs">
+        <strong>Error:</strong> {error}
       </div>
     );
   }
@@ -158,24 +148,22 @@ export default function Todo() {
   // Render tabs for tab mode
   const renderTabs = () => {
     return (
-      <div className="mb-4">
-        <div className="flex border-b border-gray-200">
+      <div>
+        <div className="flex border-b border-border-color text-xs">
           {filteredCategories.map((category, index) => (
             <button
               key={index}
-              className={`px-4 py-2 font-medium text-sm ${
+              className={`px-2 py-1 font-medium ${
                 activeTabIndex === index
-                ? 'border-b-2 border-indigo-500 text-indigo-600'
-                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } flex items-center gap-2`}
+                ? 'border-b-2 border-accent-color font-bold'
+                : 'text-subtle-color'
+              }`}
               onClick={() => setActiveTabIndex(index)}
             >
-              <span className="text-xl">
-                {category.icon}
-              </span>
+              <span className="text-sm">{category.icon}</span>
               {category.name}
-              <span className="ml-1 bg-gray-200 text-xs rounded-full px-2 py-0.5">
-                {category.todos.filter(todo => todo.completed).length}/{category.todos.length}
+              <span className="ml-1 text-subtle-color">
+                ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
               </span>
             </button>
           ))}
@@ -183,20 +171,18 @@ export default function Todo() {
         
         {/* Display active tab content */}
         {filteredCategories.length > 0 && (
-          <div className="mt-4 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="divide-y divide-gray-200">
-              {filteredCategories[activeTabIndex]?.todos.map((todo, index) => (
-                <TodoItem 
-                  key={`${todo.location}-${index}`} 
-                  todo={todo} 
-                  onEditSuccess={handleTodoUpdate} 
-                />
-              )) || (
-                <div className="p-4 text-center text-gray-500">
-                  No todos in this category
-                </div>
-              )}
-            </div>
+          <div>
+            {filteredCategories[activeTabIndex]?.todos.map((todo, index) => (
+              <TodoItem 
+                key={`${todo.location}-${index}`} 
+                todo={todo} 
+                onEditSuccess={handleTodoUpdate} 
+              />
+            )) || (
+              <div className="p-2 text-center text-subtle-color text-xs">
+                No todos in this category
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -204,111 +190,64 @@ export default function Todo() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Unitodo</h1>
-          <p className="text-gray-500 mt-1">
-            {totalTodos} tasks · {completedTodos} completed · {activeTodos} active
-            {lastUpdated && (
-              <span className="ml-2 text-xs text-gray-400">
-                Updated: {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-          </p>
-        </div>
+    <div className="hn-style">
+      <div className="hn-header">
+        <h1 className="hn-title">Unitodo</h1>
+        <span className="hn-meta">
+          {totalTodos} tasks · {completedTodos} completed · {activeTodos} active
+          {lastUpdated && (
+            <span className="ml-2">
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </span>
+      </div>
+      
+      <div className="hn-compact-controls">
+        <input
+          type="text"
+          placeholder="Search todos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="hn-search"
+        />
         
-        <div className="w-full md:w-auto flex flex-col md:flex-row gap-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search todos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-64 pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-            {searchQuery && (
-              <svg
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-600"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                onClick={() => setSearchQuery('')}
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </div>
-          
-          <div className="flex space-x-2">
-            <button 
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-              onClick={() => setFilter('all')}
-            >
-              All
-            </button>
-            <button 
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'active' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-              onClick={() => setFilter('active')}
-            >
-              Active
-            </button>
-            <button 
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'completed' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-              onClick={() => setFilter('completed')}
-            >
-              Completed
-            </button>
-            <button
-              className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-200 hover:bg-gray-300 transition-colors"
-              onClick={handleRefresh}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            
-            {/* Display mode toggle button */}
-            <button
-              className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                displayMode === 'tab' ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              } transition-colors`}
-              onClick={toggleDisplayMode}
-              title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode`}
-            >
-              {displayMode === 'section' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
+        <button 
+          className={`hn-filter-button ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          All
+        </button>
+        <button 
+          className={`hn-filter-button ${filter === 'active' ? 'active' : ''}`}
+          onClick={() => setFilter('active')}
+        >
+          Active
+        </button>
+        <button 
+          className={`hn-filter-button ${filter === 'completed' ? 'active' : ''}`}
+          onClick={() => setFilter('completed')}
+        >
+          Completed
+        </button>
+        <button
+          className="hn-filter-button"
+          onClick={handleRefresh}
+        >
+          ↻
+        </button>
+        
+        <button
+          className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''}`}
+          onClick={toggleDisplayMode}
+          title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode`}
+        >
+          {displayMode === 'section' ? '⊞' : '≡'}
+        </button>
       </div>
       
       {filteredCategories.length > 0 ? (
         displayMode === 'section' ? (
-          // Section mode (original layout)
           filteredCategories.map((category, index) => (
             <TodoCategory 
               key={index} 
@@ -317,26 +256,11 @@ export default function Todo() {
             />
           ))
         ) : (
-          // Tab mode
           renderTabs()
         )
       ) : (
-        <div className="text-center p-8 bg-gray-50 rounded-lg">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-          <p className="mt-4 text-lg font-medium text-gray-900">No todos found</p>
-          <p className="text-gray-500">Try changing your search or filter.</p>
+        <div className="text-center p-2 text-subtle-color text-xs">
+          No todos found. Try changing your search or filter.
         </div>
       )}
     </div>
