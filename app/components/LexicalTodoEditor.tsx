@@ -220,8 +220,8 @@ export default function LexicalTodoEditor({
     <LexicalComposer initialConfig={initialConfig}>
       <div className="editor-container relative">
         <RichTextPlugin
-          contentEditable={<ContentEditable className="outline-none focus:ring-1 focus:ring-blue-300 p-1 -m-1 rounded min-h-[20px]" />}
-          placeholder={<div className="editor-placeholder absolute top-0 left-0 text-gray-400 pointer-events-none p-1">Enter todo...</div>}
+          contentEditable={<ContentEditable className="outline-none focus:ring-0 focus:ring-offset-0 py-0 px-0 min-h-[18px] text-xs" />}
+          placeholder={<div className="editor-placeholder absolute top-0 left-0 text-subtle-color pointer-events-none p-0 text-xs">Enter todo...</div>}
           ErrorBoundary={StandardErrorBoundary}
         />
         <OnChangePlugin onChange={onChange ? onChange : () => {}} />
