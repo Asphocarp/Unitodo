@@ -136,6 +136,42 @@ class StandardErrorBoundary extends Component<Props, State> {
   }
 }
 
+function UpdateEditablePlugin({ isReadOnly }: { isReadOnly: boolean }) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    const isNowEditable = !isReadOnly;
+    // Set the editor's editable state first
+    editor.setEditable(isNowEditable);
+
+    // If the editor just became editable, focus it and move the cursor.
+    if (isNowEditable) {
+       // Use a small timeout to ensure the editor is fully ready after the state update.
+       setTimeout(() => {
+          // 1. Focus the editor (without the problematic callback)
+          editor.focus();
+
+          // 2. Queue an update to move the cursor to the end
+          editor.update(() => {
+            // This code runs within a valid update context
+            const root = $getRoot();
+            if (root.getChildrenSize() > 0) {
+                const lastNode = root.getLastDescendant();
+                if (lastNode) {
+                    // Select the end only if there isn't already a selection
+                    const selection = $getSelection();
+                    if (selection === null) {
+                        lastNode.selectEnd();
+                    }
+                }
+            }
+          });
+       }, 0); 
+    }
+  }, [editor, isReadOnly]); // Re-run effect when isReadOnly changes
+
+  return null; // This plugin doesn't render anything
+}
+
 export default function LexicalTodoEditor({
   initialFullContent,
   isReadOnly,
@@ -160,6 +196,7 @@ export default function LexicalTodoEditor({
         <OnChangePlugin onChange={onChange ? onChange : () => {}} />
         <HistoryPlugin />
         <InitialStatePlugin initialFullContent={initialFullContent} />
+        <UpdateEditablePlugin isReadOnly={isReadOnly} />
       </div>
     </LexicalComposer>
   );

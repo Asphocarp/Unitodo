@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@lexical/react": "^0.31.0",
     "@types/lodash": "^4.17.16",
     "axios": "^1.6.5",
