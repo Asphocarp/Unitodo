@@ -107,9 +107,10 @@ body {
 
 .hn-meta {
   font-size: 0.8rem;
-  color: var(--subtle-color);
+  color: #eaeaea;
   display: inline-block;
   margin-left: 0.5rem;
+  font-weight: bold;
 }
 
 .hn-compact-controls {
