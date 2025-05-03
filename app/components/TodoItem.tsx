@@ -89,6 +89,58 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
   const isReadOnly = !parsed.isUnique;
   const isValidTodoFormat = parsed.isValidTodoFormat;
 
+  // Format content based on identifier and prefix
+  const formatContent = (identifier: string, prefix: string, content: string): string => {
+    const literal_first_word = content.split(' ')[0];
+    const isAlphanumeric = literal_first_word && /^[a-zA-Z0-9]+$/.test(literal_first_word);
+    
+    return isAlphanumeric 
+      ? `${literal_first_word}${prefix}${identifier} ${content.replace(literal_first_word, '').trim()}`
+      : `1${prefix}${identifier} ${content}`;
+  };
+  
+  // Core function to add an identifier using a generator function
+  const addIdentifier = async (generateId: () => string, prefix: string) => {
+    if (isSaving || !isReadOnly) return;
+    
+    setError(null);
+    setIsSaving(true);
+    
+    try {
+      // Generate the identifier using the provided function
+      const identifier = generateId();
+      
+      // Create the new content
+      const newContent = formatContent(identifier, prefix, todo.content);
+      setEditedContent(newContent);
+      
+      // Save the updated todo
+      await editTodoItem({
+        location: todo.location,
+        new_content: newContent,
+        completed: isCompleted,
+      });
+      
+      // Create updated todo object
+      const updatedTodo = {
+        ...todo,
+        content: newContent
+      };
+      
+      if (onEditSuccess) onEditSuccess(updatedTodo);
+    } catch (err: any) {
+      console.error(`Error adding identifier:`, err);
+      setError(err.message || `Failed to add identifier.`);
+      setEditedContent(todo.content);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Simple wrapper functions for API compatibility
+  const addUniqueId = () => addIdentifier(() => nanoid(20), '#');
+  const addTimestamp = () => addIdentifier(generateTimestamp, '@');
+
   const handleSave = async () => {
     if (isSaving || isReadOnly) return;
     setError(null);
@@ -166,87 +218,6 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
       console.error('Error saving checkbox state:', err);
       setError(err.message || 'Failed to save completion status.');
       setIsCompleted(!newCompletedStatus);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const addUniqueId = async () => {
-    if (isSaving || !isReadOnly) return;
-    setError(null);
-    setIsSaving(true);
-    
-    try {
-      // Generate a unique nanoid (20 characters)
-      const id = nanoid(20);
-      const literal_first_word = todo.content.split(' ')[0];
-      // Check if literal_first_word is alphanumeric
-      const isAlphanumeric = literal_first_word && /^[a-zA-Z0-9]+$/.test(literal_first_word);
-      // If literal_first_word is not alphanumeric, use "1" as the priority and don't replace anything
-      const newContent = isAlphanumeric 
-        ? `${literal_first_word}#${id} ${todo.content.replace(literal_first_word, '').trim()}`
-        : `1#${id} ${todo.content}`;
-      setEditedContent(newContent);
-      
-      // Save the updated todo
-      await editTodoItem({
-        location: todo.location,
-        new_content: newContent,
-        completed: isCompleted,
-      });
-      
-      // Create updated todo object with the new content that includes unique ID
-      const updatedTodo = {
-        ...todo,
-        content: newContent
-      };
-      
-      if (onEditSuccess) onEditSuccess(updatedTodo);
-    } catch (err: any) {
-      console.error('Error adding unique ID:', err);
-      setError(err.message || 'Failed to add unique ID.');
-      setEditedContent(todo.content);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const addTimestamp = async () => {
-    if (isSaving || !isReadOnly) return;
-    setError(null);
-    setIsSaving(true);
-    
-    try {
-      // Generate a 5-character timestamp
-      const timestamp = generateTimestamp();
-      
-      const literal_first_word = todo.content.split(' ')[0];
-      // Check if literal_first_word is alphanumeric
-      const isAlphanumeric = literal_first_word && /^[a-zA-Z0-9]+$/.test(literal_first_word);
-      // If literal_first_word is not alphanumeric, use "1" as the priority and don't replace anything
-      const newContent = isAlphanumeric 
-        ? `${literal_first_word}@${timestamp} ${todo.content.replace(literal_first_word, '').trim()}`
-        : `1@${timestamp} ${todo.content}`;
-      setEditedContent(newContent);
-      
-      // Save the updated todo
-      await editTodoItem({
-        location: todo.location,
-        new_content: newContent,
-        completed: isCompleted,
-      });
-      
-      // Create updated todo object with the new content that includes timestamp
-      const updatedTodo = {
-        ...todo,
-        content: newContent
-      };
-      
-      if (onEditSuccess) onEditSuccess(updatedTodo);
-    } catch (err: any) {
-      console.error('Error adding timestamp:', err);
-      setError(err.message || 'Failed to add timestamp.');
-      setEditedContent(todo.content);
     } finally {
       setIsSaving(false);
     }
