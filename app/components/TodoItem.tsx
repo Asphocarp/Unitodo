@@ -154,8 +154,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
       
       // Create new content with the unique ID
       // Format: [priority]#[nanoid] [mainContent]
-      const priority = parsed.priority || '1'; // Default priority to 1 if not present
-      const newContent = `${priority}#${id} ${parsed.mainContent}`;
+      const newContent = parsed.priority ? `${parsed.priority}#${id} ${parsed.mainContent.replace(parsed.priority, '').trim()}` : `1#${id} ${parsed.mainContent}`;
       setEditedContent(newContent);
       
       // Save the updated todo
