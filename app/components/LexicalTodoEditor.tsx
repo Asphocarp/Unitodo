@@ -9,10 +9,15 @@ import {
   LexicalNode,
   ParagraphNode,
   TextNode,
+  KEY_ENTER_COMMAND,
+  COMMAND_PRIORITY_EDITOR,
+  COMMAND_PRIORITY_HIGH,
+  LexicalEditor,
 } from 'lexical';
 import React, { useEffect, Component, ErrorInfo, ReactNode, ReactElement } from 'react';
 
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
+import { LexicalErrorBoundaryProps } from '@lexical/react/LexicalErrorBoundary';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
@@ -44,14 +49,15 @@ const theme = {
   done: 'unitodo-done-node',
 };
 
-function onError(error: Error) {
-  console.error(error);
+function globalOnError(error: Error) {
+  console.error("Global error handler:", error);
 }
 
 interface LexicalTodoEditorProps {
   initialFullContent: string;
   isReadOnly: boolean;
   onChange?: (editorState: EditorState) => void;
+  onSubmit?: () => void;
 }
 
 function InitialStatePlugin({ initialFullContent }: { initialFullContent: string }) {
@@ -59,7 +65,7 @@ function InitialStatePlugin({ initialFullContent }: { initialFullContent: string
   useEffect(() => {
     editor.update(() => {
       const root = $getRoot();
-      if (root.getChildrenSize() === 0 || root.getTextContent() !== initialFullContent) {
+      if (root.isEmpty() || root.getTextContent() !== initialFullContent) {
         root.clear();
         const parsed = parseTodoContent(initialFullContent);
         
@@ -101,63 +107,20 @@ function InitialStatePlugin({ initialFullContent }: { initialFullContent: string
   return null;
 }
 
-interface Props {
-  children: ReactElement;
-  onError: (error: Error) => void;
-}
-
-interface State {
-  hasError: boolean;
-}
-
-class StandardErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
-
-  public static getDerivedStateFromError(_: Error): State {
-    // Update state so the next render will show the fallback UI.
-    return { hasError: true };
-  }
-
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo); // Log the full error info
-    // Call the onError prop passed down
-    this.props.onError(error);
-    // The existing global onError can still be used if needed, but prop is more direct
-    // onError(error); 
-  }
-
-  public render() {
-    if (this.state.hasError) {
-      return <div className="text-red-500 text-xs">Error in editor</div>;
-    }
-    return this.props.children;
-  }
-}
-
 function UpdateEditablePlugin({ isReadOnly }: { isReadOnly: boolean }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     const isNowEditable = !isReadOnly;
-    // Set the editor's editable state first
     editor.setEditable(isNowEditable);
 
-    // If the editor just became editable, focus it and move the cursor.
     if (isNowEditable) {
-       // Use a small timeout to ensure the editor is fully ready after the state update.
        setTimeout(() => {
-          // 1. Focus the editor (without the problematic callback)
           editor.focus();
-
-          // 2. Queue an update to move the cursor to the end
           editor.update(() => {
-            // This code runs within a valid update context
             const root = $getRoot();
             if (root.getChildrenSize() > 0) {
                 const lastNode = root.getLastDescendant();
                 if (lastNode) {
-                    // Select the end only if there isn't already a selection
                     const selection = $getSelection();
                     if (selection === null) {
                         lastNode.selectEnd();
@@ -167,22 +130,90 @@ function UpdateEditablePlugin({ isReadOnly }: { isReadOnly: boolean }) {
           });
        }, 0); 
     }
-  }, [editor, isReadOnly]); // Re-run effect when isReadOnly changes
+  }, [editor, isReadOnly]);
 
-  return null; // This plugin doesn't render anything
+  return null;
+}
+
+function EnterSubmitPlugin({ onSubmit }: { onSubmit?: () => void }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    if (!editor.isEditable()) {
+      return;
+    }
+
+    return editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      (event: KeyboardEvent | null) => {
+        if (onSubmit && editor.isEditable()) {
+          if (event !== null) {
+            event.preventDefault();
+            onSubmit();
+            return true;
+          }
+        }
+        return false;
+      },
+      COMMAND_PRIORITY_HIGH
+    );
+  }, [editor, onSubmit]);
+
+  return null;
+}
+
+interface CustomErrorBoundaryProps {
+  children: ReactElement;
+  onError: (error: Error) => void;
+}
+
+interface CustomErrorBoundaryState {
+  hasError: boolean;
+}
+
+class StandardErrorBoundary extends Component<LexicalErrorBoundaryProps, CustomErrorBoundaryState> {
+  public state: CustomErrorBoundaryState = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(_: Error): CustomErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    this.props.onError(error);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return <div className="text-red-500 text-xs">Error loading content</div>;
+    }
+    return this.props.children;
+  }
 }
 
 export default function LexicalTodoEditor({
   initialFullContent,
   isReadOnly,
   onChange,
+  onSubmit,
 }: LexicalTodoEditorProps) {
   const initialConfig = {
     namespace: 'UnitodoEditor',
     theme,
-    onError,
+    onError: globalOnError,
     editable: !isReadOnly,
     nodes: [PriorityNode, IdNode, DoneNode, ParagraphNode, TextNode],
+    editorState: (editor: LexicalEditor) => {
+      editor.update(() => {
+        const root = $getRoot();
+        if (root.isEmpty()) {
+          const paragraph = $createParagraphNode();
+          root.append(paragraph);
+        }
+      });
+    }
   };
 
   return (
@@ -197,6 +228,7 @@ export default function LexicalTodoEditor({
         <HistoryPlugin />
         <InitialStatePlugin initialFullContent={initialFullContent} />
         <UpdateEditablePlugin isReadOnly={isReadOnly} />
+        <EnterSubmitPlugin onSubmit={onSubmit} />
       </div>
     </LexicalComposer>
   );

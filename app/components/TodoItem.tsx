@@ -151,6 +151,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
             initialFullContent={editedContent}
             isReadOnly={!isEditing || isReadOnly}
             onChange={handleEditorContentChange}
+            onSubmit={handleSave}
           />
         </div>
 
