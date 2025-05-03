@@ -85,17 +85,8 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     setError(null);
   };
 
-  // New function to handle immediate state update on Enter key
   const handleEnterSubmit = () => {
-    // Immediately exit edit mode in the UI and ensure content is updated
     setIsEditing(false);
-    
-    // Explicitly set the edited content to its current value
-    // This ensures the displayed content is synchronized immediately
-    setEditedContent(editedContent);
-    
-    // Then trigger the backend save operation
-    // This will update the database but UI is already updated
     handleSave();
   };
 
@@ -136,7 +127,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     <div
       className={`flex items-start gap-3 p-3 border-b border-gray-200 group relative ${
         hovered ? 'bg-gray-50' : ''
-      } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}
+      } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'pointer-events-none' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : undefined}
