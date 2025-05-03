@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { TodoItem as TodoItemType } from '../types';
 import { editTodoItem } from '../services/todoService';
 import { parseTodoContent } from '../utils';
@@ -42,15 +42,44 @@ function generateTimestamp(): string {
 interface TodoItemProps {
   todo: TodoItemType;
   onEditSuccess?: (updatedTodo: TodoItemType) => void;
+  isFocused?: boolean;
+  onKeyNavigation?: (direction: 'up' | 'down', index: number) => void;
+  onClick?: () => void;
+  categoryIndex?: number;
+  itemIndex?: number;
 }
 
-export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
+export default function TodoItem({ 
+  todo, 
+  onEditSuccess,
+  isFocused = false,
+  onKeyNavigation,
+  onClick,
+  categoryIndex = -1,
+  itemIndex = -1
+}: TodoItemProps) {
   const [hovered, setHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(todo.content);
   const [isCompleted, setIsCompleted] = useState(todo.completed);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const itemRef = useRef<HTMLDivElement>(null);
+  
+  // Focus the item when isFocused is true
+  useEffect(() => {
+    if (isFocused && !isEditing && itemRef.current) {
+      itemRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+  
+  // Focus the edit input when entering edit mode
+  useEffect(() => {
+    if (isEditing && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -222,14 +251,61 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     }
   };
 
+  const handleToggleCompletion = () => {
+    if (onEditSuccess) {
+      onEditSuccess({
+        ...todo,
+        completed: !todo.completed
+      });
+    }
+  };
+  
+  const handleEditStart = () => {
+    setIsEditing(true);
+    setEditedContent(todo.content);
+  };
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (isEditing) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancel();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      }
+    } else {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleEditStart();
+      } else if (e.key === ' ' || e.key === 'Space') {
+        e.preventDefault();
+        handleToggleCompletion();
+      } else if ((e.key === 'ArrowUp' || e.key === 'k') && onKeyNavigation) {
+        e.preventDefault();
+        onKeyNavigation('up', -1); // The index is handled by the parent
+      } else if ((e.key === 'ArrowDown' || e.key === 'j') && onKeyNavigation) {
+        e.preventDefault();
+        onKeyNavigation('down', -1); // The index is handled by the parent
+      }
+    }
+  };
+
   return (
     <div
       className={`hn-todo-item ${
         hovered ? 'bg-gray-50' : ''
-      } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'pointer-events-none' : ''}`}
+      } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'pointer-events-none' : ''} ${isFocused ? 'focused' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : undefined}
+      ref={itemRef}
+      tabIndex={isFocused ? 0 : -1}
+      onKeyDown={handleKeyDown}
+      onClick={onClick}
+      data-location={todo.location}
+      data-category-index={categoryIndex}
+      data-item-index={itemIndex}
     >
       {/* Checkbox */}
       <div>
@@ -239,11 +315,12 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
           onChange={handleCheckboxChange}
           disabled={isReadOnly || isSaving}
           className={`hn-checkbox ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+          onClick={(e) => e.stopPropagation()}
         />
       </div>
 
       {/* Content Area */}
-      <div className="hn-todo-content">
+      <div className="hn-todo-content" onClick={(e) => e.stopPropagation()}>
         <div
           className={`${isCompleted && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
           onClick={() => {
@@ -272,6 +349,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
               if (!getVSCodeUrl()) {
                 e.preventDefault();
               }
+              e.stopPropagation();
             }}
           >
             {formattedLocation}
@@ -285,7 +363,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
       </div>
 
       {/* Action Buttons */}
-      <div className={`flex items-center transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`flex items-center transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0'}`} onClick={(e) => e.stopPropagation()}>
         {isEditing ? (
           <>
             <button

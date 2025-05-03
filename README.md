@@ -46,6 +46,8 @@ where:
 - [ ] 0 now that it works, i need:
     - [ ] 2@AoVtC polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
     - [ ] 3@AoVsT more hotkeys, even for vim users.
+- navigate todo item, not categories!
+- enter/space hotkeys should respect readonly status
 
 - [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [ ] 1 add a button to insert a nanoid/incremented-id for the-first-word, for those without unique-ensured id
