@@ -43,15 +43,11 @@ where:
 
 ## todo
 
-- [ ] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
-  - [ ] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only, and with buttons to insert a nanoid/incremented-id for it.
-  - [ ] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
-    - definition of the-first-word: the-first-word is the first word after the matched pattern (TODO) in the line (separated by blank after it).
-- [ ] 0 editable <- parser
+- [ ] 1 add a button to insert a nanoid/incremented-id for the-first-word, for those without unique-ensured id
+- [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
-- [ ] 2 switch to SolidJS (for better performance), instead of RaectJS
 - [ ] 2 make this repo public
 - [ ] 2 check command injection safety
 - [ ] 2 show dependency of todos?
@@ -62,6 +58,13 @@ where:
 - [ ] 3 more hotkeys, even for vim users.
 
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
+- [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
+  - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
+  - [x] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
+  - definition of the-first-word: the-first-word is the first word after the matched pattern (TODO) in the line (separated by blank after it).
+- [x] 0 editable <- parser
+- [x] X 3 switch to SolidJS (for better performance), instead of RaectJS
+
 
 ## Best practices
 
