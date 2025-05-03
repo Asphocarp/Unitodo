@@ -73,6 +73,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
       console.error('Error saving todo:', err);
       setError(err.message || 'Failed to save changes.');
     } finally {
+      setEditedContent(editedContent);
       setIsSaving(false);
     }
   };
@@ -82,6 +83,20 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
     setEditedContent(todo.content);
     setIsCompleted(todo.completed);
     setError(null);
+  };
+
+  // New function to handle immediate state update on Enter key
+  const handleEnterSubmit = () => {
+    // Immediately exit edit mode in the UI and ensure content is updated
+    setIsEditing(false);
+    
+    // Explicitly set the edited content to its current value
+    // This ensures the displayed content is synchronized immediately
+    setEditedContent(editedContent);
+    
+    // Then trigger the backend save operation
+    // This will update the database but UI is already updated
+    handleSave();
   };
 
   const handleEditorContentChange = (editorState: EditorState) => {
@@ -151,7 +166,7 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
             initialFullContent={editedContent}
             isReadOnly={!isEditing || isReadOnly}
             onChange={handleEditorContentChange}
-            onSubmit={handleSave}
+            onSubmit={handleEnterSubmit}
           />
         </div>
 
