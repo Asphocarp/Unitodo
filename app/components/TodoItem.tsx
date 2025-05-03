@@ -11,7 +11,7 @@ import { nanoid } from 'nanoid';
 
 interface TodoItemProps {
   todo: TodoItemType;
-  onEditSuccess?: () => void;
+  onEditSuccess?: (updatedTodo: TodoItemType) => void;
 }
 
 export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
@@ -68,13 +68,21 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
         new_content: editedContent,
         completed: isCompleted,
       });
+      
+      // Create updated todo object with the new content
+      const updatedTodo = {
+        ...todo,
+        content: editedContent,
+        completed: isCompleted
+      };
+      
       setIsEditing(false);
-      if (onEditSuccess) onEditSuccess();
+      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error('Error saving todo:', err);
       setError(err.message || 'Failed to save changes.');
     } finally {
-      setEditedContent(editedContent);
+      setEditedContent(editedContent); // TODO hacky way to update the frontend immediately (maybe need to use a better state management framework to avoid this)
       setIsSaving(false);
     }
   };
@@ -114,7 +122,15 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
         new_content: contentToSave,
         completed: newCompletedStatus,
       });
-      if (onEditSuccess) onEditSuccess();
+      
+      // Create updated todo object with the new completion status
+      const updatedTodo = {
+        ...todo,
+        content: contentToSave,
+        completed: newCompletedStatus
+      };
+      
+      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error('Error saving checkbox state:', err);
       setError(err.message || 'Failed to save completion status.');
@@ -149,7 +165,13 @@ export default function TodoItem({ todo, onEditSuccess }: TodoItemProps) {
         completed: isCompleted,
       });
       
-      if (onEditSuccess) onEditSuccess();
+      // Create updated todo object with the new content that includes unique ID
+      const updatedTodo = {
+        ...todo,
+        content: newContent
+      };
+      
+      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error('Error adding unique ID:', err);
       setError(err.message || 'Failed to add unique ID.');

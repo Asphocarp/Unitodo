@@ -101,6 +101,29 @@ export default function Todo() {
   );
   const activeTodos = totalTodos - completedTodos;
 
+  // Handle todo updates from children components
+  const handleTodoUpdate = (updatedTodo: TodoCategoryType['todos'][0]) => {
+    // Create a deep copy of categories
+    const updatedCategories = categories.map(category => {
+      // Check if the updated todo belongs to this category
+      const updatedTodos = category.todos.map(todo => {
+        if (todo.location === updatedTodo.location) {
+          return updatedTodo; // Replace with the updated todo
+        }
+        return todo;
+      });
+      
+      return {
+        ...category,
+        todos: updatedTodos
+      };
+    });
+    
+    // Update the state with the new categories
+    setCategories(updatedCategories);
+    setLastUpdated(new Date());
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -163,7 +186,11 @@ export default function Todo() {
           <div className="mt-4 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
             <div className="divide-y divide-gray-200">
               {filteredCategories[activeTabIndex]?.todos.map((todo, index) => (
-                <TodoItem key={index} todo={todo} />
+                <TodoItem 
+                  key={`${todo.location}-${index}`} 
+                  todo={todo} 
+                  onEditSuccess={handleTodoUpdate} 
+                />
               )) || (
                 <div className="p-4 text-center text-gray-500">
                   No todos in this category
@@ -283,7 +310,11 @@ export default function Todo() {
         displayMode === 'section' ? (
           // Section mode (original layout)
           filteredCategories.map((category, index) => (
-            <TodoCategory key={index} category={category} />
+            <TodoCategory 
+              key={index} 
+              category={category}
+              onTodoUpdate={handleTodoUpdate}
+            />
           ))
         ) : (
           // Tab mode
