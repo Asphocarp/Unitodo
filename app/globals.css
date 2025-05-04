@@ -37,6 +37,11 @@
   border: 1px solid #bbf7d0;
 }
 
+/* To simulate a spacing */
+div.hn-todo-item > div.hn-todo-content > div > div > div > p > span:nth-child(3) {
+  margin-left: 0.25rem;
+}
+
 /* Optional: Placeholder styling for the editor */
 .editor-placeholder {
   color: #a0aec0;
@@ -161,7 +166,7 @@ body {
   display: flex;
   border-top: 1px solid var(--border-color);
   align-items: center;
-  font-size: 0.8rem;
+  /* font-size: 0.85rem; */
   min-height: 24px;
   overflow: hidden;
   position: relative;
