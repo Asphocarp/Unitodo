@@ -26,7 +26,7 @@ interface TodoState {
   setFocusedItem: (item: { categoryIndex: number, itemIndex: number }) => void;
   toggleKeyboardHelp: () => void;
   updateTodo: (updatedTodo: TodoItem) => void;
-  navigateTodos: (direction: 'up' | 'down') => void;
+  navigateTodos: (direction: 'up' | 'down', jumpSize?: number) => void;
   navigateTabs: (direction: 'left' | 'right') => void;
 }
 
@@ -137,7 +137,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     });
   },
   
-  navigateTodos: (direction) => {
+  navigateTodos: (direction, jumpSize = 1) => {
     const state = get();
     const { categoryIndex, itemIndex } = state.focusedItem;
     const { displayMode, activeTabIndex } = state;
@@ -163,19 +163,23 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       
       // Moving up
       if (direction === 'up' && itemIndex > 0) {
+        // Calculate new index with boundary check
+        const newIndex = Math.max(0, itemIndex - jumpSize);
         set({
           focusedItem: {
             categoryIndex: activeTabIndex,
-            itemIndex: itemIndex - 1
+            itemIndex: newIndex
           }
         });
       }
       // Moving down
       else if (direction === 'down' && itemIndex < totalItems - 1) {
+        // Calculate new index with boundary check
+        const newIndex = Math.min(totalItems - 1, itemIndex + jumpSize);
         set({
           focusedItem: {
             categoryIndex: activeTabIndex,
-            itemIndex: itemIndex + 1
+            itemIndex: newIndex
           }
         });
       }
@@ -208,49 +212,58 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         return;
       }
       
-      const currentCategoryTodos = filteredCategories[categoryIndex]?.todos || [];
-      
-      // Moving up
+      // Handle multi-line jumps across categories
+      // This is more complex as we need to potentially move across category boundaries
       if (direction === 'up') {
-        if (itemIndex > 0) {
-          // Move up within the same category
-          set({
-            focusedItem: {
-              categoryIndex,
-              itemIndex: itemIndex - 1
-            }
-          });
-        } else if (categoryIndex > 0) {
-          // Move to the last item of the previous category
-          const prevCatIndex = categoryIndex - 1;
-          const prevCatLastItemIndex = filteredCategories[prevCatIndex].todos.length - 1;
-          set({
-            focusedItem: {
-              categoryIndex: prevCatIndex,
-              itemIndex: prevCatLastItemIndex
-            }
-          });
+        // Moving up
+        let newCatIndex = categoryIndex;
+        let newItemIndex = itemIndex - jumpSize;
+        
+        // If we need to move to previous categories
+        while (newItemIndex < 0 && newCatIndex > 0) {
+          newCatIndex--;
+          newItemIndex += filteredCategories[newCatIndex].todos.length;
         }
-      }
-      // Moving down
-      else if (direction === 'down') {
-        if (itemIndex < currentCategoryTodos.length - 1) {
-          // Move down within the same category
-          set({
-            focusedItem: {
-              categoryIndex,
-              itemIndex: itemIndex + 1
-            }
-          });
-        } else if (categoryIndex < filteredCategories.length - 1) {
-          // Move to the first item of the next category
-          set({
-            focusedItem: {
-              categoryIndex: categoryIndex + 1,
-              itemIndex: 0
-            }
-          });
+        
+        // Ensure we don't go beyond the first item
+        if (newItemIndex < 0) {
+          newItemIndex = 0;
         }
+        
+        set({
+          focusedItem: {
+            categoryIndex: newCatIndex,
+            itemIndex: newItemIndex
+          }
+        });
+      } else {
+        // Moving down
+        let newCatIndex = categoryIndex;
+        let newItemIndex = itemIndex + jumpSize;
+        const currentCategorySize = filteredCategories[newCatIndex].todos.length;
+        
+        // If we need to move to next categories
+        while (newItemIndex >= currentCategorySize && newCatIndex < filteredCategories.length - 1) {
+          newItemIndex -= currentCategorySize;
+          newCatIndex++;
+          
+          // If we're at the last category, make sure we don't exceed its bounds
+          if (newCatIndex === filteredCategories.length - 1) {
+            newItemIndex = Math.min(newItemIndex, filteredCategories[newCatIndex].todos.length - 1);
+          }
+        }
+        
+        // Ensure we don't go beyond the last item
+        if (newItemIndex >= filteredCategories[newCatIndex].todos.length) {
+          newItemIndex = filteredCategories[newCatIndex].todos.length - 1;
+        }
+        
+        set({
+          focusedItem: {
+            categoryIndex: newCatIndex,
+            itemIndex: newItemIndex
+          }
+        });
       }
     }
   },

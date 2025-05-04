@@ -40,11 +40,10 @@ export default function TodoCategory({
   
   // Scroll category into view when it contains focused item
   useEffect(() => {
-    if (isAnyChildFocused && focusedItem.itemIndex !== -1 && categoryRef.current) {
-      categoryRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
+    if (isAnyChildFocused && focusedItem.itemIndex !== -1) {
+      // Don't scroll the category header, let the TodoItem handle scrolling
+      // The TodoItem's useEffect will take care of scrolling the item into view
+      // Remove the categoryRef.current.scrollIntoView call
     }
   }, [isAnyChildFocused, focusedItem.itemIndex]);
   

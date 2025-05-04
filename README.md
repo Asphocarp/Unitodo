@@ -43,12 +43,6 @@ where:
 
 ## todo
 
-1. make `shift-j/k` = 5 lines down/up
-2. round-corner the focus border
-3. fix: do not change (todo-item) focus to a button (after clicking it)
-4. fix: in section-mode, it should scroll to the focused item, not the section-header (when the focused item is below the botton the screen)
-5. show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back
-
 - [ ] 1 fix toggle-checkbox, and all hotkeys
 - [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [ ] 0 great doc with screenshot (derive from this doc using llm)
@@ -64,6 +58,7 @@ where:
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
 - [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
+- [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
 - [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 

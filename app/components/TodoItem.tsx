@@ -311,12 +311,22 @@ export default function TodoItem({
         case 'ArrowUp':
         case 'k':
           e.preventDefault();
-          navigateTodos('up'); // Use store action
+          // If shift is pressed, jump 5 lines at a time
+          navigateTodos('up', e.shiftKey ? 5 : 1);
           break;
         case 'ArrowDown':
         case 'j':
           e.preventDefault();
-          navigateTodos('down'); // Use store action
+          // If shift is pressed, jump 5 lines at a time
+          navigateTodos('down', e.shiftKey ? 5 : 1);
+          break;
+        case 'K':
+          e.preventDefault();
+          navigateTodos('up', 5);
+          break;
+        case 'J':
+          e.preventDefault();
+          navigateTodos('down', 5);
           break;
       }
     }
@@ -449,11 +459,17 @@ export default function TodoItem({
               onClick={(e) => {
                 e.stopPropagation(); // We do need to stop propagation here
                 handleSave();
+                // Refocus the todo item after the action
+                if (itemRef.current) {
+                  setTimeout(() => {
+                    itemRef.current?.focus();
+                  }, 0);
+                }
               }}
               disabled={isSaving}
               className="hn-action-button text-xs px-0.5 py-0"
               title="Save changes (Enter)"
-              tabIndex={isFocused ? 0 : -1}
+              tabIndex={-1} // Change from 0 to -1 to prevent focus
             >
               save
             </button>
@@ -461,11 +477,17 @@ export default function TodoItem({
               onClick={(e) => {
                 e.stopPropagation(); // We do need to stop propagation here
                 handleCancel();
+                // Refocus the todo item after the action
+                if (itemRef.current) {
+                  setTimeout(() => {
+                    itemRef.current?.focus();
+                  }, 0);
+                }
               }}
               disabled={isSaving}
               className="hn-action-button text-xs px-0.5 py-0"
               title="Cancel edit (Escape)"
-              tabIndex={isFocused ? 0 : -1}
+              tabIndex={-1} // Change from 0 to -1 to prevent focus
             >
               cancel
             </button>
@@ -478,11 +500,17 @@ export default function TodoItem({
                   onClick={(e) => {
                     e.stopPropagation(); // We do need to stop propagation here
                     addUniqueId();
+                    // Refocus the todo item after the action
+                    if (itemRef.current) {
+                      setTimeout(() => {
+                        itemRef.current?.focus();
+                      }, 0);
+                    }
                   }}
                   disabled={isSaving}
                   className="hn-action-button text-xs px-0.5 py-0"
                   title="Add unique ID (#) to make editable"
-                  tabIndex={isFocused ? 0 : -1}
+                  tabIndex={-1} // Change from 0 to -1 to prevent focus
                 >
                   id
                 </button>
@@ -490,11 +518,17 @@ export default function TodoItem({
                   onClick={(e) => {
                     e.stopPropagation(); // We do need to stop propagation here
                     addTimestamp();
+                    // Refocus the todo item after the action
+                    if (itemRef.current) {
+                      setTimeout(() => {
+                        itemRef.current?.focus();
+                      }, 0);
+                    }
                   }}
                   disabled={isSaving}
                   className="hn-action-button text-xs px-0.5 py-0"
                   title="Add timestamp (@) to make editable"
-                  tabIndex={isFocused ? 0 : -1}
+                  tabIndex={-1} // Change from 0 to -1 to prevent focus
                 >
                   time
                 </button>
@@ -505,10 +539,11 @@ export default function TodoItem({
                 onClick={(e) => {
                   e.stopPropagation(); // We do need to stop propagation here
                   handleEditStart();
+                  // Note: No need to refocus here as entering edit mode
                 }}
                 className="hn-action-button text-xs px-0.5 py-0"
                 title="Edit todo (Enter)"
-                tabIndex={isFocused ? 0 : -1}
+                tabIndex={-1} // Change from 0 to -1 to prevent focus
               >
                 edit
               </button>
