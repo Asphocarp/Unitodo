@@ -17,7 +17,7 @@ export async function fetchTodoData(): Promise<TodoCategory[]> {
   }
 } 
 
-// Define the payload structure for editing a TODO
+// Define the payload structure for editing a todo item
 interface EditTodoPayload {
   location: string;
   new_content: string;

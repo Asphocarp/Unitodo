@@ -13,7 +13,11 @@
 https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
 
 - key diff:
-  - with key features, but not disturbingly long even in plain text (in code)
+    - with key features, but not disturbingly long even in plain text (in code)
+    - focus on so-called `embeded` todos. 
+    - all-in-one experience.
+    - same in: plain-text
+
 
 
 ## format / parsing
@@ -43,7 +47,12 @@ where:
 
 ## todo
 
-- [ ] prove it to be useful by doing a project
+- [ ] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
+- [ ] 0 if the line contain "UNITODO_IGNORE_LINE", ignore all todos found in this line; if the file contain "UNITODO_IGNORE_FILE", ignore all todos found in this file
+- [ ] 0 prove it to be useful by doing a project - wait, base on my experience, unique-id can be ignored, just fucking assume the line stays the same between aggregation and editing.
+- [ ] button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
+- [ ] 1 allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
+  - For projects, the user should assign a project default folder for the `new.todo` file.
 
 - [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [ ] 1 fix toggle-checkbox, and all hotkeys
@@ -53,12 +62,12 @@ where:
 - [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
-- [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
 - [ ] 2@AoVsq make this repo public
 - [ ] 2#wTzSLqzruFudt5f7Sf0W check command injection safety
 - [ ] 2@AoVtD show dependency of todos?
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
 - [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
+- [ ] 3 curious of battery consumption
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
 - [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
