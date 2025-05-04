@@ -67,7 +67,7 @@ export default function TodoCategory({
       ref={categoryRef}
     >
       <div 
-        className="hn-category-header dark:border-gray-700 dark:text-gray-200"
+        className="hn-category-header dark:border-gray-700 dark:text-gray-200 sticky top-0 bg-white dark:bg-gray-900 z-10"
         onClick={() => setExpanded(!expanded)}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
