@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add scroll-padding to ensure focused items aren't hidden under sticky headers */
+html {
+  scroll-padding-top: 4.5rem;
+  scroll-behavior: smooth;
+}
+
 /* Add styles for custom Lexical nodes */
 .unitodo-priority-node,
 .unitodo-id-node,
@@ -98,18 +104,6 @@ div.hn-todo-item > div.hn-todo-content > div > div > div > p > span:nth-child(3)
   --subtle-color: #828282;
   --border-color: #444444;
 }
-
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 230, 230, 230;
-    --background-rgb: 25, 25, 25;
-    --accent-color: #ff6600;
-    --link-color: #dddddd;
-    --link-hover-color: #ff6600;
-    --subtle-color: #828282;
-    --border-color: #444444;
-  }
-} */
 
 body {
   color: rgb(var(--foreground-rgb));
@@ -291,8 +285,9 @@ body {
 
 /* Ensure focused element is visible */
 .hn-todo-item.focused {
-  background-color: rgba(79, 70, 229, 0.05);
-  border-radius: 4px; /* Add rounded corners to the background highlight */
+  background-color: rgba(79, 70, 229, 0.1);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4);
 }
 
 /* Style for keyboard shortcut display */

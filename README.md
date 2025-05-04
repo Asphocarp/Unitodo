@@ -43,9 +43,12 @@ where:
 
 ## todo
 
+- make the tab part persistent (meaning when you scroll down, the tab part will not disappear) in tab-mode
+- make the section-header part persistent (meaning when you scroll down, the section-header part will not disappear) in section-mode (but if you change the section, the old section-header part should be replaced by the new one)
+
+- [ ] 0 great doc with screenshot (derive from this doc using llm)
 - [ ] 1 fix toggle-checkbox, and all hotkeys
 - [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
-- [ ] 0 great doc with screenshot (derive from this doc using llm)
 
 - [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
