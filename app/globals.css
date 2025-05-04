@@ -4,7 +4,8 @@
 
 /* Add scroll-padding to ensure focused items aren't hidden under sticky headers */
 html {
-  scroll-padding-top: 4.5rem;
+  /* Default value for when the dynamic calculation hasn't run yet */
+  scroll-padding-top: var(--tab-header-height, 4.5rem);
   scroll-behavior: smooth;
 }
 

@@ -45,7 +45,35 @@ export default function Todo() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tabHeaderRef = useRef<HTMLDivElement>(null);
   const urlUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update scroll padding based on tab header height
+  useEffect(() => {
+    if (displayMode === 'tab' && tabHeaderRef.current) {
+      const updateScrollPadding = () => {
+        const tabHeaderHeight = tabHeaderRef.current?.offsetHeight || 0;
+        // Add a small buffer (10px) to ensure content is fully visible
+        document.documentElement.style.setProperty('--tab-header-height', `${tabHeaderHeight + 10}px`);
+        document.documentElement.style.scrollPaddingTop = `${tabHeaderHeight + 10}px`;
+      };
+      
+      // Initial update
+      updateScrollPadding();
+      
+      // Update on window resize
+      window.addEventListener('resize', updateScrollPadding);
+      
+      // Cleanup
+      return () => {
+        window.removeEventListener('resize', updateScrollPadding);
+      };
+    } else {
+      // Reset when not in tab mode
+      document.documentElement.style.removeProperty('--tab-header-height');
+      document.documentElement.style.scrollPaddingTop = '';
+    }
+  }, [displayMode, categories.length, activeTabIndex, filter]);
 
   useEffect(() => {
     // Initial load
@@ -203,7 +231,7 @@ export default function Todo() {
   const renderTabs = () => {
     return (
       <div className="relative">
-        <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm">
+        <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm">
           <div className="flex flex-wrap border-b border-border-color dark:border-gray-700 text-xs overflow-visible">
             {categories.map((category, index) => (
               <button
@@ -231,7 +259,11 @@ export default function Todo() {
         
         {/* Display active tab content */}
         {filteredCategories.length > 0 && activeTabIndex < filteredCategories.length && (
-          <div role="tabpanel" className="focus-within:outline-none pt-2 scroll-mt-10">
+          <div 
+            role="tabpanel" 
+            className="focus-within:outline-none pt-2" 
+            style={{ scrollMarginTop: 'var(--tab-header-height, 0px)' }}
+          >
             {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
               // Determine the original category index
               const originalCategoryIndex = getOriginalCategoryIndex(filteredCategories[activeTabIndex].name);
