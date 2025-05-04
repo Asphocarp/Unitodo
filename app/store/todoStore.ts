@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { TodoCategory, TodoItem } from '../types';
 import { fetchTodoData, editTodoItem } from '../services/todoService';
 
+interface FilteredCategoryInfo {
+  name: string;
+  filteredTodoCount: number;
+}
+
 interface TodoState {
   // Data
   categories: TodoCategory[];
@@ -94,8 +99,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   })),
   
   setActiveTabIndex: (activeTabIndex) => set((state) => {
-    const filteredCategories = getFilteredCategories(state);
-    const hasItems = filteredCategories[activeTabIndex]?.todos.length > 0;
+    const filteredCategoryInfo = getFilteredCategoryInfo(state);
+    const hasItems = filteredCategoryInfo[activeTabIndex]?.filteredTodoCount > 0;
     
     return { 
       activeTabIndex,
@@ -141,12 +146,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const state = get();
     const { categoryIndex, itemIndex } = state.focusedItem;
     const { displayMode, activeTabIndex } = state;
-    const filteredCategories = getFilteredCategories(state);
+    const filteredCategoryInfo = getFilteredCategoryInfo(state);
     
     if (displayMode === 'tab') {
       // In tab mode, navigation is within the active tab
-      const todos = filteredCategories[activeTabIndex]?.todos || [];
-      const totalItems = todos.length;
+      const totalItems = filteredCategoryInfo[activeTabIndex]?.filteredTodoCount || 0;
       
       // Nothing focused yet
       if (itemIndex === -1) {
@@ -188,11 +192,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       
       // Nothing focused yet
       if (categoryIndex === -1 || itemIndex === -1) {
-        if (filteredCategories.length > 0) {
+        if (filteredCategoryInfo.length > 0) {
           if (direction === 'up') {
             // Focus last item of last category
-            const lastCatIndex = filteredCategories.length - 1;
-            const lastItemIndex = filteredCategories[lastCatIndex].todos.length - 1;
+            const lastCatIndex = filteredCategoryInfo.length - 1;
+            const lastItemIndex = filteredCategoryInfo[lastCatIndex].filteredTodoCount - 1;
             set({
               focusedItem: {
                 categoryIndex: lastCatIndex,
@@ -222,7 +226,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         // If we need to move to previous categories
         while (newItemIndex < 0 && newCatIndex > 0) {
           newCatIndex--;
-          newItemIndex += filteredCategories[newCatIndex].todos.length;
+          newItemIndex += filteredCategoryInfo[newCatIndex].filteredTodoCount;
         }
         
         // Ensure we don't go beyond the first item
@@ -240,22 +244,23 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         // Moving down
         let newCatIndex = categoryIndex;
         let newItemIndex = itemIndex + jumpSize;
-        const currentCategorySize = filteredCategories[newCatIndex].todos.length;
+        const currentCategorySize = filteredCategoryInfo[newCatIndex].filteredTodoCount;
         
         // If we need to move to next categories
-        while (newItemIndex >= currentCategorySize && newCatIndex < filteredCategories.length - 1) {
+        while (newItemIndex >= currentCategorySize && newCatIndex < filteredCategoryInfo.length - 1) {
           newItemIndex -= currentCategorySize;
           newCatIndex++;
+          const nextCategorySize = filteredCategoryInfo[newCatIndex].filteredTodoCount;
           
           // If we're at the last category, make sure we don't exceed its bounds
-          if (newCatIndex === filteredCategories.length - 1) {
-            newItemIndex = Math.min(newItemIndex, filteredCategories[newCatIndex].todos.length - 1);
+          if (newCatIndex === filteredCategoryInfo.length - 1) {
+            newItemIndex = Math.min(newItemIndex, nextCategorySize - 1);
           }
         }
         
         // Ensure we don't go beyond the last item
-        if (newItemIndex >= filteredCategories[newCatIndex].todos.length) {
-          newItemIndex = filteredCategories[newCatIndex].todos.length - 1;
+        if (newItemIndex >= filteredCategoryInfo[newCatIndex].filteredTodoCount) {
+          newItemIndex = filteredCategoryInfo[newCatIndex].filteredTodoCount - 1;
         }
         
         set({
@@ -270,13 +275,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
   navigateTabs: (direction) => {
     const state = get();
-    const { categories } = state;
-    const filteredCategories = getFilteredCategories(state);
+    const filteredCategoryInfo = getFilteredCategoryInfo(state);
     const { activeTabIndex } = state;
     
     if (direction === 'left' && activeTabIndex > 0) {
       const newTabIndex = activeTabIndex - 1;
-      const hasItems = filteredCategories[newTabIndex]?.todos.length > 0;
+      const hasItems = filteredCategoryInfo[newTabIndex]?.filteredTodoCount > 0;
       set({ 
         activeTabIndex: newTabIndex,
         focusedItem: { 
@@ -284,9 +288,9 @@ export const useTodoStore = create<TodoState>((set, get) => ({
           itemIndex: hasItems ? 0 : -1 
         }
       });
-    } else if (direction === 'right' && activeTabIndex < filteredCategories.length - 1) {
+    } else if (direction === 'right' && activeTabIndex < filteredCategoryInfo.length - 1) {
       const newTabIndex = activeTabIndex + 1;
-      const hasItems = filteredCategories[newTabIndex]?.todos.length > 0;
+      const hasItems = filteredCategoryInfo[newTabIndex]?.filteredTodoCount > 0;
       set({ 
         activeTabIndex: newTabIndex,
         focusedItem: { 
@@ -319,6 +323,29 @@ export const getFilteredCategories = (state: TodoState) => {
       todos: filteredTodos
     };
   }).filter(category => category.todos.length > 0);
+};
+
+// Helper function to get counts of filtered todos per category
+// Optimized for navigation logic where only counts are needed.
+const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
+  return state.categories.map(category => {
+    const filteredCount = category.todos.filter(todo => {
+      let matchesFilter = true;
+      if (state.filter === 'completed') matchesFilter = todo.completed;
+      if (state.filter === 'active') matchesFilter = !todo.completed;
+
+      const matchesSearch = !state.searchQuery ||
+        todo.content.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+        todo.location.toLowerCase().includes(state.searchQuery.toLowerCase());
+
+      return matchesFilter && matchesSearch;
+    }).length; // Calculate length directly
+
+    return {
+      name: category.name,
+      filteredTodoCount: filteredCount,
+    };
+  }).filter(categoryInfo => categoryInfo.filteredTodoCount > 0); // Filter out empty categories
 };
 
 // Utility selectors
