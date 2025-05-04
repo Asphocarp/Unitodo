@@ -148,7 +148,6 @@ export function parseTodoContent(content: string): ParsedTodo {
   const match = content.match(TODO_REGEX);
 
   if (match) {
-    console.log("TODO PARSER MATCH (Allow Leading Space):", match);
     // Corrected group indices
     const priority = match[3] || null; // Optional priority (Group 3)
     const idPart = match[4] || null;   // ID part (@..., #..., ##...) (Group 4)
