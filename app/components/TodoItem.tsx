@@ -78,8 +78,11 @@ export default function TodoItem({
       if (document.activeElement !== itemRef.current) {
         itemRef.current.focus({ preventScroll: false });
       }
-      // Scroll into view when focused
-      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Scroll into view when focused with a bit of padding to avoid the sticky header
+      itemRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest' // Changed from 'nearest' to 'center' to provide better visibility
+      });
     }
   }, [isFocused, isEditing]);
   

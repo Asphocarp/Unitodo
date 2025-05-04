@@ -202,34 +202,36 @@ export default function Todo() {
   // Render tabs for tab mode
   const renderTabs = () => {
     return (
-      <div>
-        <div className="flex flex-wrap border-b border-border-color dark:border-gray-700 text-xs overflow-visible">
-          {categories.map((category, index) => (
-            <button
-              key={index}
-              className={`px-2 py-1 my-1 mr-1 font-medium ${
-                activeTabIndex === index
-                ? 'border-b-2 border-accent-color font-bold dark:text-gray-200'
-                : 'text-subtle-color dark:text-gray-400'
-              }`}
-              onClick={() => setActiveTabIndex(index)}
-            >
-              <NerdFontIcon 
-                icon={category.icon} 
-                category={category.name} 
-                className="text-sm"
-              />
-              {category.name}
-              <span className="ml-1 text-subtle-color dark:text-gray-500">
-                ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
-              </span>
-            </button>
-          ))}
+      <div className="relative">
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm">
+          <div className="flex flex-wrap border-b border-border-color dark:border-gray-700 text-xs overflow-visible">
+            {categories.map((category, index) => (
+              <button
+                key={index}
+                className={`px-2 py-1 my-1 mr-1 font-medium ${
+                  activeTabIndex === index
+                  ? 'border-b-2 border-accent-color font-bold dark:text-gray-200'
+                  : 'text-subtle-color dark:text-gray-400'
+                }`}
+                onClick={() => setActiveTabIndex(index)}
+              >
+                <NerdFontIcon 
+                  icon={category.icon} 
+                  category={category.name} 
+                  className="text-sm"
+                />
+                {category.name}
+                <span className="ml-1 text-subtle-color dark:text-gray-500">
+                  ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
         
         {/* Display active tab content */}
         {filteredCategories.length > 0 && activeTabIndex < filteredCategories.length && (
-          <div role="tabpanel" className="focus-within:outline-none">
+          <div role="tabpanel" className="focus-within:outline-none pt-2 scroll-mt-10">
             {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
               // Determine the original category index
               const originalCategoryIndex = getOriginalCategoryIndex(filteredCategories[activeTabIndex].name);
