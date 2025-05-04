@@ -6,16 +6,17 @@
 .unitodo-priority-node,
 .unitodo-id-node,
 .unitodo-done-node {
-  display: inline-block;
-  padding: 0 1px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
   margin: 0 0.5px;
   border-radius: 2px;
-  font-size: 0.75em;
+  font-size: 0.7em;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.2;
   cursor: default;
   user-select: none;
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
 .unitodo-priority-node {
@@ -50,6 +51,8 @@
 /* Ensure ContentEditable has relative position if placeholder uses absolute */
 [contenteditable] {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 :root {
@@ -154,36 +157,64 @@ body {
 }
 
 .hn-todo-item {
-  padding: 0.25rem 0;
+  padding: 0 0.25rem;
   display: flex;
   border-top: 1px solid var(--border-color);
-  align-items: baseline;
-  font-size: 0.85rem;
+  align-items: center;
+  font-size: 0.8rem;
+  min-height: 24px;
+  overflow: hidden;
+  position: relative;
 }
 
 .hn-todo-content {
   flex: 1;
-  margin-left: 0.3rem;
+  margin-left: 0.2rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
 }
 
 .hn-todo-location {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--subtle-color);
+  margin-left: 0.3rem;
+  white-space: nowrap;
 }
 
 .hn-checkbox {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
+}
+
+.hn-todo-actions {
+  z-index: 5;
+  transition-property: opacity, max-width, margin;
+}
+
+.hn-todo-actions.visible {
+  max-width: 120px;
+  opacity: 1;
+  margin-left: 0.25rem;
+}
+
+.hn-todo-actions.hidden {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .hn-action-button {
   padding: 0;
-  margin: 0 0.1rem;
+  margin: 0 0.05rem;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--subtle-color);
+  white-space: nowrap;
 }
 
 .hn-action-button:hover {
@@ -239,4 +270,23 @@ kbd {
   padding: 0.1rem 0.4rem;
   margin: 0 0.1rem;
   vertical-align: middle;
+}
+
+/* Editor styles for single line */
+.editor-container {
+  min-height: 16px;
+  max-height: 20px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.editor-paragraph {
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
 } 
