@@ -1,84 +1,69 @@
 'use client';
 
-import React, { KeyboardEvent, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { TodoCategory as TodoCategoryType, TodoItem as TodoItemType } from '../types';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
+import { useTodoStore } from '../store/todoStore'; // Import Zustand store
 
 interface TodoCategoryProps {
   category: TodoCategoryType;
-  onTodoUpdate?: (updatedTodo: TodoItemType) => void;
-  focusedItemIndex?: number;
-  onItemClick?: (itemIndex: number) => void;
-  onKeyNavigation?: (direction: 'up' | 'down', localIndex: number) => void;
-  categoryIndex?: number;
+  categoryIndex: number; // Index within the *filtered* list
+  originalCategoryIndex: number; // Index within the *original* list
 }
 
 export default function TodoCategory({ 
   category, 
-  onTodoUpdate, 
-  focusedItemIndex = -1, 
-  onItemClick,
-  onKeyNavigation,
-  categoryIndex = -1
+  categoryIndex,
+  originalCategoryIndex
 }: TodoCategoryProps) {
   const [expanded, setExpanded] = React.useState(true);
   const categoryRef = useRef<HTMLDivElement>(null);
+  
+  // Get necessary state and actions from Zustand store
+  const focusedItem = useTodoStore(state => state.focusedItem);
+  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
+  
   const completedCount = category.todos.filter(todo => todo.completed).length;
   const totalCount = category.todos.length;
   
+  // Determine if any item within this category is currently focused
+  const isAnyChildFocused = focusedItem.categoryIndex === categoryIndex;
+  
   // Ensure category is always expanded when it contains a focused item
   useEffect(() => {
-    if (focusedItemIndex >= 0 && !expanded) {
+    if (isAnyChildFocused && focusedItem.itemIndex !== -1 && !expanded) {
       setExpanded(true);
     }
-  }, [focusedItemIndex, expanded]);
+  }, [isAnyChildFocused, focusedItem.itemIndex, expanded]);
   
-  // Handle todo updates
-  const handleTodoUpdate = (updatedTodo: TodoItemType) => {
-    if (onTodoUpdate) {
-      onTodoUpdate(updatedTodo);
-    }
+  // Handle item clicks - set focus in the store
+  const handleItemClick = (itemIndex: number) => {
+    setFocusedItem({ categoryIndex, itemIndex });
   };
   
-  // Handle item navigation - just pass through to parent
-  const handleItemNavigation = (direction: 'up' | 'down', index: number) => {
-    if (onKeyNavigation) {
-      onKeyNavigation(direction, index);
-    }
-  };
-  
-  // Handle keyboard events for the category header
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+  // Handle keyboard events for the category header (e.g., collapsing)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
       e.preventDefault();
       setExpanded(!expanded);
     }
-  };
-  
-  // Function to get appropriate icon class based on category name
-  const getIconClass = () => {
-    const name = category.name.toLowerCase();
-    if (name.includes('git')) return 'icon-git';
-    if (name === 'other') return 'icon-other';
-    return 'icon-project';
-  };
-  
-  // Handle item clicks by calling the passed handler
-  const handleItemClick = (index: number) => {
-    if (onItemClick) {
-      onItemClick(index);
-    }
+    // Note: Item navigation (up/down) is now handled globally in Todo.tsx/store
   };
   
   return (
-    <div className={`hn-category`}>
+    <div 
+      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`} // Optional: Add class if needed
+      ref={categoryRef} // Ref might still be needed for other purposes
+    >
       <div 
         className="hn-category-header"
         onClick={() => setExpanded(!expanded)}
-        ref={categoryRef}
-        tabIndex={-1} // Don't make header focusable with tab navigation
+        tabIndex={-1} // Header itself is not focusable via keyboard navigation
         onKeyDown={handleKeyDown}
+        role="button" // Add role for accessibility
+        aria-expanded={expanded}
+        // Consider adding aria-controls pointing to the list of todos if applicable
       >
         <NerdFontIcon 
           icon={category.icon} 
@@ -95,19 +80,24 @@ export default function TodoCategory({
       </div>
       
       {expanded && (
-        <div>
+        <div role="list"> {/* Add role for accessibility */}
           {category.todos.length > 0 ? (
-            category.todos.map((todo, index) => (
-              <TodoItem 
-                key={`${todo.location}-${index}`} 
-                todo={todo} 
-                isFocused={focusedItemIndex === index}
-                onKeyNavigation={handleItemNavigation}
-                onClick={() => handleItemClick(index)}
-                categoryIndex={categoryIndex}
-                itemIndex={index}
-              />
-            ))
+            category.todos.map((todo, index) => {
+              // Determine if this specific item is focused
+              const isFocused = isAnyChildFocused && focusedItem.itemIndex === index;
+              return (
+                <TodoItem 
+                  key={`${todo.location}-${index}`} 
+                  todo={todo} 
+                  isFocused={isFocused}
+                  onClick={() => handleItemClick(index)} // Use internal handler to set store focus
+                  categoryIndex={categoryIndex} // Pass filtered index
+                  originalCategoryIndex={originalCategoryIndex} // Pass original index
+                  itemIndex={index}
+                  role="listitem" // Add role for accessibility
+                />
+              );
+            })
           ) : (
             <div className="text-center p-1 text-subtle-color text-xs">
               No todos in this category
