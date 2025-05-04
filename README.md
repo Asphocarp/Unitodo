@@ -43,17 +43,17 @@ where:
 
 ## todo
 
-1. add: when lose focus, abort editing
-2. add: proper dark mode
+1. make `shift-j/k` = 5 lines down/up
+2. round-corner the focus border
+3. fix: do not change (todo-item) focus to a button (after clicking it)
+4. fix: in section-mode, it should scroll to the focused item, not the section-header (when the focused item is below the botton the screen)
+5. show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back
 
-- [ ] 0 now that it works, i need:
-    - [ ] 2@AoVtC polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
-    - [ ] 3@AoVsT more hotkeys, even for vim users.
-- navigate todo item, not categories!
-- enter/space hotkeys should respect readonly status
+- [ ] 1 fix toggle-checkbox, and all hotkeys
+- [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
+- [ ] 0 great doc with screenshot (derive from this doc using llm)
 
 - [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
-- [ ] 1 add a button to insert a nanoid/incremented-id for the-first-word, for those without unique-ensured id
 - [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
