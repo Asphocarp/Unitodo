@@ -43,6 +43,9 @@ where:
 
 ## todo
 
+1. add: when lose focus, abort editing
+2. add: proper dark mode
+
 - [ ] 0 now that it works, i need:
     - [ ] 2@AoVtC polish tab-mode; fix icons; warp tabs; better UI, mode-switch button. denser UI.
     - [ ] 3@AoVsT more hotkeys, even for vim users.
@@ -61,6 +64,8 @@ where:
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
 - [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
+
+- [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
 - [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
