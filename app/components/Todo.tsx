@@ -80,7 +80,7 @@ export default function Todo() {
     loadData();
     
     // Set up polling interval
-    intervalRef.current = setInterval(loadData, 5000);
+    intervalRef.current = setInterval(loadData, 500);
     
     // Add keyboard event listener for global navigation
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
