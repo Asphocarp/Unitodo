@@ -37,6 +37,25 @@
   border: 1px solid #bbf7d0;
 }
 
+/* Dark mode styles for custom Lexical nodes */
+.dark .unitodo-priority-node {
+  background-color: #082f49;
+  color: #38bdf8;
+  border: 1px solid #0c4a6e;
+}
+
+.dark .unitodo-id-node {
+  background-color: #4c1d95;
+  color: #c4b5fd;
+  border: 1px solid #6d28d9;
+}
+
+.dark .unitodo-done-node {
+  background-color: #14532d;
+  color: #86efac;
+  border: 1px solid #16a34a;
+}
+
 /* To simulate a spacing */
 div.hn-todo-item > div.hn-todo-content > div > div > div > p > span:nth-child(3) {
   margin-left: 0.25rem;
@@ -68,6 +87,16 @@ div.hn-todo-item > div.hn-todo-content > div > div > div > p > span:nth-child(3)
   --link-hover-color: #ff6600;
   --subtle-color: #828282;
   --border-color: #eaeaea;
+}
+
+.dark {
+  --foreground-rgb: 230, 230, 230;
+  --background-rgb: 25, 25, 25;
+  --accent-color: #ff6600;
+  --link-color: #dddddd;
+  --link-hover-color: #ff6600;
+  --subtle-color: #828282;
+  --border-color: #444444;
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -275,6 +304,13 @@ kbd {
   padding: 0.1rem 0.4rem;
   margin: 0 0.1rem;
   vertical-align: middle;
+}
+
+.dark kbd {
+  background-color: #333;
+  border: 1px solid #555;
+  color: #eee;
+  box-shadow: 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Editor styles for single line */

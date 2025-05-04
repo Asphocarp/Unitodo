@@ -69,6 +69,7 @@ export default function TodoItem({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const itemRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   
   // Focus the item when isFocused prop changes
   useEffect(() => {
@@ -321,10 +322,28 @@ export default function TodoItem({
     }
   };
 
+  const handleBlur = (e: React.FocusEvent) => {
+    // Only handle blur if we're in editing mode
+    if (isEditing) {
+      // Skip if we're focusing something inside our component
+      if (editorContainerRef.current?.contains(e.relatedTarget as Node)) {
+        return;
+      }
+      
+      // Skip if clicking one of our action buttons
+      const isActionButton = (e.relatedTarget as HTMLElement)?.closest('.hn-todo-actions');
+      if (isActionButton) {
+        return;
+      }
+      
+      handleCancel();
+    }
+  };
+
   return (
     <div
       className={`hn-todo-item flex items-center h-6 ${
-        hovered ? 'bg-gray-50' : ''
+        hovered ? 'bg-gray-50 dark:bg-gray-800' : ''
       } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''} ${isFocused ? 'focused' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -332,6 +351,7 @@ export default function TodoItem({
       ref={itemRef}
       tabIndex={isFocused ? 0 : -1}
       onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
       onClick={(e) => {
         // Set focus to this item when it's clicked
         onClick();
@@ -376,6 +396,7 @@ export default function TodoItem({
             handleEditStart();
           }
         }}
+        ref={editorContainerRef}
       >
         <div
           className={`${todo.completed && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''} overflow-hidden text-ellipsis flex-grow flex items-center`}
