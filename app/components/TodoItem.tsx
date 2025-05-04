@@ -312,7 +312,7 @@ export default function TodoItem({
 
   return (
     <div
-      className={`hn-todo-item ${
+      className={`hn-todo-item flex items-center h-6 ${
         hovered ? 'bg-gray-50' : ''
       } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''} ${isFocused ? 'focused' : ''}`}
       onMouseEnter={() => setHovered(true)}
@@ -329,7 +329,7 @@ export default function TodoItem({
       aria-current={isFocused ? 'true' : undefined}
     >
       {/* Checkbox */}
-      <div onClick={(e) => e.stopPropagation()} className="flex items-center h-full">
+      <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0 mr-0.5 h-full flex items-center justify-center">
         <input
           type="checkbox"
           checked={todo.completed}
@@ -343,7 +343,7 @@ export default function TodoItem({
 
       {/* Content Area */}
       <div 
-        className="hn-todo-content flex-grow min-w-0"
+        className="hn-todo-content flex-grow min-w-0 flex items-center h-full overflow-hidden"
         onClick={(e) => {
           e.stopPropagation();
           if (!isEditing && !isReadOnly) {
@@ -352,7 +352,7 @@ export default function TodoItem({
         }}
       >
         <div
-          className={`${todo.completed && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
+          className={`${todo.completed && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''} overflow-hidden text-ellipsis flex-grow flex items-center`}
         >
           <LexicalTodoEditor
             initialFullContent={editedContent}
@@ -366,7 +366,9 @@ export default function TodoItem({
         {todo.location && (
           <a
             href={getVSCodeUrl() || '#'}
-            className="hn-todo-location block text-xs truncate"
+            className={`hn-todo-location text-xs truncate text-gray-500 transition-all duration-200 flex items-center ${
+              (hovered || isFocused || isEditing) ? 'flex-shrink-0' : 'flex-grow-0 pr-2'
+            }`}
             title={todo.location}
             target="_blank"
             rel="noopener noreferrer"
@@ -384,13 +386,15 @@ export default function TodoItem({
 
         {/* Error Message */}
         {error && (
-          <div className="text-xs text-red-600 mt-1">Error: {error}</div>
+          <div className="text-xs text-red-600 flex-shrink-0 flex items-center">Error: {error}</div>
         )}
       </div>
 
       {/* Action Buttons */}
       <div 
-        className={`hn-todo-actions flex items-center pl-2 transition-opacity duration-150 ${hovered || isEditing ? 'opacity-100' : 'opacity-0 group-focus-within:opacity-100'}`}
+        className={`hn-todo-actions flex items-center h-full transition-all duration-200 ease-in-out ${
+          (hovered || isFocused || isEditing) ? 'visible' : 'hidden absolute right-1'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {isEditing ? (
@@ -398,7 +402,7 @@ export default function TodoItem({
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="hn-action-button"
+              className="hn-action-button text-xs px-0.5 py-0"
               title="Save changes (Enter)"
               tabIndex={isFocused ? 0 : -1}
             >
@@ -407,7 +411,7 @@ export default function TodoItem({
             <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="hn-action-button"
+              className="hn-action-button text-xs px-0.5 py-0"
               title="Cancel edit (Escape)"
               tabIndex={isFocused ? 0 : -1}
             >
@@ -421,7 +425,7 @@ export default function TodoItem({
                 <button
                   onClick={addUniqueId}
                   disabled={isSaving}
-                  className="hn-action-button"
+                  className="hn-action-button text-xs px-0.5 py-0"
                   title="Add unique ID (#) to make editable"
                   tabIndex={isFocused ? 0 : -1}
                 >
@@ -430,7 +434,7 @@ export default function TodoItem({
                 <button
                   onClick={addTimestamp}
                   disabled={isSaving}
-                  className="hn-action-button"
+                  className="hn-action-button text-xs px-0.5 py-0"
                   title="Add timestamp (@) to make editable"
                   tabIndex={isFocused ? 0 : -1}
                 >
@@ -441,7 +445,7 @@ export default function TodoItem({
             {!isReadOnly && (
               <button
                 onClick={handleEditStart}
-                className="hn-action-button"
+                className="hn-action-button text-xs px-0.5 py-0"
                 title="Edit todo (Enter)"
                 tabIndex={isFocused ? 0 : -1}
               >
@@ -450,7 +454,7 @@ export default function TodoItem({
             )}
           </>
         )}
-        {isSaving && <div className="animate-spin h-3 w-3 border-t-2 border-b-2 border-accent-color ml-1"></div>}
+        {isSaving && <div className="animate-spin h-2 w-2 border-t-1 border-b-1 border-accent-color ml-1"></div>}
       </div>
     </div>
   );
