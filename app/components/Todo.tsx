@@ -1,64 +1,221 @@
 'use client';
 
-import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { TodoCategory as TodoCategoryType } from '../types';
-import { fetchTodoData } from '../services/todoService';
+import React, { useEffect, useRef, KeyboardEvent } from 'react';
+import { useTodoStore, getFilteredCategories, useTodoSelectors } from '../store/todoStore';
 import TodoCategory from './TodoCategory';
 import TodoItem from './TodoItem';
-import isEqual from 'lodash/isEqual'; // Import lodash for deep comparison
 import NerdFontIcon from './NerdFontIcon';
+import { TodoItem as TodoItemType } from '../types'; // Import TodoItem type
 
 export default function Todo() {
-  const [categories, setCategories] = useState<TodoCategoryType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState('all'); // 'all', 'completed', 'active'
-  const [searchQuery, setSearchQuery] = useState('');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [displayMode, setDisplayMode] = useState<'section' | 'tab'>('section'); // Add display mode state
-  const [activeTabIndex, setActiveTabIndex] = useState(0); // Track the active tab
-  const [focusedItem, setFocusedItem] = useState<{categoryIndex: number, itemIndex: number}>({
-    categoryIndex: -1,
-    itemIndex: -1
-  });
-  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // New state for keyboard help visibility
+  // Use Zustand store 
+  const categories = useTodoStore(state => state.categories);
+  const loading = useTodoStore(state => state.loading);
+  const error = useTodoStore(state => state.error);
+  const filter = useTodoStore(state => state.filter);
+  const searchQuery = useTodoStore(state => state.searchQuery);
+  const lastUpdated = useTodoStore(state => state.lastUpdated);
+  const displayMode = useTodoStore(state => state.displayMode);
+  const activeTabIndex = useTodoStore(state => state.activeTabIndex);
+  const focusedItem = useTodoStore(state => state.focusedItem);
+  const showKeyboardHelp = useTodoStore(state => state.showKeyboardHelp);
+  
+  // Actions
+  const loadData = useTodoStore(state => state.loadData);
+  const setFilter = useTodoStore(state => state.setFilter);
+  const setSearchQuery = useTodoStore(state => state.setSearchQuery);
+  const toggleDisplayMode = useTodoStore(state => state.toggleDisplayMode);
+  const setActiveTabIndex = useTodoStore(state => state.setActiveTabIndex);
+  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
+  const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
+  const updateTodo = useTodoStore(state => state.updateTodo);
+  const navigateTodos = useTodoStore(state => state.navigateTodos);
+  
+  // Get counts using selector
+  const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(useTodoStore.getState());
+  
+  // Get filtered categories
+  const filteredCategories = getFilteredCategories(useTodoStore.getState());
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitialMount = useRef(true);
 
-  async function loadData() {
-    try {
-      // Only show loading indicator on initial mount
-      if (isInitialMount.current) {
-        setLoading(true);
-      }
-      
-      const newData = await fetchTodoData();
-      
-      // Compare new data with current data before setting state
-      if (!isEqual(categories, newData)) {
-          console.log("Data changed, updating state..."); // Debug log
-          setCategories(newData);
-          setLastUpdated(new Date());
-          
-          // Reset active tab index if categories change and the current one no longer exists
-          if (activeTabIndex >= newData.length) {
-            setActiveTabIndex(0);
-          }
-      } else {
-           console.log("Data unchanged, skipping state update."); // Debug log
-      }
-      setError(null);
-    } catch (err) {
-      setError('Failed to load todo data. Please try again later.');
-      console.error('Error loading todo data:', err);
-    } finally {
-      if (isInitialMount.current) {
-        setLoading(false);
-        isInitialMount.current = false; // Mark initial mount as complete
-      }
+  // Define the global keydown handler
+  const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
+    return;
+    const { key, ctrlKey, metaKey, shiftKey, altKey } = event;
+    console.log(`[handleGlobalKeyDown] Key pressed: ${key}, Ctrl: ${ctrlKey}, Meta: ${metaKey}, Shift: ${shiftKey}, Alt: ${altKey}`);
+
+    const state = useTodoStore.getState(); // Get current state
+    const { focusedItem, displayMode, activeTabIndex, categories } = state;
+    const localFilteredCategories = getFilteredCategories(state); // Get filtered categories for context
+
+    // Ignore key events if modifier keys (except Ctrl) are pressed,
+    // or if the event originates from an input/textarea/select element
+    if (metaKey || shiftKey || altKey) {
+        console.log('[handleGlobalKeyDown] Ignoring due to Meta/Shift/Alt key.');
+        return;
     }
-  }
+    if ((event.target instanceof HTMLInputElement) ||
+        (event.target instanceof HTMLTextAreaElement) ||
+        (event.target instanceof HTMLSelectElement)) {
+        console.log('[handleGlobalKeyDown] Ignoring due to input/textarea/select focus.');
+        return;
+    }
+
+    let preventDefault = true; // Default to preventing default browser behavior
+
+    // --- Global Shortcuts ---
+    if (ctrlKey) {
+        switch (key) {
+            case '/':
+                console.log('[handleGlobalKeyDown] Focusing search (Ctrl+/)');
+                searchInputRef.current?.focus();
+                break;
+            case 'r':
+                console.log('[handleGlobalKeyDown] Refreshing data (Ctrl+R)');
+                loadData();
+                break;
+            case 'm':
+                console.log('[handleGlobalKeyDown] Toggling display mode (Ctrl+M)');
+                toggleDisplayMode();
+                break;
+            default:
+                preventDefault = false; // Don't prevent default for unhandled Ctrl combinations
+        }
+    } else {
+        // --- Navigation & Filtering ---
+        switch (key) {
+            // Navigation
+            case 'k': // Up
+            case 'ArrowUp':
+                console.log('[handleGlobalKeyDown] Navigating up.');
+                navigateTodos('up');
+                break;
+            case 'j': // Down
+            case 'ArrowDown':
+                console.log('[handleGlobalKeyDown] Navigating down.');
+                // navigateTodos('down');
+                break;
+            case 'h': // Previous tab (Tab mode only)
+            case 'ArrowLeft':
+                if (displayMode === 'tab' && localFilteredCategories.length > 0) {
+                    const prevIndex = (activeTabIndex - 1 + localFilteredCategories.length) % localFilteredCategories.length;
+                    console.log(`[handleGlobalKeyDown] Navigating to previous tab: ${prevIndex}`);
+                    setActiveTabIndex(prevIndex);
+                } else {
+                    preventDefault = false;
+                }
+                break;
+            case 'l': // Next tab (Tab mode only)
+            case 'ArrowRight':
+                 if (displayMode === 'tab' && localFilteredCategories.length > 0) {
+                    const nextIndex = (activeTabIndex + 1) % localFilteredCategories.length;
+                    console.log(`[handleGlobalKeyDown] Navigating to next tab: ${nextIndex}`);
+                    setActiveTabIndex(nextIndex);
+                } else {
+                    preventDefault = false;
+                }
+                break;
+            case 'Escape':
+                console.log('[handleGlobalKeyDown] Clearing focus (Escape).');
+                setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
+                 // Also blur any active element to remove visual focus ring
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+                break;
+
+            // Filtering
+            case '1':
+                console.log('[handleGlobalKeyDown] Setting filter to All.');
+                setFilter('all');
+                break;
+            case '2':
+                console.log('[handleGlobalKeyDown] Setting filter to Active.');
+                setFilter('active');
+                break;
+            case '3':
+                console.log('[handleGlobalKeyDown] Setting filter to Completed.');
+                setFilter('completed');
+                break;
+
+             // Help
+             case '?':
+                 console.log('[handleGlobalKeyDown] Toggling keyboard help.');
+                toggleKeyboardHelp();
+                break;
+
+            // --- Focused Item Actions ---
+            case ' ': // Toggle completion
+                if (focusedItem.categoryIndex !== -1 && focusedItem.itemIndex !== -1) {
+                    console.log('[handleGlobalKeyDown] Toggle completion action triggered for focused item:', focusedItem);
+                    // Find the actual category and item based on the *current* view (filtered categories)
+                    let targetTodo: TodoItemType | undefined;
+                    let targetCategoryIndexInOriginal: number = -1; // Track the original category index
+
+                    if (displayMode === 'tab') {
+                        if (activeTabIndex < localFilteredCategories.length) {
+                            const currentTabCategory = localFilteredCategories[activeTabIndex];
+                            if (focusedItem.itemIndex < currentTabCategory.todos.length) {
+                                targetTodo = currentTabCategory.todos[focusedItem.itemIndex];
+                                // Find this category in the original unfiltered list
+                                targetCategoryIndexInOriginal = categories.findIndex(cat => cat.name === currentTabCategory.name);
+                            }
+                        }
+                    } else { // Section mode
+                        if (focusedItem.categoryIndex < localFilteredCategories.length) {
+                            const currentSectionCategory = localFilteredCategories[focusedItem.categoryIndex];
+                            if (focusedItem.itemIndex < currentSectionCategory.todos.length) {
+                                targetTodo = currentSectionCategory.todos[focusedItem.itemIndex];
+                                // Find this category in the original unfiltered list
+                                targetCategoryIndexInOriginal = categories.findIndex(cat => cat.name === currentSectionCategory.name);
+                            }
+                        }
+                    }
+
+                    if (targetTodo && targetCategoryIndexInOriginal !== -1) {
+                        // Find the corresponding item in the original, unfiltered category list to ensure we update the correct one
+                        const originalCategory = categories[targetCategoryIndexInOriginal];
+                        const originalTodo = originalCategory.todos.find(t => t.location === targetTodo!.location);
+
+                        if (originalTodo) {
+                             // Call updateTodo with the original todo object, toggling its completed status
+                             updateTodo({ ...originalTodo, completed: !originalTodo.completed });
+                        } else {
+                             console.warn("[handleGlobalKeyDown] Could not find the corresponding original todo for focused item:", targetTodo.location);
+                             preventDefault = false;
+                        }
+                    } else {
+                         console.warn("[handleGlobalKeyDown] Could not find targetTodo or targetCategoryIndexInOriginal based on focused item:", focusedItem, "Display mode:", displayMode, "Active tab:", activeTabIndex, "Filtered categories:", localFilteredCategories);
+                         preventDefault = false;
+                    }
+                } else {
+                    console.log('[handleGlobalKeyDown] Space pressed, but no item focused.');
+                    preventDefault = false; // Don't prevent default if no item is focused (allow space scrolling)
+                }
+                break;
+            // case 'Enter': // Edit todo - Placeholder for future implementation
+            //     if (focusedItem.categoryIndex !== -1 && focusedItem.itemIndex !== -1) {
+            //         console.log("Edit action triggered for:", focusedItem);
+            //         // Add logic to initiate editing
+            //     } else {
+            //         preventDefault = false;
+            //     }
+            //     break;
+
+            default:
+                preventDefault = false; // Don't prevent default for other keys
+        }
+    }
+
+    if (preventDefault) {
+        console.log('[handleGlobalKeyDown] Preventing default browser behavior.');
+        event.preventDefault();
+    } else {
+        console.log('[handleGlobalKeyDown] NOT preventing default browser behavior.');
+    }
+  };
 
   useEffect(() => {
     // Initial load
@@ -68,277 +225,16 @@ export default function Todo() {
     intervalRef.current = setInterval(loadData, 5000);
     
     // Add global keyboard event listener
-    window.addEventListener('keydown', handleGlobalKeyDown);
+    // window.addEventListener('keydown', handleGlobalKeyDown);
     
     // Clean up interval and event listener on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      window.removeEventListener('keydown', handleGlobalKeyDown);
+    //   window.removeEventListener('keydown', handleGlobalKeyDown);
     };
   }, []);
-
-  // Helper function to get all todo items as a flat list
-  const getAllTodoItems = () => {
-    if (displayMode === 'tab') {
-      // In tab mode, only items from active tab
-      return filteredCategories[activeTabIndex]?.todos || [];
-    } else {
-      // In section mode, all items flattened
-      return filteredCategories.flatMap(category => category.todos);
-    }
-  };
-
-  // Handle global keyboard shortcuts
-  const handleGlobalKeyDown = (e: KeyboardEvent<HTMLElement> | globalThis.KeyboardEvent) => {
-    // Skip if in an input field (except for specific global shortcuts)
-    const target = e.target as HTMLElement;
-    const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-    
-    // Global shortcuts that work everywhere
-    if (e.ctrlKey && e.key === '/') {
-      // Ctrl+/ - Focus search input
-      e.preventDefault();
-      searchInputRef.current?.focus();
-      return;
-    }
-    
-    if (e.ctrlKey && e.key === 'r') {
-      // Ctrl+R - Refresh data
-      e.preventDefault();
-      handleRefresh();
-      return;
-    }
-
-    if (e.ctrlKey && e.key === 'm') {
-      // Ctrl+M - Toggle display mode
-      e.preventDefault();
-      toggleDisplayMode();
-      return;
-    }
-    
-    // Skip other shortcuts if in input field
-    if (isInInput) return;
-    
-    // Filter shortcuts (1, 2, 3) - These should also reset focus
-    if (e.key === '1') {
-      setFilter('all');
-      setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
-    } else if (e.key === '2') {
-      setFilter('active');
-      setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
-    } else if (e.key === '3') {
-      setFilter('completed');
-      setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
-    }
-    
-    // Navigation shortcuts
-    if (e.key === 'ArrowUp' || e.key === 'k') {
-      e.preventDefault();
-      navigateTodos('up');
-    } else if (e.key === 'ArrowDown' || e.key === 'j') {
-      e.preventDefault();
-      navigateTodos('down');
-    }
-    
-    // Tab navigation (in tab mode)
-    if (displayMode === 'tab') {
-      if (e.key === 'ArrowLeft' || e.key === 'h') {
-        e.preventDefault();
-        setActiveTabIndex(prev => Math.max(0, prev - 1));
-        setFocusedItem({ categoryIndex: -1, itemIndex: -1 }); 
-      } else if (e.key === 'ArrowRight' || e.key === 'l') {
-        e.preventDefault();
-        setActiveTabIndex(prev => Math.min(filteredCategories.length - 1, prev + 1));
-        setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
-      }
-    }
-    
-    // Escape key to blur focus
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      setFocusedItem({ categoryIndex: -1, itemIndex: -1 });
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }
-  };
-
-  // Helper function to navigate between todo items
-  const navigateTodos = (direction: 'up' | 'down') => {
-    const { categoryIndex, itemIndex } = focusedItem;
-    
-    if (displayMode === 'tab') {
-      // In tab mode, navigation is within the active tab
-      const todos = filteredCategories[activeTabIndex]?.todos || [];
-      const totalItems = todos.length;
-      
-      // Nothing focused yet
-      if (itemIndex === -1) {
-        if (totalItems > 0) {
-          setFocusedItem({
-            categoryIndex: activeTabIndex,
-            itemIndex: direction === 'up' ? totalItems - 1 : 0
-          });
-        }
-        return;
-      }
-      
-      // Moving up
-      if (direction === 'up' && itemIndex > 0) {
-        setFocusedItem({
-          categoryIndex: activeTabIndex,
-          itemIndex: itemIndex - 1
-        });
-      }
-      // Moving down
-      else if (direction === 'down' && itemIndex < totalItems - 1) {
-        setFocusedItem({
-          categoryIndex: activeTabIndex,
-          itemIndex: itemIndex + 1
-        });
-      }
-    } else {
-      // In section mode, navigation is across all categories
-      
-      // Nothing focused yet
-      if (categoryIndex === -1 || itemIndex === -1) {
-        if (filteredCategories.length > 0) {
-          if (direction === 'up') {
-            // Focus last item of last category
-            const lastCatIndex = filteredCategories.length - 1;
-            const lastItemIndex = filteredCategories[lastCatIndex].todos.length - 1;
-            setFocusedItem({
-              categoryIndex: lastCatIndex,
-              itemIndex: lastItemIndex
-            });
-          } else {
-            // Focus first item of first category
-            setFocusedItem({
-              categoryIndex: 0,
-              itemIndex: 0
-            });
-          }
-        }
-        return;
-      }
-      
-      const currentCategoryTodos = filteredCategories[categoryIndex]?.todos || [];
-      
-      // Moving up
-      if (direction === 'up') {
-        if (itemIndex > 0) {
-          // Move up within the same category
-          setFocusedItem({
-            categoryIndex,
-            itemIndex: itemIndex - 1
-          });
-        } else if (categoryIndex > 0) {
-          // Move to the last item of the previous category
-          const prevCatIndex = categoryIndex - 1;
-          const prevCatLastItemIndex = filteredCategories[prevCatIndex].todos.length - 1;
-          setFocusedItem({
-            categoryIndex: prevCatIndex,
-            itemIndex: prevCatLastItemIndex
-          });
-        }
-      }
-      // Moving down
-      else if (direction === 'down') {
-        if (itemIndex < currentCategoryTodos.length - 1) {
-          // Move down within the same category
-          setFocusedItem({
-            categoryIndex,
-            itemIndex: itemIndex + 1
-          });
-        } else if (categoryIndex < filteredCategories.length - 1) {
-          // Move to the first item of the next category
-          setFocusedItem({
-            categoryIndex: categoryIndex + 1,
-            itemIndex: 0
-          });
-        }
-      }
-    }
-  };
-
-  const handleRefresh = () => {
-    loadData(); // Trigger a manual data load
-  };
-
-  // Filter todos based on filter state and search query
-  const filteredCategories = categories.map(category => {
-    const filteredTodos = category.todos.filter(todo => {
-      let matchesFilter = true;
-      if (filter === 'completed') matchesFilter = todo.completed;
-      if (filter === 'active') matchesFilter = !todo.completed;
-
-      // If we have a search query, match against content or location
-      const matchesSearch = !searchQuery || 
-        todo.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        todo.location.toLowerCase().includes(searchQuery.toLowerCase());
-
-      return matchesFilter && matchesSearch;
-    });
-
-    return {
-      ...category,
-      todos: filteredTodos
-    };
-  }).filter(category => category.todos.length > 0);
-
-  // Calculate total counts
-  const totalTodos = categories.reduce((acc, category) => acc + category.todos.length, 0);
-  const completedTodos = categories.reduce(
-    (acc, category) => acc + category.todos.filter(todo => todo.completed).length,
-    0
-  );
-  const activeTodos = totalTodos - completedTodos;
-
-  // Handle todo updates from children components
-  const handleTodoUpdate = (updatedTodo: TodoCategoryType['todos'][0]) => {
-    // Create a deep copy of categories
-    const updatedCategories = categories.map(category => {
-      // Check if the updated todo belongs to this category
-      const updatedTodos = category.todos.map(todo => {
-        if (todo.location === updatedTodo.location) {
-          return updatedTodo; // Replace with the updated todo
-        }
-        return todo;
-      });
-      
-      return {
-        ...category,
-        todos: updatedTodos
-      };
-    });
-    
-    // Update the state with the new categories
-    setCategories(updatedCategories);
-    setLastUpdated(new Date());
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-24">
-        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-accent-color"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 p-2 text-xs">
-        <strong>Error:</strong> {error}
-      </div>
-    );
-  }
-
-  // Toggle between section and tab mode
-  const toggleDisplayMode = () => {
-    setDisplayMode(prev => prev === 'section' ? 'tab' : 'section');
-  };
 
   // Handler for when a TodoItem is clicked
   const handleItemClick = (categoryIndex: number, localItemIndex: number) => {
@@ -359,6 +255,18 @@ export default function Todo() {
     if (todoElement instanceof HTMLElement) {
       todoElement.focus();
     }
+  };
+
+  // Handle keyboard navigation requests from child components
+  const handleTodoNavigation = (direction: 'up' | 'down', categoryIndex: number, localIndex: number) => {
+    // First record the current position
+    setFocusedItem({
+      categoryIndex,
+      itemIndex: localIndex
+    });
+    
+    // Then navigate from there
+    navigateTodos(direction);
   };
 
   // Render tabs for tab mode
@@ -393,15 +301,16 @@ export default function Todo() {
         {filteredCategories.length > 0 && activeTabIndex < filteredCategories.length && (
           <div>
             {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
+              // Determine the original category index for data attributes
+               const originalCategoryIndex = categories.findIndex(cat => cat.name === filteredCategories[activeTabIndex]?.name);
               return (
-                <TodoItem 
+                <TodoItem
                   key={`${todo.location}-${localIndex}`}
-                  todo={todo} 
-                  onEditSuccess={handleTodoUpdate}
+                  todo={todo}
                   isFocused={focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === localIndex}
                   onKeyNavigation={(direction) => handleTodoNavigation(direction, activeTabIndex, localIndex)}
                   onClick={() => handleItemClick(activeTabIndex, localIndex)}
-                  categoryIndex={activeTabIndex}
+                  categoryIndex={originalCategoryIndex !== -1 ? originalCategoryIndex : activeTabIndex} // Use original index if found
                   itemIndex={localIndex}
                 />
               );
@@ -416,18 +325,6 @@ export default function Todo() {
     );
   };
 
-  // Handle keyboard navigation requests from child components
-  const handleTodoNavigation = (direction: 'up' | 'down', categoryIndex: number, localIndex: number) => {
-    // First record the current position
-    setFocusedItem({
-      categoryIndex,
-      itemIndex: localIndex
-    });
-    
-    // Then navigate from there
-    navigateTodos(direction);
-  };
-
   // Helper function to display keyboard shortcuts
   const renderKeyboardShortcutsHelp = () => {
     if (!showKeyboardHelp) return null; // Only render if showKeyboardHelp is true
@@ -437,7 +334,7 @@ export default function Todo() {
         <div className="flex justify-between items-center mb-2">
           <div className="font-bold">Keyboard Shortcuts</div>
           <button 
-            onClick={() => setShowKeyboardHelp(false)}
+            onClick={() => toggleKeyboardHelp()}
             className="text-gray-500 hover:text-gray-700"
             aria-label="Close shortcuts help"
           >
@@ -467,6 +364,22 @@ export default function Todo() {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-24">
+        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-accent-color"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 p-2 text-xs">
+        <strong>Error:</strong> {error}
+      </div>
+    );
+  }
 
   return (
     <div className="hn-style group" tabIndex={-1} role="application" aria-label="Todo Application">
@@ -515,7 +428,7 @@ export default function Todo() {
         </button>
         <button
           className="hn-filter-button"
-          onClick={handleRefresh}
+          onClick={loadData}
           title="Refresh data (Ctrl+R)"
         >
           ↻
@@ -533,7 +446,7 @@ export default function Todo() {
           className="hn-filter-button text-xs"
           title="Keyboard shortcuts"
           aria-label="Show keyboard shortcuts"
-          onClick={() => setShowKeyboardHelp(prev => !prev)}
+          onClick={toggleKeyboardHelp}
         >
           ⌨️
         </button>
@@ -546,7 +459,7 @@ export default function Todo() {
               key={catIndex} 
               category={category}
               categoryIndex={catIndex}
-              onTodoUpdate={handleTodoUpdate}
+              onTodoUpdate={updateTodo}
               focusedItemIndex={focusedItem.categoryIndex === catIndex ? focusedItem.itemIndex : -1}
               onItemClick={(localItemIndex) => handleItemClick(catIndex, localItemIndex)}
               onKeyNavigation={(direction, localIndex) => handleTodoNavigation(direction, catIndex, localIndex)}
