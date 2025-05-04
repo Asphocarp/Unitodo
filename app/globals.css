@@ -92,9 +92,9 @@ div.hn-todo-item > div.hn-todo-content > div > div > div > p > span:nth-child(3)
 .dark {
   --foreground-rgb: 230, 230, 230;
   --background-rgb: 25, 25, 25;
-  --accent-color: #ff6600;
+  --accent-color: #313e53;
   --link-color: #dddddd;
-  --link-hover-color: #ff6600;
+  --link-hover-color: #313e53;
   --subtle-color: #828282;
   --border-color: #444444;
 }
