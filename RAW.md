@@ -47,7 +47,6 @@ where:
 
 ## todo
 
-- [ ] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [ ] 0 if the line contain "UNITODO_IGNORE_LINE", ignore all todos found in this line; if the file contain "UNITODO_IGNORE_FILE", ignore all todos found in this file
 - [ ] 0 prove it to be useful by doing a project - wait, base on my experience, unique-id can be ignored, just fucking assume the line stays the same between aggregation and editing.
 - [ ] button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
@@ -73,6 +72,7 @@ where:
 
 - [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 
+- [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
 - [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
   - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
