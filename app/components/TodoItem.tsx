@@ -332,7 +332,13 @@ export default function TodoItem({
       ref={itemRef}
       tabIndex={isFocused ? 0 : -1}
       onKeyDown={handleKeyDown}
-      onClick={onClick}
+      onClick={(e) => {
+        // Set focus to this item when it's clicked
+        onClick();
+        if (itemRef.current && !isEditing) {
+          itemRef.current.focus();
+        }
+      }}
       data-location={todo.location}
       data-category-index={categoryIndex}
       data-item-index={itemIndex}
