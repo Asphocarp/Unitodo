@@ -64,17 +64,16 @@ export default function TodoCategory({
   
   return (
     <div 
-      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`} // Optional: Add class if needed
-      ref={categoryRef} // Ref might still be needed for other purposes
+      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`}
+      ref={categoryRef}
     >
       <div 
-        className="hn-category-header"
+        className="hn-category-header dark:border-gray-700 dark:text-gray-200"
         onClick={() => setExpanded(!expanded)}
-        tabIndex={-1} // Header itself is not focusable via keyboard navigation
+        tabIndex={-1}
         onKeyDown={handleKeyDown}
-        role="button" // Add role for accessibility
+        role="button"
         aria-expanded={expanded}
-        // Consider adding aria-controls pointing to the list of todos if applicable
       >
         <NerdFontIcon 
           icon={category.icon} 
@@ -82,16 +81,16 @@ export default function TodoCategory({
           className="text-sm mr-1"
         />
         {category.name}
-        <span className="ml-1 text-subtle-color text-xs">
+        <span className="ml-1 text-subtle-color dark:text-gray-500 text-xs">
           ({completedCount}/{totalCount})
         </span>
-        <span className="ml-1 text-subtle-color text-xs">
+        <span className="ml-1 text-subtle-color dark:text-gray-500 text-xs">
           {expanded ? '▼' : '►'}
         </span>
       </div>
       
       {expanded && (
-        <div ref={itemsContainerRef} role="list" className="focus-within:outline-none"> {/* Add role for accessibility */}
+        <div ref={itemsContainerRef} role="list" className="focus-within:outline-none">
           {category.todos.length > 0 ? (
             category.todos.map((todo, index) => {
               // Determine if this specific item is focused
@@ -101,16 +100,16 @@ export default function TodoCategory({
                   key={`${todo.location}-${index}`} 
                   todo={todo} 
                   isFocused={isFocused}
-                  onClick={() => handleItemClick(index)} // Use internal handler to set store focus
-                  categoryIndex={categoryIndex} // Pass filtered index
-                  originalCategoryIndex={originalCategoryIndex} // Pass original index
+                  onClick={() => handleItemClick(index)}
+                  categoryIndex={categoryIndex}
+                  originalCategoryIndex={originalCategoryIndex}
                   itemIndex={index}
-                  role="listitem" // Add role for accessibility
+                  role="listitem"
                 />
               );
             })
           ) : (
-            <div className="text-center p-1 text-subtle-color text-xs">
+            <div className="text-center p-1 text-subtle-color dark:text-gray-500 text-xs">
               No todos in this category
             </div>
           )}
