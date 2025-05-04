@@ -7,6 +7,7 @@ import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
 import { TodoItem as TodoItemType } from '../types';
 import { useDarkMode } from '../utils/darkMode';
+import { parseTodoContent } from '../utils';
 
 export default function Todo() {
   // Use Zustand store 
@@ -44,6 +45,7 @@ export default function Todo() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const urlUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Initial load
@@ -55,10 +57,18 @@ export default function Todo() {
     // Add keyboard event listener for global navigation
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       // Skip if we're inside an input element or if modifiers are pressed
-      if (e.target instanceof HTMLInputElement || e.ctrlKey || e.metaKey || e.altKey) {
+      // Allow '?' even if in input to toggle help
+      if (e.target instanceof HTMLInputElement && e.key !== '?') {
         return;
       }
-      
+      // Allow '?' even with modifiers? Maybe not, standard seems no modifiers.
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        // Exception for Ctrl+/ to focus search
+        if (!(e.ctrlKey && e.key === '/')) {
+          return;
+        }
+      }
+
       switch (e.key) {
         case 'h':
           e.preventDefault();
@@ -71,7 +81,56 @@ export default function Todo() {
         case 'd':
           e.preventDefault();
           toggleDarkMode();
+          // Refocus the main container after toggling theme
+          if (containerRef.current) {
+            // Use setTimeout to ensure focus happens after potential DOM updates
+            setTimeout(() => {
+              containerRef.current?.focus();
+              // Optionally, refocus the previously focused item if applicable
+              const { categoryIndex, itemIndex } = useTodoStore.getState().focusedItem;
+              if (categoryIndex !== -1 && itemIndex !== -1) {
+                const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
+                const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
+                focusedElement?.focus();
+              }
+            }, 0);
+          }
           break;
+        case '?':
+          e.preventDefault();
+          toggleKeyboardHelp();
+          break;
+        // Add cases for 1, 2, 3 to set filters
+        case '1':
+          setFilter('all');
+          break;
+        case '2':
+          setFilter('active');
+          break;
+        case '3':
+          setFilter('completed');
+          break;
+        // Add case for Ctrl+/ to focus search
+        case '/':
+          if (e.ctrlKey) {
+            e.preventDefault();
+            searchInputRef.current?.focus();
+          }
+          break;
+        // Add case for Ctrl+R to refresh data
+        case 'r':
+          if (e.ctrlKey) {
+            e.preventDefault();
+            loadData();
+          }
+          break;
+        // Add case for Ctrl+M to toggle display mode
+        case 'm':
+           if (e.ctrlKey) {
+             e.preventDefault();
+             toggleDisplayMode();
+           }
+           break;
       }
     };
     
@@ -84,7 +143,56 @@ export default function Todo() {
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode]);
+
+  // Handle URL hash on initial load
+  useEffect(() => {
+    if (typeof window === 'undefined' || filteredCategories.length === 0) return;
+    
+    try {
+      // Parse the URL hash
+      const hash = window.location.hash.substring(1);
+      if (!hash) return;
+      
+      const params = new URLSearchParams(hash);
+      const tabName = params.get('tab');
+      const itemId = params.get('item');
+      
+      // Ensure both tab and item are present
+      if (!tabName || !itemId) return;
+      
+      // Find the category by name
+      const categoryIndex = filteredCategories.findIndex(c => c.name === tabName);
+      if (categoryIndex === -1) return;
+      
+      // Find the item by id or index
+      let itemIndex = -1;
+      
+      // At this point we've confirmed itemId is not null, so we can assert the type
+      const itemIdString = itemId as string;
+      
+      if (itemIdString.includes('index=')) {
+        // Find by index
+        const indexStr = itemIdString.replace('index=', '');
+        itemIndex = parseInt(indexStr, 10);
+      } else {
+        // Find by unique ID
+        itemIndex = filteredCategories[categoryIndex].todos.findIndex(todo => {
+          const parsed = parseTodoContent(todo.content);
+          return parsed.idPart === itemIdString;
+        });
+      }
+      
+      if (itemIndex === -1 || itemIndex >= filteredCategories[categoryIndex].todos.length) return;
+      
+      // Set the active tab and focused item
+      setActiveTabIndex(categoryIndex);
+      setFocusedItem({ categoryIndex, itemIndex });
+      
+    } catch (err) {
+      console.error('Error handling URL hash:', err);
+    }
+  }, [filteredCategories, setActiveTabIndex, setFocusedItem]);
 
   // Helper function to get original category index
   const getOriginalCategoryIndex = (categoryName: string) => {
@@ -169,6 +277,8 @@ export default function Todo() {
           <div className="col-span-2 font-semibold mt-1">Navigation</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">↑</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">k</kbd> Navigate up</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">↓</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">j</kbd> Navigate down</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Shift</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">k</kbd> Navigate up 5 items</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Shift</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">j</kbd> Navigate down 5 items</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">←</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">h</kbd> Previous tab</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">→</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">l</kbd> Next tab</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Esc</kbd> Clear focus</div>
@@ -208,7 +318,13 @@ export default function Todo() {
   }
 
   return (
-    <div className="hn-style group dark:bg-gray-900 dark:text-gray-100" tabIndex={-1} role="application" aria-label="Todo Application">
+    <div 
+      className="hn-style group dark:bg-gray-900 dark:text-gray-100 focus:outline-none" 
+      tabIndex={-1} // Make the main container focusable
+      ref={containerRef} // Add ref to the main container
+      role="application" 
+      aria-label="Todo Application"
+    >
       <div className="hn-header dark:border-gray-700">
         <h1 className="hn-title">Unitodo</h1>
         <span className="hn-meta dark:text-gray-400">
