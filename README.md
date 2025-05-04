@@ -118,7 +118,3 @@ The web interface offers:
 - Currently supports one-line TODOs only
 - Assumes all created timestamps are unique (not more than 1 todo per second)
 - For bi-directional sync, assumes input TODOs maintain their position
-
-## License
-
-[GPL-3.0](LICENSE)
