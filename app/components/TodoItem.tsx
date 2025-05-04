@@ -7,6 +7,7 @@ import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
+import { useTodoStore } from '../store/todoStore'; // Import Zustand store
 
 // Function to generate a 5-character timestamp in URL-safe base64 format
 // Starting from 25.1.1 (as specified in the README)
@@ -41,7 +42,6 @@ function generateTimestamp(): string {
 
 interface TodoItemProps {
   todo: TodoItemType;
-  onEditSuccess?: (updatedTodo: TodoItemType) => void;
   isFocused?: boolean;
   onKeyNavigation?: (direction: 'up' | 'down', index: number) => void;
   onClick?: () => void;
@@ -51,17 +51,18 @@ interface TodoItemProps {
 
 export default function TodoItem({ 
   todo, 
-  onEditSuccess,
   isFocused = false,
   onKeyNavigation,
   onClick,
   categoryIndex = -1,
   itemIndex = -1
 }: TodoItemProps) {
+  // Use Zustand action
+  const updateTodo = useTodoStore(state => state.updateTodo);
+  
   const [hovered, setHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(todo.content);
-  const [isCompleted, setIsCompleted] = useState(todo.completed);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -84,9 +85,8 @@ export default function TodoItem({
   useEffect(() => {
     if (!isEditing) {
       setEditedContent(todo.content);
-      setIsCompleted(todo.completed);
     }
-  }, [todo.content, todo.completed, isEditing]);
+  }, [todo.content, isEditing]);
 
   const { formattedLocation, fullPath, lineNumber } = React.useMemo(() => {
     if (!todo.location) return { formattedLocation: '', fullPath: '', lineNumber: '' };
@@ -135,31 +135,25 @@ export default function TodoItem({
     setIsSaving(true);
     
     try {
-      // Generate the identifier using the provided function
       const identifier = generateId();
-      
-      // Create the new content
       const newContent = formatContent(identifier, prefix, todo.content);
-      setEditedContent(newContent);
       
-      // Save the updated todo
+      // Call API first
       await editTodoItem({
         location: todo.location,
         new_content: newContent,
-        completed: isCompleted,
+        completed: todo.completed,
       });
       
-      // Create updated todo object
-      const updatedTodo = {
+      // Update store
+      updateTodo({
         ...todo,
         content: newContent
-      };
+      });
       
-      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error(`Error adding identifier:`, err);
       setError(err.message || `Failed to add identifier.`);
-      setEditedContent(todo.content);
     } finally {
       setIsSaving(false);
     }
@@ -174,26 +168,25 @@ export default function TodoItem({
     setError(null);
     setIsSaving(true);
     try {
+      // Call API first
       await editTodoItem({
         location: todo.location,
         new_content: editedContent,
-        completed: isCompleted,
+        completed: todo.completed,
       });
       
-      // Create updated todo object with the new content
-      const updatedTodo = {
+      // Update store
+      updateTodo({
         ...todo,
         content: editedContent,
-        completed: isCompleted
-      };
+        completed: todo.completed,
+      });
       
       setIsEditing(false);
-      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error('Error saving todo:', err);
       setError(err.message || 'Failed to save changes.');
     } finally {
-      setEditedContent(editedContent); // TODO hacky way to update the frontend immediately (maybe need to use a better state management framework to avoid this)
       setIsSaving(false);
     }
   };
@@ -201,7 +194,6 @@ export default function TodoItem({
   const handleCancel = () => {
     setIsEditing(false);
     setEditedContent(todo.content);
-    setIsCompleted(todo.completed);
     setError(null);
   };
 
@@ -223,41 +215,48 @@ export default function TodoItem({
   const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
     const newCompletedStatus = e.target.checked;
-    setIsCompleted(newCompletedStatus);
     setError(null);
     setIsSaving(true);
     try {
       const contentToSave = isEditing ? editedContent : todo.content;
+      
+      // Call API first
       await editTodoItem({
         location: todo.location,
         new_content: contentToSave,
         completed: newCompletedStatus,
       });
       
-      // Create updated todo object with the new completion status
-      const updatedTodo = {
+      // Update store
+      updateTodo({
         ...todo,
         content: contentToSave,
         completed: newCompletedStatus
-      };
+      });
       
-      if (onEditSuccess) onEditSuccess(updatedTodo);
     } catch (err: any) {
       console.error('Error saving checkbox state:', err);
       setError(err.message || 'Failed to save completion status.');
-      setIsCompleted(!newCompletedStatus);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleToggleCompletion = () => {
-    if (onEditSuccess) {
-      onEditSuccess({
-        ...todo,
-        completed: !todo.completed
+    updateTodo({
+      ...todo,
+      completed: !todo.completed
+    });
+    
+    editTodoItem({
+      location: todo.location,
+      new_content: todo.content,
+      completed: !todo.completed,
+    }).catch(err => {
+        console.error('Error toggling completion:', err);
+        updateTodo(todo);
+        setError('Failed to toggle completion status.')
       });
-    }
   };
   
   const handleEditStart = () => {
@@ -283,10 +282,10 @@ export default function TodoItem({
         handleToggleCompletion();
       } else if ((e.key === 'ArrowUp' || e.key === 'k') && onKeyNavigation) {
         e.preventDefault();
-        onKeyNavigation('up', -1); // The index is handled by the parent
+        onKeyNavigation('up', -1);
       } else if ((e.key === 'ArrowDown' || e.key === 'j') && onKeyNavigation) {
         e.preventDefault();
-        onKeyNavigation('down', -1); // The index is handled by the parent
+        onKeyNavigation('down', -1);
       }
     }
   };
@@ -311,7 +310,7 @@ export default function TodoItem({
       <div>
         <input
           type="checkbox"
-          checked={isCompleted}
+          checked={todo.completed}
           onChange={handleCheckboxChange}
           disabled={isReadOnly || isSaving}
           className={`hn-checkbox ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}
@@ -322,7 +321,7 @@ export default function TodoItem({
       {/* Content Area */}
       <div className="hn-todo-content" onClick={(e) => e.stopPropagation()}>
         <div
-          className={`${isCompleted && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
+          className={`${todo.completed && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''}`}
           onClick={() => {
             if (!isEditing && !isReadOnly) {
               setIsEditing(true);
@@ -407,7 +406,7 @@ export default function TodoItem({
             )}
             {!isReadOnly && (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={handleEditStart}
                 className="hn-action-button"
                 title="Edit todo"
               >

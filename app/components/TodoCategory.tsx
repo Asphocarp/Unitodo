@@ -41,7 +41,7 @@ export default function TodoCategory({
     }
   };
   
-  // Handle item navigation - now just pass through to parent
+  // Handle item navigation - just pass through to parent
   const handleItemNavigation = (direction: 'up' | 'down', index: number) => {
     if (onKeyNavigation) {
       onKeyNavigation(direction, index);
@@ -101,7 +101,6 @@ export default function TodoCategory({
               <TodoItem 
                 key={`${todo.location}-${index}`} 
                 todo={todo} 
-                onEditSuccess={handleTodoUpdate}
                 isFocused={focusedItemIndex === index}
                 onKeyNavigation={handleItemNavigation}
                 onClick={() => handleItemClick(index)}
