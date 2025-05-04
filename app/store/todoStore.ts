@@ -27,6 +27,7 @@ interface TodoState {
   toggleKeyboardHelp: () => void;
   updateTodo: (updatedTodo: TodoItem) => void;
   navigateTodos: (direction: 'up' | 'down') => void;
+  navigateTabs: (direction: 'left' | 'right') => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -38,7 +39,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   
   filter: 'all',
   searchQuery: '',
-  displayMode: 'section',
+  displayMode: 'tab',
   activeTabIndex: 0,
   focusedItem: { categoryIndex: -1, itemIndex: -1 },
   showKeyboardHelp: false,
@@ -92,7 +93,18 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     displayMode: state.displayMode === 'section' ? 'tab' : 'section' 
   })),
   
-  setActiveTabIndex: (activeTabIndex) => set({ activeTabIndex }),
+  setActiveTabIndex: (activeTabIndex) => set((state) => {
+    const filteredCategories = getFilteredCategories(state);
+    const hasItems = filteredCategories[activeTabIndex]?.todos.length > 0;
+    
+    return { 
+      activeTabIndex,
+      focusedItem: { 
+        categoryIndex: activeTabIndex, 
+        itemIndex: hasItems ? 0 : -1 
+      }
+    };
+  }),
   
   setFocusedItem: (focusedItem) => set({ focusedItem }),
   
@@ -240,6 +252,35 @@ export const useTodoStore = create<TodoState>((set, get) => ({
           });
         }
       }
+    }
+  },
+
+  navigateTabs: (direction) => {
+    const state = get();
+    const { categories } = state;
+    const filteredCategories = getFilteredCategories(state);
+    const { activeTabIndex } = state;
+    
+    if (direction === 'left' && activeTabIndex > 0) {
+      const newTabIndex = activeTabIndex - 1;
+      const hasItems = filteredCategories[newTabIndex]?.todos.length > 0;
+      set({ 
+        activeTabIndex: newTabIndex,
+        focusedItem: { 
+          categoryIndex: newTabIndex, 
+          itemIndex: hasItems ? 0 : -1 
+        }
+      });
+    } else if (direction === 'right' && activeTabIndex < filteredCategories.length - 1) {
+      const newTabIndex = activeTabIndex + 1;
+      const hasItems = filteredCategories[newTabIndex]?.todos.length > 0;
+      set({ 
+        activeTabIndex: newTabIndex,
+        focusedItem: { 
+          categoryIndex: newTabIndex, 
+          itemIndex: hasItems ? 0 : -1 
+        }
+      });
     }
   }
 }));

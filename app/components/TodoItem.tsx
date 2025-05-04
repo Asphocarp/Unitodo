@@ -75,8 +75,10 @@ export default function TodoItem({
     if (isFocused && !isEditing && itemRef.current) {
       // Check if the element is already focused to avoid loops
       if (document.activeElement !== itemRef.current) {
-        itemRef.current.focus({ preventScroll: true });
+        itemRef.current.focus({ preventScroll: false });
       }
+      // Scroll into view when focused
+      itemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [isFocused, isEditing]);
   
@@ -283,10 +285,19 @@ export default function TodoItem({
     } else {
       // Prevent default actions for keys we handle
       switch (e.key) {
-        case 'Enter':
+        case 'i':
           if (!isReadOnly) {
             e.preventDefault();
             handleEditStart();
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (todo.location) {
+            const url = getVSCodeUrl();
+            if (url) {
+              window.open(url, '_blank');
+            }
           }
           break;
         case ' ':
@@ -329,7 +340,17 @@ export default function TodoItem({
       aria-current={isFocused ? 'true' : undefined}
     >
       {/* Checkbox */}
-      <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0 mr-0.5 h-full flex items-center justify-center">
+      <div 
+        className="flex-shrink-0 mr-0.5 h-full flex items-center justify-center"
+        onClick={(e) => {
+          // Let the event through, but still toggle checkbox
+          if (!isReadOnly && !isSaving) {
+            handleCheckboxChange({
+              target: { checked: !todo.completed }
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+        }}
+      >
         <input
           type="checkbox"
           checked={todo.completed}
@@ -345,7 +366,6 @@ export default function TodoItem({
       <div 
         className="hn-todo-content flex-grow min-w-0 flex items-center h-full overflow-hidden"
         onClick={(e) => {
-          e.stopPropagation();
           if (!isEditing && !isReadOnly) {
             handleEditStart();
           }
@@ -376,7 +396,7 @@ export default function TodoItem({
               if (!getVSCodeUrl()) {
                 e.preventDefault();
               }
-              e.stopPropagation();
+              // Don't stop propagation, let parent handle focus
             }}
             tabIndex={isFocused ? 0 : -1}
           >
@@ -395,12 +415,14 @@ export default function TodoItem({
         className={`hn-todo-actions flex items-center h-full transition-all duration-200 ease-in-out ${
           (hovered || isFocused || isEditing) ? 'visible' : 'hidden absolute right-1'
         }`}
-        onClick={(e) => e.stopPropagation()}
       >
         {isEditing ? (
           <>
             <button
-              onClick={handleSave}
+              onClick={(e) => {
+                e.stopPropagation(); // We do need to stop propagation here
+                handleSave();
+              }}
               disabled={isSaving}
               className="hn-action-button text-xs px-0.5 py-0"
               title="Save changes (Enter)"
@@ -409,7 +431,10 @@ export default function TodoItem({
               save
             </button>
             <button
-              onClick={handleCancel}
+              onClick={(e) => {
+                e.stopPropagation(); // We do need to stop propagation here
+                handleCancel();
+              }}
               disabled={isSaving}
               className="hn-action-button text-xs px-0.5 py-0"
               title="Cancel edit (Escape)"
@@ -423,7 +448,10 @@ export default function TodoItem({
             {isReadOnly && (
               <>
                 <button
-                  onClick={addUniqueId}
+                  onClick={(e) => {
+                    e.stopPropagation(); // We do need to stop propagation here
+                    addUniqueId();
+                  }}
                   disabled={isSaving}
                   className="hn-action-button text-xs px-0.5 py-0"
                   title="Add unique ID (#) to make editable"
@@ -432,7 +460,10 @@ export default function TodoItem({
                   id
                 </button>
                 <button
-                  onClick={addTimestamp}
+                  onClick={(e) => {
+                    e.stopPropagation(); // We do need to stop propagation here
+                    addTimestamp();
+                  }}
                   disabled={isSaving}
                   className="hn-action-button text-xs px-0.5 py-0"
                   title="Add timestamp (@) to make editable"
@@ -444,7 +475,10 @@ export default function TodoItem({
             )}
             {!isReadOnly && (
               <button
-                onClick={handleEditStart}
+                onClick={(e) => {
+                  e.stopPropagation(); // We do need to stop propagation here
+                  handleEditStart();
+                }}
                 className="hn-action-button text-xs px-0.5 py-0"
                 title="Edit todo (Enter)"
                 tabIndex={isFocused ? 0 : -1}

@@ -29,6 +29,7 @@ export default function Todo() {
   const setFocusedItem = useTodoStore(state => state.setFocusedItem);
   const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
   const navigateTodos = useTodoStore(state => state.navigateTodos);
+  const navigateTabs = useTodoStore(state => state.navigateTabs);
   
   // Get counts using selector
   const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(useTodoStore.getState());
@@ -38,6 +39,7 @@ export default function Todo() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Initial load
@@ -46,13 +48,35 @@ export default function Todo() {
     // Set up polling interval
     intervalRef.current = setInterval(loadData, 5000);
     
+    // Add keyboard event listener for global navigation
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      // Skip if we're inside an input element or if modifiers are pressed
+      if (e.target instanceof HTMLInputElement || e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+      
+      switch (e.key) {
+        case 'h':
+          e.preventDefault();
+          navigateTabs('left');
+          break;
+        case 'l':
+          e.preventDefault();
+          navigateTabs('right');
+          break;
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    
     // Clean up interval and event listener on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [loadData, navigateTabs]);
 
   // Helper function to get original category index
   const getOriginalCategoryIndex = (categoryName: string) => {
@@ -89,7 +113,7 @@ export default function Todo() {
         
         {/* Display active tab content */}
         {filteredCategories.length > 0 && activeTabIndex < filteredCategories.length && (
-          <div>
+          <div role="tabpanel" className="focus-within:outline-none">
             {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
               // Determine the original category index
               const originalCategoryIndex = getOriginalCategoryIndex(filteredCategories[activeTabIndex].name);
@@ -143,7 +167,8 @@ export default function Todo() {
           
           <div className="col-span-2 font-semibold mt-1">Todo actions</div>
           <div><kbd>Space</kbd> Toggle completion</div>
-          <div><kbd>Enter</kbd> Edit todo</div>
+          <div><kbd>i</kbd> Edit todo</div>
+          <div><kbd>Enter</kbd> Open in VSCode</div>
           
           <div className="col-span-2 font-semibold mt-1">Global</div>
           <div><kbd>Ctrl</kbd>+<kbd>/</kbd> Focus search</div>
