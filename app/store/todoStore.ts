@@ -304,48 +304,56 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
 // Helper function to filter categories based on filter state and search query
 export const getFilteredCategories = (state: TodoState) => {
-  return state.categories.map(category => {
+  const result: TodoCategory[] = [];
+  const lowerCaseSearchQuery = state.searchQuery.toLowerCase();
+
+  for (const category of state.categories) {
     const filteredTodos = category.todos.filter(todo => {
       let matchesFilter = true;
       if (state.filter === 'completed') matchesFilter = todo.completed;
       if (state.filter === 'active') matchesFilter = !todo.completed;
 
-      // If we have a search query, match against content or location
       const matchesSearch = !state.searchQuery || 
-        todo.content.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-        todo.location.toLowerCase().includes(state.searchQuery.toLowerCase());
+        todo.content.toLowerCase().includes(lowerCaseSearchQuery) ||
+        todo.location.toLowerCase().includes(lowerCaseSearchQuery);
 
       return matchesFilter && matchesSearch;
     });
 
-    return {
-      ...category,
-      todos: filteredTodos
-    };
-  }).filter(category => category.todos.length > 0);
+    if (filteredTodos.length > 0) {
+      result.push({ ...category, todos: filteredTodos });
+    }
+  }
+  return result;
 };
 
 // Helper function to get counts of filtered todos per category
 // Optimized for navigation logic where only counts are needed.
 const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
-  return state.categories.map(category => {
+  const result: FilteredCategoryInfo[] = [];
+  const lowerCaseSearchQuery = state.searchQuery.toLowerCase();
+
+  for (const category of state.categories) {
     const filteredCount = category.todos.filter(todo => {
       let matchesFilter = true;
       if (state.filter === 'completed') matchesFilter = todo.completed;
       if (state.filter === 'active') matchesFilter = !todo.completed;
 
       const matchesSearch = !state.searchQuery ||
-        todo.content.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-        todo.location.toLowerCase().includes(state.searchQuery.toLowerCase());
+        todo.content.toLowerCase().includes(lowerCaseSearchQuery) ||
+        todo.location.toLowerCase().includes(lowerCaseSearchQuery);
 
       return matchesFilter && matchesSearch;
     }).length; // Calculate length directly
 
-    return {
-      name: category.name,
-      filteredTodoCount: filteredCount,
-    };
-  }).filter(categoryInfo => categoryInfo.filteredTodoCount > 0); // Filter out empty categories
+    if (filteredCount > 0) {
+      result.push({
+        name: category.name,
+        filteredTodoCount: filteredCount,
+      });
+    }
+  }
+  return result;
 };
 
 // Utility selectors
