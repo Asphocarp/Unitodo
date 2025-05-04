@@ -304,10 +304,19 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
 // Helper function to filter categories based on filter state and search query
 export const getFilteredCategories = (state: TodoState) => {
+  const startTime = performance.now();
+  
   const result: TodoCategory[] = [];
   const lowerCaseSearchQuery = state.searchQuery.toLowerCase();
+  const noFilterNeeded = state.searchQuery === '' && state.filter === 'all';
 
   for (const category of state.categories) {
+    if (noFilterNeeded) {
+      // No filtering needed, add the entire category
+      result.push({ ...category });
+      continue;
+    }
+
     const filteredTodos = category.todos.filter(todo => {
       let matchesFilter = true;
       if (state.filter === 'completed') matchesFilter = todo.completed;
@@ -324,16 +333,31 @@ export const getFilteredCategories = (state: TodoState) => {
       result.push({ ...category, todos: filteredTodos });
     }
   }
+  
+  const endTime = performance.now();
+  console.log(`getFilteredCategories took ${endTime - startTime}ms`);
   return result;
 };
 
 // Helper function to get counts of filtered todos per category
 // Optimized for navigation logic where only counts are needed.
 const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
+  const startTime = performance.now();
+  
   const result: FilteredCategoryInfo[] = [];
   const lowerCaseSearchQuery = state.searchQuery.toLowerCase();
+  const noFilterNeeded = state.searchQuery === '' && state.filter === 'all';
 
   for (const category of state.categories) {
+    if (noFilterNeeded) {
+      // No filtering needed, use the total count directly
+      result.push({
+        name: category.name,
+        filteredTodoCount: category.todos.length,
+      });
+      continue;
+    }
+
     const filteredCount = category.todos.filter(todo => {
       let matchesFilter = true;
       if (state.filter === 'completed') matchesFilter = todo.completed;
@@ -353,6 +377,9 @@ const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
       });
     }
   }
+  
+  const endTime = performance.now();
+  console.log(`getFilteredCategoryInfo took ${endTime - startTime}ms`);
   return result;
 };
 
