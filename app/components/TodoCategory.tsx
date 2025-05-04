@@ -19,6 +19,7 @@ export default function TodoCategory({
 }: TodoCategoryProps) {
   const [expanded, setExpanded] = React.useState(true);
   const categoryRef = useRef<HTMLDivElement>(null);
+  const itemsContainerRef = useRef<HTMLDivElement>(null);
   
   // Get necessary state and actions from Zustand store
   const focusedItem = useTodoStore(state => state.focusedItem);
@@ -36,6 +37,16 @@ export default function TodoCategory({
       setExpanded(true);
     }
   }, [isAnyChildFocused, focusedItem.itemIndex, expanded]);
+  
+  // Scroll category into view when it contains focused item
+  useEffect(() => {
+    if (isAnyChildFocused && focusedItem.itemIndex !== -1 && categoryRef.current) {
+      categoryRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, [isAnyChildFocused, focusedItem.itemIndex]);
   
   // Handle item clicks - set focus in the store
   const handleItemClick = (itemIndex: number) => {
@@ -80,7 +91,7 @@ export default function TodoCategory({
       </div>
       
       {expanded && (
-        <div role="list"> {/* Add role for accessibility */}
+        <div ref={itemsContainerRef} role="list" className="focus-within:outline-none"> {/* Add role for accessibility */}
           {category.todos.length > 0 ? (
             category.todos.map((todo, index) => {
               // Determine if this specific item is focused
