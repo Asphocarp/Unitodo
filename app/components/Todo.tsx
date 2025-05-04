@@ -84,12 +84,20 @@ export default function Todo() {
     
     // Add keyboard event listener for global navigation
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      // Skip if we're inside an input element or if modifiers are pressed
-      // Allow '?' even if in input to toggle help
-      if (e.target instanceof HTMLInputElement && e.key !== '?') {
+      // Skip if we're inside an input element, contentEditable element, or textarea
+      const isEditingContext = 
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement || 
+        (e.target instanceof HTMLElement && e.target.getAttribute('contenteditable') === 'true') ||
+        (e.target instanceof HTMLElement && e.target.closest('.editor-container')) ||
+        (e.target instanceof HTMLElement && e.target.closest('[contenteditable="true"]'));
+      
+      // Only allow Ctrl/Cmd shortcuts when in editing contexts
+      if (isEditingContext && e.key !== '?' && !(e.ctrlKey || e.metaKey)) {
         return;
       }
-      // Allow '?' even with modifiers? Maybe not, standard seems no modifiers.
+      
+      // Skip if modifiers are pressed (except for specific combinations we want to allow)
       if (e.ctrlKey || e.metaKey || e.altKey) {
         // Exception for Ctrl+/ to focus search
         if (!(e.ctrlKey && e.key === '/')) {
@@ -99,44 +107,58 @@ export default function Todo() {
 
       switch (e.key) {
         case 'h':
-          e.preventDefault();
-          navigateTabs('left');
+          if (!isEditingContext) {
+            e.preventDefault();
+            navigateTabs('left');
+          }
           break;
         case 'l':
-          e.preventDefault();
-          navigateTabs('right');
+          if (!isEditingContext) {
+            e.preventDefault();
+            navigateTabs('right');
+          }
           break;
         case 'd':
-          e.preventDefault();
-          toggleDarkMode();
-          // Refocus the main container after toggling theme
-          if (containerRef.current) {
-            // Use setTimeout to ensure focus happens after potential DOM updates
-            setTimeout(() => {
-              containerRef.current?.focus();
-              // Optionally, refocus the previously focused item if applicable
-              const { categoryIndex, itemIndex } = useTodoStore.getState().focusedItem;
-              if (categoryIndex !== -1 && itemIndex !== -1) {
-                const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
-                const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
-                focusedElement?.focus();
-              }
-            }, 0);
+          if (!isEditingContext) {
+            e.preventDefault();
+            toggleDarkMode();
+            // Refocus the main container after toggling theme
+            if (containerRef.current) {
+              // Use setTimeout to ensure focus happens after potential DOM updates
+              setTimeout(() => {
+                containerRef.current?.focus();
+                // Optionally, refocus the previously focused item if applicable
+                const { categoryIndex, itemIndex } = useTodoStore.getState().focusedItem;
+                if (categoryIndex !== -1 && itemIndex !== -1) {
+                  const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
+                  const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
+                  focusedElement?.focus();
+                }
+              }, 0);
+            }
           }
           break;
         case '?':
-          e.preventDefault();
-          toggleKeyboardHelp();
+          if (!isEditingContext) {
+            e.preventDefault();
+            toggleKeyboardHelp();
+          }
           break;
         // Add cases for 1, 2, 3 to set filters
         case '1':
-          setFilter('all');
+          if (!isEditingContext) {
+            setFilter('all');
+          }
           break;
         case '2':
-          setFilter('active');
+          if (!isEditingContext) {
+            setFilter('active');
+          }
           break;
         case '3':
-          setFilter('completed');
+          if (!isEditingContext) {
+            setFilter('completed');
+          }
           break;
         // Add case for Ctrl+/ to focus search
         case '/':
@@ -307,6 +329,9 @@ export default function Todo() {
             ✕
           </button>
         </div>
+        <div className="italic text-gray-500 dark:text-gray-400 mb-2 text-xs">
+          Note: Shortcuts only work when not editing text
+        </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           <div className="col-span-2 font-semibold mt-1">Navigation</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">↑</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">k</kbd> Navigate up</div>
@@ -329,7 +354,7 @@ export default function Todo() {
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">1</kbd> Show all todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">2</kbd> Show active todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">3</kbd> Show completed todos</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">D</kbd> Toggle dark mode</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
         </div>
       </div>
     );
