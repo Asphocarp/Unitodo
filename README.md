@@ -1,114 +1,124 @@
 # Unitodo
-- **Unifying Distributed TODOs**
 
-## idea
+**Unitying Distributed TODOs**
 
-- give every todo a unique ID while distributing them everywhere
-- collect them in real time at one place 
-    - obsidian (simply a markdown file)?
-    - webview? notion? terminal?
-- (impact) so that every TODO is in one place, and all you need to do today is DO things after ranking them.
+Centralize all your TODOs from across your entire codebase and projects into a single, manageable, vim-able view.
 
-## related work:
-https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
+<!-- ![Unitodo Logo](assets/logo.png) -->
 
-- key diff:
-  - with key features, but not disturbingly long even in plain text (in code)
+> ⚠️ **Warning**: Unitodo is currently a toy project in early development stage. It may contain bugs, lack features, or undergo significant changes. Use at your own risk in production environments.
 
+> ⚠️ **Warning**: This doc (and most of the code) was AI-generated because life’s short — polish coming later!
 
-## format / parsing
+## Overview
 
-EGs:
-```bash
-T0DO1@fffff content lalalaa
-T0DO1#Jl_obVmSA7XCwzp7hkT2r content lalalaa
-T0DO1##12 content lalalaa
-T0DO1@fffff@@eeeee content lalalaa
+Unitodo is a powerful solution that helps developers and teams track all their TODOs across different files, projects, and repositories. The tool assigns unique IDs to each TODO item, collects them in real-time, and presents them in a unified interface for easy management.
 
-T0DO 1@fffff content lalalaa
-T0DO: 1@fffff content lalalaa
-- [ ] 1@AoVs5 content lalalaa
-```
-where:
-- At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list.
-    - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
-- `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`.
-    - `@@eeeee` is a timestamp indicating when the TODO was done.
-- `#Jl_obVmSA7XCwzp7hkT2r` is a unique nanoid of 20 chars.
-- `##12` is a unique incremented number id, assigned by unitodo system.
-- Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
-- We only match all of above stuff in the-first-word of the line, excluding all leading blanks and `:`.
+### Architecture
 
+Unitodo consists of two main components:
 
+1. **Rust Backend**: Scans your codebase for TODOs using `ag` (the silver searcher), processes and categorizes them, and provides a REST API for the frontend.
 
-## todo
+2. **React Frontend**: A modern web interface for viewing, filtering, and managing your TODO items.
 
-- make the tab part persistent (meaning when you scroll down, the tab part will not disappear) in tab-mode
-- make the section-header part persistent (meaning when you scroll down, the section-header part will not disappear) in section-mode (but if you change the section, the old section-header part should be replaced by the new one)
+### Key Features
 
-- [ ] 0 great doc with screenshot (derive from this doc using llm)
-- [ ] 1 fix toggle-checkbox, and all hotkeys
-- [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
+- **Distributed TODOs with Unique IDs**: Add TODOs anywhere in your codebase with a simple format
+- **Centralized Management**: View and manage all your TODOs in one place
+- **Priority System**: Easily prioritize your tasks with a simple numbering system
+- **Timestamping**: Automatic tracking of when TODOs are created and completed
+- **Modern Web Interface**: Filter, sort, and manage your TODOs with an intuitive UI
+- **Markdown Support**: Basic markdown rendering for rich TODO descriptions
 
-- [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
-- [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
+## Installation
 
-- [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
-- [ ] 1 if the line contain "UNITODO_IGNORE", then skip it
-- [ ] 2@AoVsq make this repo public
-- [ ] 2#wTzSLqzruFudt5f7Sf0W check command injection safety
-- [ ] 2@AoVtD show dependency of todos?
-- [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
-- [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
-- [ ] 3@AoVsd see from cease plugin, how to inline-render a string
-- [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
+- install `ag` (the silver searcher)
 
-- [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
+### Prerequisites
 
-- [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
-- [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
-  - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
-  - [x] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
-  - definition of the-first-word: the-first-word is the first word after the matched pattern (TODO) in the line (separated by blank after it).
-- [x] 0 editable <- parser
-- [x] X 3 switch to SolidJS (for better performance), instead of RaectJS
+- Rust (for the backend)
+- Node.js and npm (for the frontend)
 
+### Setup
 
-## Best practices
-
-[TODO: simply put a 0/1/2/3 in the front of the line, to indicate the priority, when alphabetically sorted]
-
-## Known issues
-
-- support one-line TODO only
-- to bi-directional sync, for now, we assume that the input TODOs are edited 
-- we assume all created timestamps are unique. (you do not create more than 1 todo within 1 second)
-
-## Frontend
-
-A React frontend has been added to display the todo items in a web interface:
-
-- Display todos grouped by categories (Project, Git Repo, Other)
-- Filter todos by status (All/Active/Completed)
-- Responsive design with modern UI
-
-See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
-
-### Running the Frontend
-
-1. First run the Rust backend to generate the todo data:
+1. Clone the repository:
    ```bash
-   cargo run
+   git clone https://github.com/yourusername/unitodo.git
+   cd unitodo
    ```
 
-2. Install frontend dependencies:
+2. Build the backend:
+   ```bash
+   cargo build --release
+   ```
+
+3. Install frontend dependencies:
    ```bash
    npm install
    ```
 
-3. Run the frontend development server:
+## Usage
+
+### Running Unitodo
+
+1. Start the backend to aggregate TODOs:
+   ```bash
+   cargo run
+   ```
+
+2. Run the frontend development server:
    ```bash
    npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Adding TODOs
+
+Unitodo supports several TODO formats. Add them anywhere in your code or documentation:
+
+```
+T0DO 1@fffff content description
+T0DO 1#Jl_obVmSA7XCwzp7hkT2r another task
+- [ ] 2@AoVs5 third task with checklist format
+```
+
+#### Format Explained
+
+- **Priority**: The number at the beginning (0-3 recommended, 0 being highest priority)
+- **Identifier**: One of the following:
+  - `@fffff` - Timestamp (5-character URL-safe base64 Unix timestamp)
+  - `#Jl_obVmSA7XCwzp7hkT2r` - Unique nanoid (20 characters)
+  - `##12` - Sequential numeric ID
+
+- **Content**: The actual task description following the identifier
+
+### Web Interface
+
+The web interface offers:
+
+- Grouping by categories (Project, Git Repo, Other)
+- Filtering by status (All/Active/Completed)
+- Editing of todo items
+- Responsive design for desktop and mobile
+
+## Best Practices
+
+- Use the priority system (0-3) consistently:
+  - `0`: Critical/urgent tasks
+  - `1`: Important tasks
+  - `2`: Normal priority tasks
+  - `3`: Low priority/nice-to-have tasks
+- Add unique IDs to TODOs that you want to track and edit
+- Keep TODO descriptions concise but descriptive
+
+## Known Limitations
+
+- Currently supports one-line TODOs only
+- Assumes all created timestamps are unique (not more than 1 todo per second)
+- For bi-directional sync, assumes input TODOs maintain their position
+
+## License
+
+[GPL-3.0](LICENSE)
