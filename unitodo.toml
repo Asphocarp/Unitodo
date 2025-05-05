@@ -17,6 +17,7 @@ ignore = [
     "/Users/asc/repo/_archive_/**", # Relative path
     "*/unitodo.sync.*",
     "*.temp.*",
+    "/Users/asc/repo/Unitodo/README.md",
 ]
 
 [projects]
