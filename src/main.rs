@@ -20,14 +20,14 @@ use std::sync::Mutex;
 #[derive(Deserialize, Debug, Default, Clone)] // Added Clone
 struct Config {
     #[serde(default)]
-    ag: AgConfig,
+    rg: RgConfig,
     #[serde(default)] // Projects map: Project name -> List of glob patterns
     projects: HashMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)] // Add Clone here
-struct AgConfig {
-    #[serde(default = "default_ag_pattern")]
+struct RgConfig {
+    #[serde(default = "default_rg_pattern")]
     pattern: String,
     #[serde(default = "default_search_paths")]
     paths: Vec<String>,
@@ -37,7 +37,7 @@ struct AgConfig {
     file_types: Option<Vec<String>>,
 }
 
-fn default_ag_pattern() -> String {
+fn default_rg_pattern() -> String {
     "TODO".to_string()
 }
 
@@ -93,7 +93,7 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
             current_path = parent.to_path_buf();
         } else {
             // Cannot get parent (e.g., root directory or relative path with no parent)
-            return Ok(None);
+            return Ok(None); // Return Ok(None) if no parent
         }
     }
 
@@ -104,7 +104,7 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
             let repo_name = current_path.file_name()
                 .and_then(|name| name.to_str())
                 .map(String::from);
-            return Ok(repo_name);
+            return Ok(repo_name); // Return Ok(Some(repo_name)) or Ok(None)
         }
 
         // Move up to the parent directory
@@ -217,10 +217,10 @@ impl<'a> Sink for TodoSink<'a> {
         };
 
         // Now, use the *config* regex to extract the content *after* the pattern
-        let todo_pattern_re = match Regex::new(&self.config.ag.pattern) {
+        let todo_pattern_re = match Regex::new(&self.config.rg.pattern) {
             Ok(re) => re,
             Err(_) => {
-                eprintln!("Error: Invalid regex pattern in config during sink processing ('{}')", self.config.ag.pattern);
+                eprintln!("Error: Invalid regex pattern in config during sink processing ('{}')", self.config.rg.pattern);
                 return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern"));
             }
         };
@@ -244,7 +244,6 @@ impl<'a> Sink for TodoSink<'a> {
                 for pattern_str in glob_patterns {
                     match Pattern::new(pattern_str) {
                         Ok(pattern) => {
-                            // Use file_path_str for glob matching
                             if pattern.matches(&file_path_str) {
                                 category = TodoCategory::Project(project_name.clone());
                                 project_match = true;
@@ -299,17 +298,17 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     }
 
     // 1. Compile the Regex Matcher for TODO pattern
-    let matcher = match RegexMatcher::new(&config.ag.pattern) {
+    let matcher = match RegexMatcher::new(&config.rg.pattern) {
         Ok(m) => m,
         Err(e) => {
-            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
+            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.rg.pattern, e);
             return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid regex pattern in config: {}", e)));
         }
     };
 
     // 2. Build GlobSet for custom ignore patterns from config
     let mut custom_ignore_builder = GlobSetBuilder::new();
-    if let Some(items_to_ignore) = &config.ag.ignore {
+    if let Some(items_to_ignore) = &config.rg.ignore {
         for pattern_str in items_to_ignore {
             match Glob::new(pattern_str) {
                 Ok(glob) => { custom_ignore_builder.add(glob); },
@@ -339,8 +338,8 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 
 
     // 3. Prepare the WalkBuilder (without overrides)
-    let mut builder = WalkBuilder::new(&config.ag.paths[0]);
-    for path in config.ag.paths.iter().skip(1) {
+    let mut builder = WalkBuilder::new(&config.rg.paths[0]);
+    for path in config.rg.paths.iter().skip(1) {
         builder.add(path);
     }
     builder.git_ignore(true);  // Standard gitignore handling
@@ -348,9 +347,9 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     builder.parents(true); // Standard parent ignore handling
 
     // Still warn about file_types being unsupported
-    if let Some(types) = &config.ag.file_types {
+    if let Some(types) = &config.rg.file_types {
          if debug {
-             eprintln!("Warning: config `ag.file_types` ('{:?}') not yet supported with internal search.", types);
+             eprintln!("Warning: config `rg.file_types` ('{:?}') not yet supported with internal search.", types);
          }
     }
 
@@ -493,11 +492,11 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
     let original_line = &lines[line_index];
 
     // Re-compile the todo pattern regex from the config to find the start of the todo text
-    let todo_pattern_re = match Regex::new(&config.ag.pattern) {
+    let todo_pattern_re = match Regex::new(&config.rg.pattern) {
         Ok(re) => re,
         Err(e) => {
             // Use eprintln for internal errors, let handler return generic server error
-            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
+            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.rg.pattern, e);
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern in config"));
         }
     };
@@ -526,7 +525,7 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
         lines[line_index] = new_line_content;
     } else {
         // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
-        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.ag.pattern, line_number, file_path_str)));
+        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.rg.pattern, line_number, file_path_str)));
     }
 
     // 4. Write the modified content back to the file
