@@ -52,17 +52,15 @@ where:
 - [ ] 0 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp / remove it?
 - [ ] 1H allow for adding todo to a project/glob (press `o`), by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
-- [ ] 1 store entire line in the json, to future-proof when writing back to the file?
 - [ ] 0 profile and optimize frontend performance, when the list is >800 items.
 - [ ] 0 feat: show est time, like @1h; record time?
-- [ ] 0 fancy: merge rust-module into node.js via napi-rs
-  - [ ] 0 fancy: make native rn/swift frontend?
 
 - [ ] 1 feat-fix: hotkeys, toggle-checkbox, search (via `/`)
 - [ ] 1 edit the toml (especially projects) in the frontend
 
 - [ ] 2 more config from frontend: 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml)
 - [ ] 3 maybe optimize via sha256 of ori-content?
+- [ ] 1 fancy: make native rn/swift frontend?
 - [ ] 2 maybe to move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
@@ -80,6 +78,8 @@ where:
 
 ---
 
+- [x] 0 X fancy: merge rust-module into node.js via napi-rs - X only to -5ms json parsing, tranmission is not bottleneck!
+- [x] 1 X store entire line in the json, to future-proof when writing back to the file? no need, we only change the todo content
 - [x] X 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [x] 0 check if the todo item is changed between aggregation and editing, if so, abort. (lock the file during editing)
     - [x] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)

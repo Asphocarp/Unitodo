@@ -5,7 +5,7 @@ import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'Unitodo',
-  description: 'Unifying Distributed TODOs',
+  description: 'Unifying Distributed TODOs', // UNITODO_IGNORE_LINE
   icons: {
     icon: '/images/favicon.ico',
   },
