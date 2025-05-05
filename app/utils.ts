@@ -52,11 +52,11 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
       }
       
       // Clean up the content based on different formats
-      if (content.startsWith('- [ ] ')) {
+      if (content.startsWith('- [ ] ')) { // UNITODO_IGNORE_LINE
         content = content.substring(6);
       } else if (content.startsWith('- [x] ') || content.startsWith('- [X] ')) {
         content = content.substring(6);
-      } else if (content.startsWith('TODO ')) {
+      } else if (content.startsWith('TODO ')) { // UNITODO_IGNORE_LINE
         content = content.substring(5);
       }
       
@@ -128,7 +128,7 @@ export function categorizeTodos(todos: TodoItem[]) {
 //   (.*)                                 - Start group 7: The rest of the content
 // )?                                     - End group 6 & 7, make them optional (for lines with only the first word)
 // $                                      - End of the string
-const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+)|(?:\#[a-zA-Z0-9_\-]{20}))(@@[a-zA-Z0-9_\-]{5})?)(\s+(.*))?$/;
+const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+)|(?:\#[a-zA-Z0-9_\-]{20}))(@@[a-zA-Z0-9_\-]{5})?)(\s+(.*))?$/; // UNITODO_IGNORE_LINE
 
 export interface ParsedTodo {
   priority: string | null;
@@ -145,7 +145,7 @@ export interface ParsedTodo {
  * Handles different ID formats (@timestamp, #nanoid, ##incremented) and optional priority/done markers.
  */
 export function parseTodoContent(content: string): ParsedTodo {
-  const match = content.match(TODO_REGEX);
+  const match = content.match(TODO_REGEX); // UNITODO_IGNORE_LINE
 
   if (match) {
     // Corrected group indices
