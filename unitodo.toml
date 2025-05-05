@@ -14,13 +14,13 @@ ignore = [
     "node_modules",
     "build",
     "dist",
-    "*.toml",
     # mine:
-    "_cloned_", # Relative path
-    "_study_", # Relative path
-    "tmp", # Relative path
-    "_archive_", # Relative path
-    "unitodo.sync.*",
+    "*.toml",
+    "/Users/asc/repo/_cloned_/**", # Relative path
+    "/Users/asc/repo/_study_/**", # Relative path
+    "/Users/asc/repo/tmp/**", # Relative path
+    "/Users/asc/repo/_archive_/**", # Relative path
+    "*/unitodo.sync.*",
     "*.temp.*",
 ]
 

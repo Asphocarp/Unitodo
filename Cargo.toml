@@ -15,6 +15,11 @@ glob = "0.3.1"
 regex = "1.9.5"
 actix-web = "4" # Added actix-web
 env_logger = "0.11" # Added env_logger
+grep-searcher = "0.1"
+grep-regex = "0.1"
+ignore = "0.4"
+walkdir = "2"
+globset = "0.4" # Add globset
 
 [profile.release]
 lto = true

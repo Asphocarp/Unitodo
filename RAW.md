@@ -75,7 +75,7 @@ where:
 - [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 
 - [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
-- [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) TODOs
+- [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) todos
 - [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
   - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
   - [x] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
