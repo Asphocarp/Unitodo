@@ -441,10 +441,9 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     for category_key in categories {
         // Use final_grouped_todos directly
         if let Some(todos) = final_grouped_todos.get(&category_key) { // Use get, no mut needed now
-            // Sort TodoItems alphabetically by content (needs mutable access, clone first?)
-            // Let's clone and sort
+            // Sort TodoItems alphabetically by content using natural sort
             let mut sorted_todos = todos.clone();
-            sorted_todos.sort_by(|a, b| a.content.cmp(&b.content));
+            sorted_todos.sort_by(|a, b| natord::compare(&a.content, &b.content));
 
 
             let (name, icon) = category_key.get_details();

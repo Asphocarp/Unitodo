@@ -20,6 +20,7 @@ grep-regex = "0.1"
 ignore = "0.4"
 walkdir = "2"
 globset = "0.4" # Add globset
+natord = "1.0.9" # Add natord for natural sorting
 
 [profile.release]
 lto = true
