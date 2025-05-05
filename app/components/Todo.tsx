@@ -340,11 +340,11 @@ export default function Todo() {
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Shift</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">j</kbd> Navigate down 5 items</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">←</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">h</kbd> Previous tab</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">→</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">l</kbd> Next tab</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Esc</kbd> Clear focus</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Esc</kbd> Exit edit mode</div>
           
           <div className="col-span-2 font-semibold mt-1">Todo actions</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Space</kbd> Toggle completion</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">i</kbd> Edit todo</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">a</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">i</kbd> Edit todo</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Enter</kbd> Open in VSCode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">x</kbd> Append ignore comment</div>
           
