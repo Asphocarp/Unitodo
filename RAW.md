@@ -32,7 +32,7 @@ T0DO1@fffff@@eeeee content lalalaa
 
 T0DO 1@fffff content lalalaa
 T0DO: 1@fffff content lalalaa
-- [ ] 1@AoVs5 content lalalaa
+- [x] 1@AoVs5 content lalalaa
 ```
 where:
 - At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list. <!-- UNITODO_IGNORE_LINE -->
@@ -59,16 +59,15 @@ where:
 - [ ] 1 fix toggle-checkbox, and all hotkeys
 - [ ] 1 edit the toml (especially projects) in the frontend
 
-- [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [ ] 2 maybe to move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
-- [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
+- [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
-- [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
+- [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 2@AoVsq make this repo public // UNITODO_IGNORE_LINE
-- [ ] 2#wTzSLqzruFudt5f7Sf0W check command injection safety
-- [ ] 2@AoVtD show dependency of todos?
-- [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
-- [ ] 2#PZ_0stf0wpRHVBP7R13M ag: include / file types?
+- [ ] 2 check command injection safety
+- [ ] 2@AoVtD (fancy) show dependency of todos?
+- [ ] 2 DB instead of json (200KB though)?
+- [ ] 2 ag: include / file types?
 - [ ] 3 curious of battery consumption
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
 - [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
@@ -78,6 +77,7 @@ where:
 ---
 
 - [x] 0 check if the todo item is changed between aggregation and editing, if so, abort. (lock the file during editing)
+    - [x] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [x] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
 - [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) todos
