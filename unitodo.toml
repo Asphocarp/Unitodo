@@ -19,6 +19,8 @@ ignore = [
     "*.temp.*",
     "/Users/asc/repo/Unitodo/README.md",
     "/Users/asc/repo/Ray/render-markdown.nvim/**",
+    "/Users/asc/repo/tex/StealingPartofaProductionLanguageModel_arXiv-2403.06634v2/**",
+    "/Users/asc/repo/tex/SS_arXiv-2303.15435v2/macros.tex/**",
 ]
 
 [projects]
