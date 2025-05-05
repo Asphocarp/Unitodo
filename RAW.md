@@ -49,7 +49,7 @@ where:
 ## todo
 
 - [ ] 0 unique-id can be fucking doomed! just fucking assume the line stays the same between aggregation and editing.
-- [ ] 0 prove it to be useful by doing a project
+- [ ] 0-1 prove it to be useful by doing a project
 - [ ] 1 allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
   - For projects, the user should assign a project default folder for the `new.todo` file.
 - [ ] 1 store entire line in the json, to future-proof when writing back to the file?
