@@ -122,7 +122,8 @@ export default function TodoItem({
   };
 
   const parsed = parseTodoContent(todo.content);
-  const isReadOnly = !parsed.isUnique;
+  // const isReadOnly = !parsed.isUnique; // TODO 1 consider no more unique-id?
+  const isReadOnly = false;
   const isValidTodoFormat = parsed.isValidTodoFormat;
 
   // Format content based on identifier and prefix
