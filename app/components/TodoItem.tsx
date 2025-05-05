@@ -384,6 +384,7 @@ export default function TodoItem({
       // Prevent default actions for keys we handle
       switch (e.key) {
         case 'i':
+        case 'a':
           if (!isReadOnly) {
             e.preventDefault();
             handleEditStart();

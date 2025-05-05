@@ -4,8 +4,11 @@ import './styles/fonts.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'Unitodo - Todo Tracker',
-  description: 'A unified todo tracker for your projects',
+  title: 'Unitodo',
+  description: 'Unifying Distributed TODOs',
+  icons: {
+    icon: '/images/favicon.ico',
+  },
 };
 
 export default function RootLayout({
