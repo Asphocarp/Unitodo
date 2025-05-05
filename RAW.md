@@ -51,15 +51,14 @@ where:
 
 - [ ] 0 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp / remove it?
-- [ ] 1H allow for adding todo to a project/glob (press `o`), by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
-- [ ] 0 profile and optimize frontend performance, when the list is >800 items.
+- [ ] 0 fix: profile and optimize frontend performance, when the list is >800 items.
+- [ ] 0 feat: allow for adding todo to a project/glob (press `o`), by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
 - [ ] 0 feat: show est time, like @1h; record time?
+- [ ] 0 more config from frontend: 0. project setting 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml) - more payload for both apis
 
-- [ ] 1 feat-fix: hotkeys, toggle-checkbox, search (via `/`)
-- [ ] 1 edit the toml (especially projects) in the frontend
+- [ ] 1 feat: fix hotkeys, toggle-checkbox, search (via `/`)
+- [ ] 1 do not scroll twice (when 5j too low)
 
-- [ ] 2 more config from frontend: 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml)
-- [ ] 3 maybe optimize via sha256 of ori-content?
 - [ ] 1 fancy: make native rn/swift frontend?
 - [ ] 2 maybe to move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
@@ -78,6 +77,7 @@ where:
 
 ---
 
+- [x] 3 maybe optimize via hash of ori-content? X - no need, the content is not long
 - [x] 0 X fancy: merge rust-module into node.js via napi-rs - X only to -5ms json parsing, tranmission is not bottleneck!
 - [x] 1 X store entire line in the json, to future-proof when writing back to the file? no need, we only change the todo content
 - [x] X 1 make it `2@AoVtC:` instead of `2@AoVtC`
