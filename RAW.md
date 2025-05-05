@@ -61,7 +61,7 @@ where:
 - [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
-- [ ] 2@AoVsq make this repo public
+- [ ] 2@AoVsq make this repo public // UNITODO_IGNORE_LINE
 - [ ] 2#wTzSLqzruFudt5f7Sf0W check command injection safety
 - [ ] 2@AoVtD show dependency of todos?
 - [ ] 2#tOvIdO-8kDD0skxZe97m DB instead of json (200KB though)?
@@ -77,7 +77,7 @@ where:
 - [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
   - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
   - [x] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
-  - definition of the-first-word: the-first-word is the first word after the matched pattern (TODO) in the line (separated by blank after it).
+  - definition of the-first-word: the-first-word is the first word after the matched pattern in the line (separated by blank after it).
 - [x] 0 editable <- parser
 - [x] X 3 switch to SolidJS (for better performance), instead of RaectJS
 - [x] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE"

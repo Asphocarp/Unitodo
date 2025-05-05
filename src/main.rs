@@ -38,7 +38,7 @@ struct RgConfig {
 }
 
 fn default_rg_pattern() -> String {
-    "TODO".to_string()
+    "TODO".to_string() // UNITODO_IGNORE_LINE
 }
 
 fn default_search_paths() -> Vec<String> {
@@ -123,7 +123,7 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
     Ok(None) // No .git directory found in ancestor paths
 }
 
-// --- TODO Data Structures for JSON Output ---
+// --- todo Data Structures for JSON Output ---
 #[derive(Serialize, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 struct TodoItem {
     content: String,
@@ -161,11 +161,11 @@ struct OutputData {
 #[derive(Deserialize, Debug)]
 struct EditTodoPayload {
     location: String, // "path/to/file.rs:123"
-    new_content: String, // The new text content for the TODO item
+    new_content: String, // The new text content for the todo item
     completed: bool, // The new completion status
 }
 
-// --- TODO Category Enum ---
+// --- todo Category Enum ---
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 enum TodoCategory {
     Project(String),
@@ -299,7 +299,7 @@ impl<'a> Sink for TodoSink<'a> {
     }
 }
 
-// --- Core TODO Finding Logic ---
+// --- Core todo Finding Logic ---
 fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
     let start_time = Instant::now();
     if debug {
@@ -418,7 +418,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 
     if debug {
         println!("[{:.2?}] Search completed in {:.2?}", start_time.elapsed(), search_start.elapsed());
-        println!("[{:.2?}] Processing found TODOs...", start_time.elapsed());
+        println!("[{:.2?}] Processing found TODOs...", start_time.elapsed()); // UNITODO_IGNORE_LINE
     }
 
     // 5. Process and Format Output
@@ -470,7 +470,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     Ok(final_data)
 }
 
-// --- Core TODO Editing Logic ---
+// --- Core todo Editing Logic ---
 fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<()> {
     // 1. Parse location
     let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
@@ -513,7 +513,7 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
     // Find the match of the TODO pattern on the target line
     if let Some(mat) = todo_pattern_re.find(original_line) {
         let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
-        let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME")
+        let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME") // UNITODO_IGNORE_LINE
         // Find the index of the first non-whitespace character after the pattern match
         let content_start_index = original_line[mat.end()..]
             .find(|c: char| !c.is_whitespace())
@@ -566,9 +566,9 @@ async fn get_todos_handler(config: web::Data<Arc<Config>>) -> ActixResult<impl R
         Ok(output_data_result) => match output_data_result {
              Ok(data) => Ok(web::Json(data)),
              Err(e) => {
-                 eprintln!("Error processing TODOs: {}", e);
+                 eprintln!("Error processing TODOs: {}", e); // UNITODO_IGNORE_LINE
                  // Convert the io::Error into an Actix error
-                 Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))
+                 Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e))) // UNITODO_IGNORE_LINE
              }
         },
         Err(e) => {

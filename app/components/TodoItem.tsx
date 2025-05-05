@@ -275,6 +275,57 @@ export default function TodoItem({
       });
   };
   
+  const handleAddIgnoreComment = async () => {
+    if (isSaving) return;
+    
+    // Check if location exists
+    if (!todo.location) return;
+    
+    // Extract the file path from the location (which includes line number)
+    const filePath = todo.location.split(':')[0];
+    
+    // Check if the file has a valid extension
+    const validExtensions = ['.c', '.rs', '.md', '.ts', '.tsx'];
+    const hasValidExtension = validExtensions.some(ext => filePath.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      setError('Cannot add ignore comment to this file type');
+      return;
+    }
+    
+    // Check if already has the ignore comment
+    if (todo.content.includes('// UNITODO_IGNORE_LINE')) {
+      setError('Already has ignore comment');
+      return;
+    }
+    
+    setError(null);
+    setIsSaving(true);
+    
+    try {
+      const newContent = `${todo.content} // UNITODO_IGNORE_LINE`;
+      
+      // Call API first
+      await editTodoItem({
+        location: todo.location,
+        new_content: newContent,
+        completed: todo.completed,
+      });
+      
+      // Update store
+      updateTodo({
+        ...todo,
+        content: newContent
+      });
+      
+    } catch (err: any) {
+      console.error('Error adding ignore comment:', err);
+      setError(err.message || 'Failed to add ignore comment.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
   const handleEditStart = () => {
     if (!isReadOnly) {
       setEditedContent(todo.content);
@@ -298,6 +349,12 @@ export default function TodoItem({
             e.preventDefault();
             handleEditStart();
           }
+          break;
+        case 'x':
+        //   if (!isReadOnly) {
+          e.preventDefault();
+          handleAddIgnoreComment();
+        //   }
           break;
         case 'Enter':
           e.preventDefault();
@@ -364,7 +421,7 @@ export default function TodoItem({
       } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''} ${isFocused ? 'focused' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : todo.content}
+      title={isReadOnly ? 'This TODO cannot be edited directly (non-unique pattern match). Edit the source file.' : todo.content} // UNITODO_IGNORE_LINE
       ref={itemRef}
       tabIndex={isFocused ? 0 : -1}
       onKeyDown={handleKeyDown}
@@ -542,19 +599,39 @@ export default function TodoItem({
               </>
             )}
             {!isReadOnly && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); // We do need to stop propagation here
-                  handleEditStart();
-                  // Note: No need to refocus here as entering edit mode
-                }}
-                className="hn-action-button text-xs px-0.5 py-0"
-                title="Edit todo (Enter)"
-                tabIndex={-1} // Change from 0 to -1 to prevent focus
-              >
-                edit
-              </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // We do need to stop propagation here
+                    handleEditStart();
+                    // Note: No need to refocus here as entering edit mode
+                  }}
+                  className="hn-action-button text-xs px-0.5 py-0"
+                  title="Edit todo (Enter)"
+                  tabIndex={-1} // Change from 0 to -1 to prevent focus
+                >
+                  edit
+                </button>
             )}
+            {
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddIgnoreComment();
+                    // Refocus the todo item after the action
+                    if (itemRef.current) {
+                      setTimeout(() => {
+                        itemRef.current?.focus();
+                      }, 0);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="hn-action-button text-xs px-0.5 py-0"
+                  title="Add ignore comment (g)"
+                  tabIndex={-1}
+                >
+                  ignore
+                </button>
+            }
           </>
         )}
         {isSaving && <div className="animate-spin h-2 w-2 border-t-1 border-b-1 border-accent-color ml-1"></div>}

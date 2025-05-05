@@ -346,6 +346,7 @@ export default function Todo() {
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Space</kbd> Toggle completion</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">i</kbd> Edit todo</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Enter</kbd> Open in VSCode</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">x</kbd> Append ignore comment</div>
           
           <div className="col-span-2 font-semibold mt-1">Global</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
