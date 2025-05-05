@@ -9,13 +9,11 @@ import { useTodoStore } from '../store/todoStore'; // Import Zustand store
 interface TodoCategoryProps {
   category: TodoCategoryType;
   categoryIndex: number; // Index within the *filtered* list
-  originalCategoryIndex: number; // Index within the *original* list
 }
 
 export default function TodoCategory({ 
   category, 
   categoryIndex,
-  originalCategoryIndex
 }: TodoCategoryProps) {
   const [expanded, setExpanded] = React.useState(true);
   const categoryRef = useRef<HTMLDivElement>(null);
@@ -101,7 +99,6 @@ export default function TodoCategory({
                   isFocused={isFocused}
                   onClick={() => handleItemClick(index)}
                   categoryIndex={categoryIndex}
-                  originalCategoryIndex={originalCategoryIndex}
                   itemIndex={index}
                   role="listitem"
                 />
