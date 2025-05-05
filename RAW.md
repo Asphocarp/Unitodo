@@ -59,6 +59,7 @@ where:
 - [ ] 1 edit the toml (especially projects) in the frontend
 
 - [ ] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
+- [ ] 2 maybe to move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 2#jvxJSUV_L1VgU5c3uleQ make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1#6rCK5SlYLmWv0Ke-kGLq render basic markdown of the content; open wikilink using obsidian-uri
