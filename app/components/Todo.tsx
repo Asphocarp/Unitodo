@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, KeyboardEvent } from 'react';
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { useTodoStore, getFilteredCategories, useTodoSelectors } from '../store/todoStore';
 import TodoCategory from './TodoCategory';
 import TodoItem from './TodoItem';
@@ -8,6 +10,8 @@ import NerdFontIcon from './NerdFontIcon';
 import { TodoItem as TodoItemType } from '../types';
 import { useDarkMode } from '../utils/darkMode';
 import { parseTodoContent } from '../utils';
+
+const ITEM_HEIGHT = 24;
 
 export default function Todo() {
   // Use Zustand store 
@@ -47,7 +51,8 @@ export default function Todo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabHeaderRef = useRef<HTMLDivElement>(null);
   const urlUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for scroll debounce timer
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const listRef = useRef<FixedSizeList>(null);
 
   // Update scroll padding based on tab header height
   useEffect(() => {
@@ -198,38 +203,23 @@ export default function Todo() {
 
   // Effect for debounced scrolling when focusedItem changes
   useEffect(() => {
-    // Clear any existing scroll timeout
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
-
-    // Set a new timeout to scroll after a short delay
     scrollTimeoutRef.current = setTimeout(() => {
-      // Get the latest focused item state directly from the store
       const currentFocusedItem = useTodoStore.getState().focusedItem;
-      const { categoryIndex, itemIndex } = currentFocusedItem;
+      const { itemIndex } = currentFocusedItem;
 
-      if (categoryIndex !== -1 && itemIndex !== -1 && containerRef.current) {
-        // Construct selector based on data attributes
-        const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
-        const focusedElement = containerRef.current.querySelector(itemSelector) as HTMLElement;
-
-        if (focusedElement) {
-          focusedElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'nearest'
-          });
-        }
+      if (itemIndex !== -1 && listRef.current) {
+        listRef.current.scrollToItem(itemIndex, 'smart');
       }
-    }, 50); // 50ms debounce delay
-
-    // Cleanup function to clear timeout on unmount or before next run
+    }, 50);
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [focusedItem]); // Dependency: only run when focusedItem changes
+  }, [focusedItem]);
 
   // TODO 2 Handle URL hash on initial load
   useEffect(() => {
@@ -285,11 +275,32 @@ export default function Todo() {
     return categories.findIndex(cat => cat.name === categoryName);
   };
 
-  // Render tabs for tab mode
+  // Render tabs for tab mode - Refactored for AutoSizer
   const renderTabs = () => {
+    const activeCategoryData = filteredCategories[activeTabIndex];
+    const itemCount = activeCategoryData?.todos.length || 0;
+
+    const Row = ({ index, style }: { index: number, style: React.CSSProperties }) => {
+      if (!activeCategoryData) return null;
+      const todo = activeCategoryData.todos[index];
+      const isFocused = focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === index;
+      return (
+        <div style={style}>
+          <TodoItem
+            key={`${todo.location}-${index}`}
+            todo={todo}
+            isFocused={isFocused}
+            onClick={() => setFocusedItem({ categoryIndex: activeTabIndex, itemIndex: index })}
+            categoryIndex={activeTabIndex}
+            itemIndex={index}
+          />
+        </div>
+      );
+    };
+
     return (
-      <div className="relative">
-        <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm">
+      <div className="relative flex flex-col flex-grow min-h-0">
+        <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm flex-shrink-0">
           <div className="flex flex-wrap border-b border-border-color dark:border-gray-700 text-xs overflow-visible">
             {categories.map((category, index) => (
               <button
@@ -299,11 +310,16 @@ export default function Todo() {
                   ? 'border-b-2 border-accent-color font-bold dark:text-gray-200'
                   : 'text-subtle-color dark:text-gray-400'
                 }`}
-                onClick={() => setActiveTabIndex(index)}
+                onClick={() => {
+                  setActiveTabIndex(index);
+                  if (listRef.current) {
+                    listRef.current.scrollToItem(0);
+                  }
+                }}
               >
-                <NerdFontIcon 
-                  icon={category.icon} 
-                  category={category.name} 
+                <NerdFontIcon
+                  icon={category.icon}
+                  category={category.name}
                   className="text-sm"
                 />
                 {category.name}
@@ -314,35 +330,30 @@ export default function Todo() {
             ))}
           </div>
         </div>
-        
-        {/* Display active tab content */}
-        {filteredCategories.length > 0 && activeTabIndex < filteredCategories.length && (
-          <div 
-            role="tabpanel" 
-            className="focus-within:outline-none pt-2" 
-            style={{ scrollMarginTop: 'var(--tab-header-height, 0px)' }}
-          >
-            {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
-              // Determine the original category index
-              const isFocused = focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === localIndex;
-              
-              return (
-                <TodoItem
-                  key={`${todo.location}-${localIndex}`}
-                  todo={todo}
-                  isFocused={isFocused}
-                  onClick={() => setFocusedItem({ categoryIndex: activeTabIndex, itemIndex: localIndex })}
-                  categoryIndex={activeTabIndex}
-                  itemIndex={localIndex}
-                />
-              );
-            }) || (
-              <div className="p-2 text-center text-subtle-color dark:text-gray-500 text-xs">
-                No todos in this category
-              </div>
-            )}
-          </div>
-        )}
+
+        <div className="flex-grow min-h-0">
+          {itemCount > 0 ? (
+            <AutoSizer>
+              {({ height, width }) => (
+                <FixedSizeList
+                  ref={listRef}
+                  height={height}
+                  itemCount={itemCount}
+                  itemSize={ITEM_HEIGHT}
+                  width={width}
+                  className="focus-within:outline-none pt-2"
+                  style={{ scrollMarginTop: 'var(--tab-header-height, 0px)' }}
+                >
+                  {Row}
+                </FixedSizeList>
+              )}
+            </AutoSizer>
+          ) : (
+            <div className="p-2 text-center text-subtle-color dark:text-gray-500 text-xs">
+              No todos in this category
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -412,14 +423,14 @@ export default function Todo() {
   }
 
   return (
-    <div 
-      className="hn-style group dark:bg-gray-900 dark:text-gray-100 focus:outline-none" 
-      tabIndex={-1} // Make the main container focusable
-      ref={containerRef} // Add ref to the main container
-      role="application" 
+    <div
+      className="hn-style group dark:bg-gray-900 dark:text-gray-100 focus:outline-none flex flex-col min-h-screen"
+      tabIndex={-1}
+      ref={containerRef}
+      role="application"
       aria-label="Todo Application"
     >
-      <div className="hn-header dark:border-gray-700">
+      <div className="hn-header dark:border-gray-700 flex-shrink-0">
         <h1 className="hn-title">Unitodo</h1>
         <span className="hn-meta dark:text-gray-400">
           {totalTodos} tasks · {completedTodos} completed · {activeTodos} active
@@ -431,7 +442,7 @@ export default function Todo() {
         </span>
       </div>
       
-      <div className="hn-compact-controls dark:border-gray-700">
+      <div className="hn-compact-controls dark:border-gray-700 flex-shrink-0">
         <input
           ref={searchInputRef}
           type="text"
@@ -497,27 +508,28 @@ export default function Todo() {
         </button>
       </div>
       
-      {filteredCategories.length > 0 ? (
-        displayMode === 'section' ? (
-          filteredCategories.map((category, catIndex) => {
-            return (
-              <TodoCategory 
-                key={catIndex} 
-                category={category}
-                categoryIndex={catIndex}
-              />
-            );
-          })
+      <div className="flex-grow min-h-0 flex flex-col">
+        {filteredCategories.length > 0 ? (
+          displayMode === 'section' ? (
+            filteredCategories.map((category, catIndex) => {
+              return (
+                <TodoCategory
+                  key={catIndex}
+                  category={category}
+                  categoryIndex={catIndex}
+                />
+              );
+            })
+          ) : (
+            renderTabs()
+          )
         ) : (
-          renderTabs()
-        )
-      ) : (
-        <div className="text-center p-2 text-subtle-color dark:text-gray-500 text-xs">
-          No todos found. Try changing your search or filter.
-        </div>
-      )}
+          <div className="text-center p-2 text-subtle-color dark:text-gray-500 text-xs flex-grow flex items-center justify-center">
+            No todos found. Try changing your search or filter.
+          </div>
+        )}
+      </div>
       
-      {/* Render keyboard help overlay at the end of the component */}
       {renderKeyboardShortcutsHelp()}
     </div>
   );
