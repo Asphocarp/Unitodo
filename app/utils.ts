@@ -30,7 +30,7 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
         categories.push(currentCategory);
       }
     } 
-    // If line starts with TODO, - [ ], or contains a todo item pattern
+    // If line starts with TODO, - [ ], or contains a todo item pattern // UNITODO_IGNORE_LINE
     else if (currentCategory && (line.startsWith('TODO') || line.startsWith('- [') || line.match(/^[^-]*?TODO/))) { // UNITODO_IGNORE_LINE
       // Default to incomplete
       let completed = false;
