@@ -268,19 +268,28 @@ body {
 
 /* Add styles for keyboard focus */
 .focused {
-  outline: 2px solid #4f46e5 !important; /* Accent color for focus */
-  outline-offset: 1px;
+  /* Accent color for focus */
+  outline: 2px solid #4f46e5 !important; 
+  /* outline-offset: 1px; */
   position: relative;
   z-index: 10;
-  border-radius: 4px; /* Add rounded corners to the focus */
+  /* Add rounded corners to the focus */
+  border-radius: 4px; 
 }
 
 /* Style for keyboard navigation */
 .hn-todo-item:focus,
 .hn-category-header:focus {
+  z-index: 10;
   outline: 2px solid #4f46e5;
-  outline-offset: 1px;
-  border-radius: 4px; /* Add rounded corners to the focus */
+  /* outline-offset: 1px; */
+  /* Add rounded corners to the focus */
+  border-radius: 4px; 
+}
+
+.hn-todo-item,
+.hn-category-header{
+  margin: 0 2px;
 }
 
 /* Ensure focused element is visible */
