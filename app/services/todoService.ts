@@ -21,6 +21,7 @@ export async function fetchTodoData(): Promise<TodoCategory[]> {
 interface EditTodoPayload {
   location: string;
   new_content: string;
+  original_content: string; // Add original content for verification
   completed: boolean;
 }
 
@@ -35,8 +36,17 @@ export async function editTodoItem(payload: EditTodoPayload): Promise<any> { // 
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ details: 'Could not parse error response' }));
-      throw new Error(`API error: ${response.status} ${response.statusText} - ${errorData.details || 'No details'}`);
+      const errorData = await response.json().catch(() => ({ 
+        error: 'Could not parse error response',
+        code: response.status 
+      }));
+      
+      // Special handling for 409 Conflict status - content was modified by someone else
+      if (response.status === 409) {
+        throw new Error('CONFLICT_ERROR: Todo content was modified by someone else. Please refresh and try again.');
+      }
+      
+      throw new Error(`API error: ${response.status} ${response.statusText} - ${errorData.error || 'No details'}`);
     }
 
     // Assuming the backend sends back a success status or updated item

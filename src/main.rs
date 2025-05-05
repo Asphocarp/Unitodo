@@ -2,7 +2,7 @@ use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middlewa
 use std::sync::Arc;
 use std::str;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write, Seek, SeekFrom, BufReader};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -15,6 +15,8 @@ use globset::{Glob, GlobSetBuilder};
 use regex::Regex;
 use std::time::Instant;
 use std::sync::Mutex;
+use std::fs::OpenOptions;
+use fs2::FileExt;
 
 // --- Configuration Structure ---
 #[derive(Deserialize, Debug, Default, Clone)] // Added Clone
@@ -162,6 +164,7 @@ struct OutputData {
 struct EditTodoPayload {
     location: String, // "path/to/file.rs:123"
     new_content: String, // The new text content for the todo item
+    original_content: String, // The original content to verify it hasn't changed
     completed: bool, // The new completion status
 }
 
@@ -488,67 +491,106 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
          return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
     }
 
-    // 2. Read the file content
-    let original_content = std::fs::read_to_string(file_path)?;
-    let mut lines: Vec<String> = original_content.lines().map(String::from).collect();
+    // 2. Open file with exclusive lock to prevent concurrent modifications
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(file_path)?;
+    
+    // Acquire an exclusive lock on the file - this will block if another process has it locked
+    file.lock_exclusive()?;
+    
+    // Ensure we unlock the file when we're done, even if there's an error
+    let result = (|| {
+        // Read the file content
+        let mut original_content = String::new();
+        let mut file_reader = io::BufReader::new(&file);
+        file_reader.read_to_string(&mut original_content)?;
+        
+        let lines: Vec<String> = original_content.lines().map(String::from).collect();
 
-    // 3. Find and modify the line
-    if line_index >= lines.len() {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Line number {} is out of bounds for file {}", line_number, file_path_str)));
-    }
-
-    let original_line = &lines[line_index];
-
-    // Re-compile the todo pattern regex from the config to find the start of the todo text
-    let todo_pattern_re = match Regex::new(&config.rg.pattern) {
-        Ok(re) => re,
-        Err(e) => {
-            // Use eprintln for internal errors, let handler return generic server error
-            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.rg.pattern, e);
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern in config"));
+        // 3. Find and verify the line
+        if line_index >= lines.len() {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, 
+                format!("Line number {} is out of bounds for file {}", line_number, file_path_str)));
         }
-    };
 
-    // Find the match of the todo pattern on the target line
-    if let Some(mat) = todo_pattern_re.find(original_line) {
-        let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
-        let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME") // UNITODO_IGNORE_LINE
-        // Find the index of the first non-whitespace character after the pattern match
-        let content_start_index = original_line[mat.end()..]
-            .find(|c: char| !c.is_whitespace())
-            .map(|i| mat.end() + i)
-            .unwrap_or(original_line.len()); // Use end of line if only whitespace follows pattern
-        // Capture the original spacing between the pattern and the content/checkbox
-        let original_spacing = &original_line[mat.end()..content_start_index];
+        let original_line = &lines[line_index];
 
-        // Construct the new line using the captured original spacing and the new content
-        // Format: prefix + pattern + original_spacing + new_content
-        let new_line_content = format!("{}{}{}{}",
-            prefix,
-            pattern_match,
-            original_spacing,
-            payload.new_content.trim() // Directly use the new content
-        );
+        // Re-compile the todo pattern regex from the config to find the start of the todo text
+        let todo_pattern_re = match Regex::new(&config.rg.pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                // Use eprintln for internal errors, let handler return generic server error
+                eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.rg.pattern, e);
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern in config"));
+            }
+        };
 
-        lines[line_index] = new_line_content;
-    } else {
-        // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
-        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.rg.pattern, line_number, file_path_str))); // UNITODO_IGNORE_LINE
-    }
+        // Find the match of the todo pattern on the target line
+        if let Some(mat) = todo_pattern_re.find(original_line) {
+            let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
+            let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME") // UNITODO_IGNORE_LINE
+            
+            // Find the index of the first non-whitespace character after the pattern match
+            let content_start_index = original_line[mat.end()..]
+                .find(|c: char| !c.is_whitespace())
+                .map(|i| mat.end() + i)
+                .unwrap_or(original_line.len()); // Use end of line if only whitespace follows pattern
+            
+            // Extract the current todo content to compare with the original content from the payload
+            let current_content = original_line[content_start_index..].trim();
+            
+            // Verify the content hasn't changed since it was loaded in the UI
+            if current_content != payload.original_content.trim() {
+                return Err(io::Error::new(io::ErrorKind::Other, 
+                    "Content has been modified since it was loaded. Edit aborted."));
+            }
+            
+            // Capture the original spacing between the pattern and the content/checkbox
+            let original_spacing = &original_line[mat.end()..content_start_index];
 
-    // 4. Write the modified content back to the file
-    let new_file_content = lines.join("\n");
-    // Add a trailing newline if the original file had one (important for many tools)
-    let final_content = if original_content.ends_with('\n') && !new_file_content.is_empty() {
-        format!("{}\n", new_file_content)
-    } else {
-        new_file_content
-    };
+            // Create modified lines array
+            let mut modified_lines = lines.clone();
+            
+            // Construct the new line using the captured original spacing and the new content
+            // Format: prefix + pattern + original_spacing + new_content
+            let new_line_content = format!("{}{}{}{}",
+                prefix,
+                pattern_match,
+                original_spacing,
+                payload.new_content.trim() // Directly use the new content
+            );
 
-    // Use write which truncates/overwrites
-    std::fs::write(file_path, final_content)?;
+            modified_lines[line_index] = new_line_content;
+            
+            // 4. Write the modified content back to the file
+            let new_file_content = modified_lines.join("\n");
+            // Add a trailing newline if the original file had one (important for many tools)
+            let final_content = if original_content.ends_with('\n') && !new_file_content.is_empty() {
+                format!("{}\n", new_file_content)
+            } else {
+                new_file_content
+            };
 
-    Ok(())
+            // Truncate the file and write the new content
+            file.set_len(0)?;
+            file.seek(io::SeekFrom::Start(0))?;
+            io::Write::write_all(&mut &file, final_content.as_bytes())?;
+            
+            Ok(())
+        } else {
+            // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
+            Err(io::Error::new(io::ErrorKind::NotFound, 
+                format!("TODO pattern '{}' not found on line {} of file {}", // UNITODO_IGNORE_LINE
+                config.rg.pattern, line_number, file_path_str))) // UNITODO_IGNORE_LINE
+        }
+    })();
+    
+    // Ensure we unlock the file regardless of the result
+    file.unlock()?;
+    
+    result
 }
 
 // --- API Handler ---
@@ -594,9 +636,21 @@ async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<Ed
                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
                 io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
                 io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
+                io::ErrorKind::Other if e.to_string().contains("Content has been modified") => {
+                    // Special handling for content modification conflicts
+                    actix_web::http::StatusCode::CONFLICT // 409 Conflict
+                },
                 _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             };
-            Err(actix_web::error::InternalError::new(e.to_string(), status_code).into())
+            
+            // Create a more detailed error response
+            let error_response = serde_json::json!({
+                "status": "error",
+                "error": e.to_string(),
+                "code": status_code.as_u16()
+            });
+            
+            Ok(HttpResponse::build(status_code).json(error_response))
         },
         Err(e) => {
             eprintln!("Error running blocking task for edit: {}", e);

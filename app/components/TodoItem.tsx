@@ -150,6 +150,7 @@ export default function TodoItem({
       await editTodoItem({
         location: todo.location,
         new_content: newContent,
+        original_content: todo.content, // Add original content for verification
         completed: todo.completed,
       });
       
@@ -161,7 +162,13 @@ export default function TodoItem({
       
     } catch (err: any) {
       console.error(`Error adding identifier:`, err);
-      setError(err.message || `Failed to add identifier.`);
+      
+      // Special handling for content conflicts
+      if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
+        setError('This todo has been modified elsewhere. Please refresh and try again.');
+      } else {
+        setError(err.message || `Failed to add identifier.`);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -176,10 +183,11 @@ export default function TodoItem({
     setError(null);
     setIsSaving(true);
     try {
-      // Call API first
+      // Call API first with original content for verification
       await editTodoItem({
         location: todo.location,
         new_content: editedContent,
+        original_content: todo.content, // Add original content for verification
         completed: todo.completed,
       });
       
@@ -193,7 +201,16 @@ export default function TodoItem({
       setIsEditing(false);
     } catch (err: any) {
       console.error('Error saving todo:', err);
-      setError(err.message || 'Failed to save changes.');
+      
+      // Special handling for content conflicts
+      if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
+        setError('This todo has been modified elsewhere. Please refresh and try again.');
+        setTimeout(() => {
+          setIsEditing(false); // Close the editor after showing the error
+        }, 3000);
+      } else {
+        setError(err.message || 'Failed to save changes.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -233,6 +250,7 @@ export default function TodoItem({
       await editTodoItem({
         location: todo.location,
         new_content: contentToSave,
+        original_content: todo.content, // Add original content for verification
         completed: newCompletedStatus,
       });
       
@@ -245,7 +263,13 @@ export default function TodoItem({
       
     } catch (err: any) {
       console.error('Error saving checkbox state:', err);
-      setError(err.message || 'Failed to save completion status.');
+      
+      // Special handling for content conflicts
+      if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
+        setError('This todo has been modified elsewhere. Please refresh and try again.');
+      } else {
+        setError(err.message || 'Failed to save completion status.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -266,12 +290,19 @@ export default function TodoItem({
     editTodoItem({
       location: todo.location,
       new_content: todo.content,
+      original_content: todo.content, // Add original content for verification
       completed: newCompletedStatus,
     }).catch(err => {
         console.error('Error toggling completion:', err);
-        // Revert on error
-        updateTodo(todo);
-        setError('Failed to toggle completion status.');
+        
+        // Special handling for content conflicts
+        if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
+          setError('This todo has been modified elsewhere. Please refresh and try again.');
+        } else {
+          // Revert on error
+          updateTodo(todo);
+          setError('Failed to toggle completion status.');
+        }
       });
   };
   
@@ -309,6 +340,7 @@ export default function TodoItem({
       await editTodoItem({
         location: todo.location,
         new_content: newContent,
+        original_content: todo.content, // Add original content for verification
         completed: todo.completed,
       });
       
@@ -320,7 +352,13 @@ export default function TodoItem({
       
     } catch (err: any) {
       console.error('Error adding ignore comment:', err);
-      setError(err.message || 'Failed to add ignore comment.');
+      
+      // Special handling for content conflicts
+      if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
+        setError('This todo has been modified elsewhere. Please refresh and try again.');
+      } else {
+        setError(err.message || 'Failed to add ignore comment.');
+      }
     } finally {
       setIsSaving(false);
     }
