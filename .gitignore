@@ -30,3 +30,4 @@ unitodo.sync.*
 *.temp.md
 node_modules
 .next
+*.ignore.*

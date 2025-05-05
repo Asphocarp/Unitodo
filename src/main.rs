@@ -1,22 +1,24 @@
 use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middleware, error::ErrorInternalServerError, HttpResponse};
 use std::sync::Arc;
-use std::process::Command;
 use std::str;
 use std::fs::File;
-use std::io::{self, Write, Read};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use glob::Pattern;
+use grep_searcher::{Searcher, Sink, SinkMatch};
+use grep_regex::RegexMatcher;
+use ignore::WalkBuilder;
+use globset::{Glob, GlobSetBuilder};
 use regex::Regex;
 use std::time::Instant;
+use std::sync::Mutex;
 
 // --- Configuration Structure ---
 #[derive(Deserialize, Debug, Default, Clone)] // Added Clone
 struct Config {
-    #[serde(default = "default_output_file")]
-    output_file: String,
     #[serde(default)]
     ag: AgConfig,
     #[serde(default)] // Projects map: Project name -> List of glob patterns
@@ -33,10 +35,6 @@ struct AgConfig {
     ignore: Option<Vec<String>>,
     #[serde(default)]
     file_types: Option<Vec<String>>,
-}
-
-fn default_output_file() -> String {
-    "unitodo.sync.json".to_string()
 }
 
 fn default_ag_pattern() -> String {
@@ -186,212 +184,282 @@ impl TodoCategory {
     }
 }
 
+// --- Sink for grep-searcher ---
+#[derive(Debug)]
+struct TodoSink<'a> {
+    config: &'a Config, // Need config to access the pattern regex
+    matcher: RegexMatcher,
+    grouped_todos: Arc<Mutex<HashMap<TodoCategory, Vec<TodoItem>>>>,
+    current_path: PathBuf,
+    debug: bool,
+    start_time: Instant,
+}
+
+impl<'a> Sink for TodoSink<'a> {
+    type Error = io::Error;
+
+    fn matched(&mut self, _searcher: &Searcher, mat: &SinkMatch<'_>) -> Result<bool, io::Error> {
+        let line_bytes = mat.bytes();
+        let line_num = mat.line_number().unwrap_or(0); // Should always have line number
+
+        // Use the path stored in the sink state
+        let file_path_str = self.current_path.to_string_lossy().to_string();
+        let file_path = &self.current_path; // Use the PathBuf directly for categorization
+
+        let line = match str::from_utf8(line_bytes) {
+            Ok(s) => s.trim_end(), // Trim trailing newline if present
+            Err(_) => {
+                if self.debug {
+                    eprintln!("[{:.2?}] Warning: Skipping non-UTF8 line in file: {}", self.start_time.elapsed(), self.current_path.display());
+                }
+                return Ok(true); // Continue searching
+            }
+        };
+
+        // Now, use the *config* regex to extract the content *after* the pattern
+        let todo_pattern_re = match Regex::new(&self.config.ag.pattern) {
+            Ok(re) => re,
+            Err(_) => {
+                eprintln!("Error: Invalid regex pattern in config during sink processing ('{}')", self.config.ag.pattern);
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern"));
+            }
+        };
+
+        if let Some(found_match) = todo_pattern_re.find(line) {
+            let raw_todo_content = line[found_match.end()..].trim();
+            let completed = raw_todo_content.starts_with("[x]") || raw_todo_content.starts_with("[X]");
+            let mut cleaned_content = raw_todo_content;
+            if cleaned_content.starts_with("[ ]") || cleaned_content.starts_with("[x]") || cleaned_content.starts_with("[X]") {
+                cleaned_content = cleaned_content[3..].trim_start();
+            }
+             cleaned_content = cleaned_content.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace()).trim();
+
+            // Use file_path_str derived from self.current_path
+            let location = format!("{}:{}", file_path_str, line_num);
+
+            // Determine category using file_path (&PathBuf)
+            let mut category = TodoCategory::Other;
+            let mut project_match = false;
+            for (project_name, glob_patterns) in &self.config.projects {
+                for pattern_str in glob_patterns {
+                    match Pattern::new(pattern_str) {
+                        Ok(pattern) => {
+                            // Use file_path_str for glob matching
+                            if pattern.matches(&file_path_str) {
+                                category = TodoCategory::Project(project_name.clone());
+                                project_match = true;
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            if self.debug {
+                                eprintln!("Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
+                            }
+                        }
+                    }
+                }
+                if project_match { break; }
+            }
+            if !project_match {
+                // Use file_path (&PathBuf) for find_git_repo_name
+                match find_git_repo_name(file_path) {
+                    Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
+                    Ok(None) => {} // Stays Other
+                    Err(e) => {
+                        if self.debug {
+                            eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+                        }
+                    }
+                }
+            }
+
+            let todo_item = TodoItem {
+                content: cleaned_content.to_string(),
+                location,
+                completed,
+            };
+
+            // Lock the mutex to safely insert the item
+            let mut todos_map = self.grouped_todos.lock().unwrap();
+            todos_map.entry(category)
+                         .or_insert_with(Vec::new)
+                         .push(todo_item);
+
+        }
+
+        Ok(true) // Continue searching
+    }
+}
+
 // --- Core TODO Finding Logic ---
 fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
     let start_time = Instant::now();
-
     if debug {
-        println!("[{:.2?}] Starting TODO processing", start_time.elapsed());
+        println!("[{:.2?}] Starting TODO processing using grep-searcher", start_time.elapsed());
     }
 
-    // Construct the command to run `ag`
-    let build_command_start = Instant::now();
-    let mut command = Command::new("ag");
-    command.arg("--noheading"); // Prevent ag from printing filename headers
-    command.arg(&config.ag.pattern); // Use the pattern from config
+    // 1. Compile the Regex Matcher for TODO pattern
+    let matcher = match RegexMatcher::new(&config.ag.pattern) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
+            return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid regex pattern in config: {}", e)));
+        }
+    };
 
-    // Add ignored patterns/directories
+    // 2. Build GlobSet for custom ignore patterns from config
+    let mut custom_ignore_builder = GlobSetBuilder::new();
     if let Some(items_to_ignore) = &config.ag.ignore {
-        for item in items_to_ignore {
-            command.arg("--ignore");
-            command.arg(item);
+        for pattern_str in items_to_ignore {
+            match Glob::new(pattern_str) {
+                Ok(glob) => { custom_ignore_builder.add(glob); },
+                Err(e) => {
+                     if debug {
+                         eprintln!("[{:.2?}] Warning: Invalid custom ignore glob pattern '{}': {}", start_time.elapsed(), pattern_str, e);
+                     }
+                 }
+            }
         }
     }
+    let custom_ignores = match custom_ignore_builder.build() {
+        Ok(gs) => {
+             if debug && !gs.is_empty() {
+                 println!("[{:.2?}] Using custom ignore patterns from config.", start_time.elapsed());
+             }
+             gs
+         },
+         Err(e) => {
+             if debug {
+                eprintln!("[{:.2?}] Warning: Failed to build custom ignore GlobSet: {}", start_time.elapsed(), e);
+             }
+             GlobSetBuilder::new().build().unwrap() // Build empty set on error
+         }
+     };
+     let custom_ignores = Arc::new(custom_ignores); // Wrap in Arc for sharing
 
-    // Add file types (e.g., --rust, --py)
+
+    // 3. Prepare the WalkBuilder (without overrides)
+    let mut builder = WalkBuilder::new(&config.ag.paths[0]);
+    for path in config.ag.paths.iter().skip(1) {
+        builder.add(path);
+    }
+    builder.git_ignore(true);  // Standard gitignore handling
+    builder.ignore(true);  // Standard .ignore handling
+    builder.parents(true); // Standard parent ignore handling
+
+    // Still warn about file_types being unsupported
     if let Some(types) = &config.ag.file_types {
-        for ftype in types {
-            command.arg(format!("--{}", ftype));
-        }
+         if debug {
+             eprintln!("Warning: config `ag.file_types` ('{:?}') not yet supported with internal search.", types);
+         }
     }
 
-    // Add paths to search (should come after options)
-    for path in &config.ag.paths {
-        command.arg(path);
-    }
+    // 4. Execute the search in parallel
+    let search_start = Instant::now();
+    let grouped_todos = Arc::new(Mutex::new(HashMap::<TodoCategory, Vec<TodoItem>>::new()));
+
+    builder.build_parallel().run(|| {
+        let current_matcher = matcher.clone();
+        let current_todos = Arc::clone(&grouped_todos);
+        let config_ref = config;
+        let is_debug = debug;
+        let start_time_ref = start_time;
+        let current_custom_ignores = Arc::clone(&custom_ignores); // Clone Arc<GlobSet>
+
+        Box::new(move |result| {
+            let entry = match result {
+                Ok(e) => e,
+                Err(err) => {
+                    if is_debug { eprintln!("[{:.2?}] Warning: Error walking directory: {}", start_time_ref.elapsed(), err); }
+                    return ignore::WalkState::Continue;
+                }
+            };
+
+            // Check custom ignores *after* standard ignores have passed the entry
+            let path = entry.path();
+            if current_custom_ignores.is_match(path) {
+                 if is_debug {
+                     println!("[{:.2?}] Ignoring {} due to custom pattern match.", start_time_ref.elapsed(), path.display());
+                 }
+                 return ignore::WalkState::Continue; // Skip this entry
+            }
+
+            // Proceed only if it's a file and not matched by custom ignores
+            if entry.file_type().map_or(false, |ft| ft.is_file()) {
+                // Create a new searcher for each thread/task
+                let mut searcher = Searcher::new();
+                let mut sink = TodoSink {
+                    config: config_ref,
+                    matcher: current_matcher.clone(),
+                    grouped_todos: Arc::clone(&current_todos),
+                    current_path: path.to_path_buf(),
+                    debug: is_debug,
+                    start_time: start_time_ref,
+                 };
+
+                 let result = searcher.search_path(&current_matcher, path, &mut sink);
+                 if let Err(err) = result {
+                      if is_debug {
+                         eprintln!("[{:.2?}] Warning: Error searching file {}: {}", start_time_ref.elapsed(), path.display(), err);
+                      }
+                 }
+            }
+            ignore::WalkState::Continue
+        })
+    });
+
     if debug {
-        println!("[{:.2?}] Command constructed in {:.2?}", start_time.elapsed(), build_command_start.elapsed());
-        println!("[{:.2?}] Running command: {:?}", start_time.elapsed(), command);
+        println!("[{:.2?}] Search completed in {:.2?}", start_time.elapsed(), search_start.elapsed());
+        println!("[{:.2?}] Processing found TODOs...", start_time.elapsed());
     }
 
-    // Execute the command and capture its output
-    let run_ag_start = Instant::now();
-    let output = command.output()?;
+    // 5. Process and Format Output
+    let format_output_start = Instant::now();
+    let mut output_categories: Vec<TodoCategoryData> = Vec::new();
+    // Lock the mutex and get the final map
+    let final_grouped_todos = match Arc::try_unwrap(grouped_todos) {
+        Ok(mutex) => mutex.into_inner().unwrap(), // Handle potential poisoning
+        Err(_) => {
+             // This should ideally not happen if all threads finished, but handle defensively
+             eprintln!("Error: Could not obtain exclusive access to grouped_todos after parallel walk.");
+             return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping"));
+        }
+    };
+    let mut categories: Vec<TodoCategory> = final_grouped_todos.keys().cloned().collect();
+
+    // Sort categories: Project(A-Z), GitRepo(A-Z), Other
+    categories.sort();
+
+    for category_key in categories {
+        // Use final_grouped_todos directly
+        if let Some(todos) = final_grouped_todos.get(&category_key) { // Use get, no mut needed now
+            // Sort TodoItems alphabetically by content (needs mutable access, clone first?)
+            // Let's clone and sort
+            let mut sorted_todos = todos.clone();
+            sorted_todos.sort_by(|a, b| a.content.cmp(&b.content));
+
+
+            let (name, icon) = category_key.get_details();
+            let category_data = TodoCategoryData {
+                name,
+                icon,
+                // Use the sorted clone
+                todos: sorted_todos,
+            };
+            output_categories.push(category_data);
+        }
+    }
+
+    let final_data = OutputData {
+        categories: output_categories,
+    };
+
     if debug {
-        println!("[{:.2?}] ag command finished in {:.2?}", start_time.elapsed(), run_ag_start.elapsed());
+        println!("[{:.2?}] Output processed and structured in {:.2?}", start_time.elapsed(), format_output_start.elapsed());
+        println!("[{:.2?}] Total processing time: {:.2?}", start_time.elapsed(), start_time.elapsed());
     }
 
-    // Check if the command executed successfully
-    if output.status.success() {
-        let process_output_start = Instant::now();
-        if debug {
-            println!("[{:.2?}] Processing ag output...", start_time.elapsed());
-        }
-        match str::from_utf8(&output.stdout) {
-            Ok(stdout_str) => {
-                // Group TODOs by category, now storing TodoItem structs
-                let mut grouped_todos: HashMap<TodoCategory, Vec<TodoItem>> = HashMap::new();
-
-                // Compile the todo pattern regex from the config
-                let todo_pattern_re = match Regex::new(&config.ag.pattern) {
-                    Ok(re) => re,
-                    Err(e) => {
-                        eprintln!("Error: Invalid regex pattern in config ('{}'): {}", config.ag.pattern, e);
-                        return Err(io::Error::new(io::ErrorKind::InvalidData,
-                            format!("Invalid regex pattern in config: {}", e)));
-                    }
-                };
-
-                for line in stdout_str.lines() {
-                    let parts: Vec<&str> = line.splitn(3, ':').collect();
-                    if parts.len() == 3 {
-                        let file_path_str = parts[0];
-                        let line_number_str = parts[1];
-                        let content_part = parts[2].trim_start();
-
-                        if let Some(mat) = todo_pattern_re.find(content_part) {
-                             // Extract the raw content *after* the matched pattern
-                            let raw_todo_content = content_part[mat.end()..].trim();
-
-                            // Basic check for markdown checkbox completion - enhance as needed
-                            let completed = raw_todo_content.starts_with("[x]") || raw_todo_content.starts_with("[X]");
-
-                            // Clean the content: remove pattern, checkbox, leading markers
-                            let mut cleaned_content = raw_todo_content.trim_start_matches(&config.ag.pattern).trim();
-                            if cleaned_content.starts_with("[ ]") || cleaned_content.starts_with("[x]") || cleaned_content.starts_with("[X]") {
-                                cleaned_content = cleaned_content[3..].trim_start();
-                            }
-                             cleaned_content = cleaned_content.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace()).trim();
-
-
-                            let file_path = Path::new(file_path_str);
-                            let location = format!("{}:{}", file_path_str, line_number_str);
-
-                            // Determine category (same logic as before)
-                            let mut category = TodoCategory::Other;
-                            let mut project_match = false;
-                            for (project_name, glob_patterns) in &config.projects {
-                                for pattern_str in glob_patterns {
-                                    match Pattern::new(pattern_str) {
-                                        Ok(pattern) => {
-                                            if pattern.matches(file_path_str) {
-                                                category = TodoCategory::Project(project_name.clone());
-                                                project_match = true;
-                                                break;
-                                            }
-                                        }
-                                        Err(e) => {
-                                            if debug {
-                                                eprintln!("Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
-                                            }
-                                        }
-                                    }
-                                }
-                                if project_match { break; }
-                            }
-                            if !project_match {
-                                match find_git_repo_name(file_path) {
-                                    Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
-                                    Ok(None) => {} // Stays Other
-                                    Err(e) => {
-                                        if debug {
-                                            eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
-                                        }
-                                    }
-                                }
-                            }
-
-                            let todo_item = TodoItem {
-                                content: cleaned_content.to_string(),
-                                location,
-                                completed,
-                            };
-
-                            grouped_todos.entry(category)
-                                         .or_insert_with(Vec::new)
-                                         .push(todo_item);
-                        } // ... (rest of line parsing warnings) ...
-                        else if !line.trim().is_empty() {
-                            if debug {
-                                eprintln!("Warning: Skipping line where pattern '{}' was not found (ag output discrepancy?): {}", config.ag.pattern, line);
-                            }
-                        }
-                    } else if !line.trim().is_empty() {
-                         if debug {
-                            eprintln!("Warning: Skipping line that might be empty or unexpectedly formatted: {}", line);
-                         }
-                    }
-                }
-
-                // Prepare data for JSON output
-                let format_output_start = Instant::now();
-                let mut output_categories: Vec<TodoCategoryData> = Vec::new();
-                let mut categories: Vec<TodoCategory> = grouped_todos.keys().cloned().collect();
-
-                // Sort categories: Project(A-Z), GitRepo(A-Z), Other (using derived Ord)
-                categories.sort();
-
-                for category_key in categories {
-                    if let Some(todos) = grouped_todos.get_mut(&category_key) {
-                        // Sort the TodoItems alphabetically by content
-                        todos.sort_by(|a, b| a.content.cmp(&b.content));
-
-                        let (name, icon) = category_key.get_details(); // Get name and icon
-
-                        let category_data = TodoCategoryData {
-                            name,
-                            icon,
-                            todos: todos.clone(), // Clone the sorted todos
-                        };
-                        output_categories.push(category_data);
-                    }
-                }
-
-                 // Sort the final categories list alphabetically by name
-                 // output_categories.sort(); // Already sorted by key order which respects Project->Git->Other then alpha
-
-
-                let final_data = OutputData {
-                    categories: output_categories,
-                };
-
-                if debug {
-                    println!("[{:.2?}] Output processed and structured in {:.2?}", start_time.elapsed(), process_output_start.elapsed());
-                    println!("[{:.2?}] Structuring/sorting took {:.2?}", start_time.elapsed(), format_output_start.elapsed());
-                    println!("[{:.2?}] Total processing time: {:.2?}", start_time.elapsed(), start_time.elapsed());
-                }
-
-                Ok(final_data)
-            }
-            Err(e) => {
-                if debug {
-                    eprintln!("Error converting ag output to UTF-8: {}", e);
-                }
-                Err(io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert ag stdout to UTF-8: {}", e)))
-            }
-        }
-    } else {
-        // If the command failed, print the error output (stderr)
-        match str::from_utf8(&output.stderr) {
-            Ok(stderr_str) => {
-                eprintln!("ag command failed:\n{}", stderr_str);
-            }
-            Err(e) => {
-                eprintln!("ag command failed and error converting ag stderr to UTF-8: {}", e);
-            }
-        }
-        Err(io::Error::new(io::ErrorKind::Other, "ag command failed"))
-    }
+    Ok(final_data)
 }
 
 // --- Core TODO Editing Logic ---
