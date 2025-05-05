@@ -18,6 +18,7 @@ ignore = [
     "*/unitodo.sync.*",
     "*.temp.*",
     "/Users/asc/repo/Unitodo/README.md",
+    "/Users/asc/repo/Ray/render-markdown.nvim/**",
 ]
 
 [projects]

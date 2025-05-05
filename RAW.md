@@ -51,11 +51,10 @@ where:
 
 - [ ] 0 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp / remove it?
-- [ ] 1H allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
-  - For projects, the user should assign a project default folder for the `new.todo` file.
+- [ ] 1H allow for adding todo to a project/glob, by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
 - [ ] 1 store entire line in the json, to future-proof when writing back to the file?
+- [ ] 0 profile and optimize frontend performance, when the list is >800 items.
 
-- [ ] 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [ ] 1 fix toggle-checkbox, and all hotkeys
 - [ ] 1 edit the toml (especially projects) in the frontend
 
@@ -76,6 +75,7 @@ where:
 
 ---
 
+- [x] X 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [x] 0 check if the todo item is changed between aggregation and editing, if so, abort. (lock the file during editing)
     - [x] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [x] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
