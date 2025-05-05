@@ -47,6 +47,7 @@ export default function Todo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabHeaderRef = useRef<HTMLDivElement>(null);
   const urlUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for scroll debounce timer
 
   // Update scroll padding based on tab header height
   useEffect(() => {
@@ -195,7 +196,42 @@ export default function Todo() {
     };
   }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode]);
 
-  // Handle URL hash on initial load
+  // Effect for debounced scrolling when focusedItem changes
+  useEffect(() => {
+    // Clear any existing scroll timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // Set a new timeout to scroll after a short delay
+    scrollTimeoutRef.current = setTimeout(() => {
+      // Get the latest focused item state directly from the store
+      const currentFocusedItem = useTodoStore.getState().focusedItem;
+      const { categoryIndex, itemIndex } = currentFocusedItem;
+
+      if (categoryIndex !== -1 && itemIndex !== -1 && containerRef.current) {
+        // Construct selector based on data attributes
+        const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
+        const focusedElement = containerRef.current.querySelector(itemSelector) as HTMLElement;
+
+        if (focusedElement) {
+          focusedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+          });
+        }
+      }
+    }, 50); // 50ms debounce delay
+
+    // Cleanup function to clear timeout on unmount or before next run
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [focusedItem]); // Dependency: only run when focusedItem changes
+
+  // TODO 2 Handle URL hash on initial load
   useEffect(() => {
     if (typeof window === 'undefined' || filteredCategories.length === 0) return;
     
@@ -288,7 +324,6 @@ export default function Todo() {
           >
             {filteredCategories[activeTabIndex]?.todos.map((todo, localIndex) => {
               // Determine the original category index
-              const originalCategoryIndex = getOriginalCategoryIndex(filteredCategories[activeTabIndex].name);
               const isFocused = focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === localIndex;
               
               return (
@@ -298,7 +333,6 @@ export default function Todo() {
                   isFocused={isFocused}
                   onClick={() => setFocusedItem({ categoryIndex: activeTabIndex, itemIndex: localIndex })}
                   categoryIndex={activeTabIndex}
-                  originalCategoryIndex={originalCategoryIndex}
                   itemIndex={localIndex}
                 />
               );
@@ -466,14 +500,11 @@ export default function Todo() {
       {filteredCategories.length > 0 ? (
         displayMode === 'section' ? (
           filteredCategories.map((category, catIndex) => {
-            // Get the original unfiltered index for this category
-            const originalCategoryIndex = getOriginalCategoryIndex(category.name);
             return (
               <TodoCategory 
                 key={catIndex} 
                 category={category}
                 categoryIndex={catIndex}
-                originalCategoryIndex={originalCategoryIndex}
               />
             );
           })

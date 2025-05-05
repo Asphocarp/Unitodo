@@ -45,7 +45,6 @@ interface TodoItemProps {
   isFocused: boolean;
   onClick: () => void;
   categoryIndex: number;
-  originalCategoryIndex: number;
   itemIndex: number;
   role?: string;
 }
@@ -55,7 +54,6 @@ export default function TodoItem({
   isFocused,
   onClick,
   categoryIndex,
-  originalCategoryIndex,
   itemIndex,
   role
 }: TodoItemProps) {
