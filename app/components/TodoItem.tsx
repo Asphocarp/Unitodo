@@ -78,15 +78,6 @@ export default function TodoItem({
       if (document.activeElement !== itemRef.current) {
         itemRef.current.focus({ preventScroll: false });
       }
-      
-      // Small delay to ensure CSS variables are set
-      setTimeout(() => {
-        // Scroll into view when focused
-        itemRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'nearest'
-        });
-      }, 10);
     }
   }, [isFocused, isEditing]);
   
