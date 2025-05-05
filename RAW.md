@@ -49,8 +49,8 @@ where:
 ## todo
 - [ ] 0-1 prove it to be useful by doing a project
 
-- [ ] 0 check if the todo item is changed between aggregation and editing, if so, abort.
-- [ ] 0 unique-id can be fucking doomed! just fucking assume the line stays the same between aggregation and editing; therefore allow editing to any todo line, just check before applying.
+- [ ] 0 unique-id can be fucking doomed! (with checking before applying)
+    - [ ] 2 render timestamp / remove it?
 - [ ] 1H allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
   - For projects, the user should assign a project default folder for the `new.todo` file.
 - [ ] 1 store entire line in the json, to future-proof when writing back to the file?
@@ -77,6 +77,7 @@ where:
 
 ---
 
+- [x] 0 check if the todo item is changed between aggregation and editing, if so, abort. (lock the file during editing)
 - [x] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
 - [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) todos
