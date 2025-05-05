@@ -1,13 +1,8 @@
-# output_file = "/Users/asc/Documents/Obsidian/alpha-vault/Life/unitodo.sync.md"
-output_file = "unitodo.sync.json"
-
-[ag]
+[rg]
 pattern = "TODO:|TODO|- \\[ \\] "
-
-# Paths to search for TODOs (defaults to [\".\"] if empty or not present)
+# Paths to search for TODOs (defaults to ["."] if empty or not present)
 paths = ["/Users/asc/repo", "/Users/asc/Documents/Obsidian/alpha-vault"] # Example path, adjust as needed
-
-# Patterns/directories to ignore (uses ag's --ignore flag)
+# Patterns/directories to ignore (supplements rg's ignore mechanism)
 ignore = [
     ".git",
     "target",
@@ -24,10 +19,8 @@ ignore = [
     "*.temp.*",
 ]
 
-
 [projects]
 # project_name = ["glob_pattern_1", "glob_pattern_2"]
-
 Unitodo = ["**/Unitodo.md", "**/Unitodo/**"] # Example: Match any path containing Unitodo
 Ceal = ["**/Ceal.*", "**/Ceal/**"]       # Example: Match any path containing Ceal
 # Add more projects and their glob patterns here
