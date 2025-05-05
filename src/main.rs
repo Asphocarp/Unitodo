@@ -303,10 +303,10 @@ impl<'a> Sink for TodoSink<'a> {
 fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
     let start_time = Instant::now();
     if debug {
-        println!("[{:.2?}] Starting TODO processing using grep-searcher", start_time.elapsed());
+        println!("[{:.2?}] Starting TODO processing using grep-searcher", start_time.elapsed()); // UNITODO_IGNORE_LINE
     }
 
-    // 1. Compile the Regex Matcher for TODO pattern
+    // 1. Compile the Regex Matcher for TODO pattern // UNITODO_IGNORE_LINE
     let matcher = match RegexMatcher::new(&config.rg.pattern) {
         Ok(m) => m,
         Err(e) => {
@@ -430,7 +430,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
         Err(_) => {
              // This should ideally not happen if all threads finished, but handle defensively
              eprintln!("Error: Could not obtain exclusive access to grouped_todos after parallel walk.");
-             return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping"));
+             return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping")); // UNITODO_IGNORE_LINE
         }
     };
     let mut categories: Vec<TodoCategory> = final_grouped_todos.keys().cloned().collect();
@@ -510,7 +510,7 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
         }
     };
 
-    // Find the match of the TODO pattern on the target line
+    // Find the match of the todo pattern on the target line
     if let Some(mat) = todo_pattern_re.find(original_line) {
         let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
         let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME") // UNITODO_IGNORE_LINE
@@ -534,7 +534,7 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
         lines[line_index] = new_line_content;
     } else {
         // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
-        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.rg.pattern, line_number, file_path_str)));
+        return Err(io::Error::new(io::ErrorKind::NotFound, format!("TODO pattern '{}' not found on line {} of file {}", config.rg.pattern, line_number, file_path_str))); // UNITODO_IGNORE_LINE
     }
 
     // 4. Write the modified content back to the file
@@ -578,7 +578,7 @@ async fn get_todos_handler(config: web::Data<Arc<Config>>) -> ActixResult<impl R
     }
 }
 
-// --- API Handler for Editing TODOs ---
+// --- API Handler for Editing todos ---
 async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<EditTodoPayload>) -> ActixResult<impl Responder> {
     let config_clone = config.clone();
     let payload_inner = payload.into_inner(); // Move payload into the closure
@@ -589,7 +589,7 @@ async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<Ed
     match result {
         Ok(Ok(())) => Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))),
         Ok(Err(e)) => {
-            eprintln!("Error editing TODO in file: {}", e);
+            eprintln!("Error editing TODO in file: {}", e); // UNITODO_IGNORE_LINE
             // Map specific IO errors to HTTP status codes
             let status_code = match e.kind() {
                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,

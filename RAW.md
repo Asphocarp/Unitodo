@@ -1,5 +1,6 @@
 # Unitodo
-- **Unifying Distributed TODOs**
+- **Unifying Distributed TODOs** <!-- UNITODO_IGNORE_LINE -->
+
 
 ## idea
 
@@ -7,7 +8,7 @@
 - collect them in real time at one place 
     - obsidian (simply a markdown file)?
     - webview? notion? terminal?
-- (impact) so that every TODO is in one place, and all you need to do today is DO things after ranking them.
+- (impact) so that every Todo is in one place, and all you need to do today is DO things after ranking them.
 
 ## related work:
 https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
@@ -34,10 +35,10 @@ T0DO: 1@fffff content lalalaa
 - [ ] 1@AoVs5 content lalalaa
 ```
 where:
-- At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list.
+- At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list. <!-- UNITODO_IGNORE_LINE -->
     - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
-- `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`.
-    - `@@eeeee` is a timestamp indicating when the TODO was done.
+- `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`. <!-- UNITODO_IGNORE_LINE -->
+    - `@@eeeee` is a timestamp indicating when the TODO was done. <!-- UNITODO_IGNORE_LINE -->
 - `#Jl_obVmSA7XCwzp7hkT2r` is a unique nanoid of 20 chars.
 - `##12` is a unique incremented number id, assigned by unitodo system.
 - Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
@@ -47,8 +48,8 @@ where:
 
 ## todo
 
-- [ ] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
-- [ ] 0 prove it to be useful by doing a project - wait, base on my experience, unique-id can be ignored, just fucking assume the line stays the same between aggregation and editing.
+- [ ] 0 unique-id can be fucking doomed! just fucking assume the line stays the same between aggregation and editing.
+- [ ] 0 prove it to be useful by doing a project
 - [ ] 1 allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
   - For projects, the user should assign a project default folder for the `new.todo` file.
 - [ ] 1 store entire line in the json, to future-proof when writing back to the file?
@@ -72,9 +73,12 @@ where:
 
 - [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 
+---
+
+- [x] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
 - [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) todos
-- [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change)
+- [x] 0 we need a unique id for each TODO, to support bi-directional sync (since the TODO line position may change) <!-- UNITODO_IGNORE_LINE -->
   - [x] let only unique-ensured id be editable and synced. show non-unique-ensured id in a different color, read-only.
   - [x] let the frontend parse the content (which includes the-first-word), show it in a very advanced text-editor, where the-first-word is separated into small blocks, and each block is a button to edit part of the-first-word, and the remaining content is just editable text. The overall text-editor is like a text-editor in cursor. The overall text-editor is readonly if no unique-ensured id is present.
   - definition of the-first-word: the-first-word is the first word after the matched pattern in the line (separated by blank after it).
@@ -85,12 +89,12 @@ where:
 
 ## Best practices
 
-[TODO: simply put a 0/1/2/3 in the front of the line, to indicate the priority, when alphabetically sorted]
+- simply put a 0/1/2/3 in the front of the line, to indicate the priority, when alphabetically sorted
 
 ## Known issues
 
-- support one-line TODO only
-- to bi-directional sync, for now, we assume that the input TODOs are edited 
+- support one-line TODO only <!-- UNITODO_IGNORE_LINE -->
+- to bi-directional sync, for now, we assume that the input todos are edited 
 - we assume all created timestamps are unique. (you do not create more than 1 todo within 1 second)
 
 ## Frontend
