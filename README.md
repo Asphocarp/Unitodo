@@ -20,7 +20,7 @@ Unitodo is a powerful solution that helps developers and teams track all their T
 
 Unitodo consists of two main components:
 
-1. **Rust Backend**: Scans your codebase for TODOs using `ag` (the silver searcher), processes and categorizes them, and provides a REST API for the frontend.
+1. **Rust Backend**: Scans your codebase for TODOs using `rg` (ripgrep), processes and categorizes them, and provides a REST API for the frontend.
 
 2. **React Frontend**: A modern web interface for viewing, filtering, and managing your TODO items.
 
@@ -32,10 +32,6 @@ Unitodo consists of two main components:
 - **Timestamping**: Automatic tracking of when TODOs are created and completed
 - **Modern Web Interface**: Filter, sort, and manage your TODOs with an intuitive UI
 - **Markdown Support**: Basic markdown rendering for rich TODO descriptions
-
-## Installation
-
-- install `ag` (the silver searcher)
 
 ### Prerequisites
 
