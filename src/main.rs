@@ -216,6 +216,15 @@ impl<'a> Sink for TodoSink<'a> {
             }
         };
 
+        // --- IGNORE LINE CHECK ---
+        if line.contains("UNITODO_IGNORE_LINE") {
+            if self.debug {
+                println!("[{:.2?}] Ignoring TODO on line {} of {} due to UNITODO_IGNORE_LINE", self.start_time.elapsed(), line_num, file_path_str);
+            }
+            return Ok(true); // Skip this match, continue searching file
+        }
+        // --- END IGNORE LINE CHECK ---
+
         // Now, use the *config* regex to extract the content *after* the pattern
         let todo_pattern_re = match Regex::new(&self.config.rg.pattern) {
             Ok(re) => re,
@@ -396,12 +405,12 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
                     start_time: start_time_ref,
                  };
 
-                 let result = searcher.search_path(&current_matcher, path, &mut sink);
-                 if let Err(err) = result {
-                      if is_debug {
-                         eprintln!("[{:.2?}] Warning: Error searching file {}: {}", start_time_ref.elapsed(), path.display(), err);
-                      }
-                 }
+                let result = searcher.search_path(&current_matcher, path, &mut sink);
+                if let Err(err) = result {
+                    if is_debug {
+                        eprintln!("[{:.2?}] Warning: Error searching file {}: {}", start_time_ref.elapsed(), path.display(), err);
+                    }
+                }
             }
             ignore::WalkState::Continue
         })

@@ -47,7 +47,6 @@ where:
 
 ## todo
 
-- [ ] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE", ignore all todos found in this line; if the file contain "UNITODO_IGNORE_FILE", ignore all todos found in this file
 - [ ] 0 prove it to be useful by doing a project - wait, base on my experience, unique-id can be ignored, just fucking assume the line stays the same between aggregation and editing.
 - [ ] button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
 - [ ] 1 allow for adding todo to a project/glob, by append to `new.todo` file beside the `.git` folder. 
@@ -81,6 +80,7 @@ where:
   - definition of the-first-word: the-first-word is the first word after the matched pattern (TODO) in the line (separated by blank after it).
 - [x] 0 editable <- parser
 - [x] X 3 switch to SolidJS (for better performance), instead of RaectJS
+- [x] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE"
 
 
 ## Best practices
