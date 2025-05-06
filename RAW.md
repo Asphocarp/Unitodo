@@ -91,6 +91,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 
 - [ ] 2 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
+- [ ] 1 submit to homebrew, aur; make doc and everything more user-friendly
 
 - [ ] 1 fancy: make it a native app? (rn/swift?)
 - [ ] 2 move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
