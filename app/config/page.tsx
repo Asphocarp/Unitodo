@@ -60,11 +60,16 @@ export default function ConfigPage() {
     updateProjectField,
     updateProjectAppendPath,
     addProject,
-    removeProject
+    removeProject,
+    addTodoDonePair,
+    updateTodoDonePair,
+    removeTodoDonePair
   } = useConfigStore();
   
   const { isDarkMode } = useDarkMode();
   const [newProjectName, setNewProjectName] = useState('');
+  const [newTodoPattern, setNewTodoPattern] = useState('');
+  const [newDonePattern, setNewDonePattern] = useState('');
 
   useEffect(() => {
     if (!config && !loading) {
@@ -82,6 +87,14 @@ export default function ConfigPage() {
           addProject(newProjectName.trim());
           setNewProjectName('');
       }
+  };
+
+  const handleAddTodoDonePair = () => {
+    if (newTodoPattern.trim() && newDonePattern.trim()) {
+        addTodoDonePair([newTodoPattern.trim(), newDonePattern.trim()]);
+        setNewTodoPattern('');
+        setNewDonePattern('');
+    }
   };
 
   if (loading && !config) {
@@ -146,14 +159,6 @@ export default function ConfigPage() {
           {/* Backend Settings (rg) */}
           <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
               <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">Search Settings</h2>
-              <InputField
-                label="Search Pattern (Regex)"
-                description="Pattern for finding TODOs"
-                type="text"
-                id="rg_pattern"
-                value={config.rg.pattern}
-                onChange={(e) => updateRgField('pattern', e.target.value)}
-              />
               <TextareaField
                   label="Search Paths"
                   description="Locations to scan (one per line)"
@@ -232,6 +237,62 @@ export default function ConfigPage() {
                 ))}
               </div>
             )}
+        </section>
+
+        {/* TODO/DONE Pattern Pairs Settings */}
+        <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
+          <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">TODO/DONE Pattern Pairs</h2>
+          <div className="mb-3 p-2 border border-gray-200 dark:border-gray-700 rounded-sm">
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <InputField
+                label="New TODO Pattern"
+                type="text"
+                value={newTodoPattern}
+                onChange={(e) => setNewTodoPattern(e.target.value)}
+                placeholder="e.g., - [ ] or TODO:"
+              />
+              <InputField
+                label="New DONE Pattern"
+                type="text"
+                value={newDonePattern}
+                onChange={(e) => setNewDonePattern(e.target.value)}
+                placeholder="e.g., - [x] or DONE:"
+              />
+            </div>
+            <button 
+              type="button"
+              onClick={handleAddTodoDonePair}
+              className="px-2 py-0.5 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color"
+            >
+              Add Pair
+            </button>
+          </div>
+
+          {config.todo_done_pairs && config.todo_done_pairs.length > 0 ? (
+            <div className="space-y-2">
+              {config.todo_done_pairs.map((pair, index) => (
+                <div key={index} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm flex justify-between items-center">
+                  <div className="flex-grow">
+                    <p className="text-xs dark:text-gray-300">
+                      <span className="font-medium">From:</span> {pair[0]}
+                    </p>
+                    <p className="text-xs dark:text-gray-300">
+                      <span className="font-medium">To:</span> {pair[1]}
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => removeTodoDonePair(index)}
+                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-2"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400 italic">No TODO/DONE pattern pairs defined. Defaults will be used.</p>
+          )}
         </section>
 
         {/* Save Button */}

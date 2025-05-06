@@ -16,6 +16,7 @@ export interface Config {
   projects: Record<string, ProjectConfig>; // Updated: Value is now ProjectConfig
   refresh_interval: number; // u32 -> number
   editor_uri_scheme: string;
+  todo_done_pairs: string[][]; // Added: Array of [todo_pattern, done_pattern] strings
 }
 
 // Added: Corresponds to the Rust ProjectConfig struct
@@ -26,7 +27,6 @@ export interface ProjectConfig {
 
 // Corresponds to the Rust RgConfig struct
 export interface RgConfig {
-  pattern: string;
   paths: string[];
   ignore?: string[]; // Option<Vec<String>> -> string[] | undefined
   file_types?: string[]; // Option<Vec<String>> -> string[] | undefined
