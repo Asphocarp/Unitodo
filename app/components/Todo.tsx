@@ -262,11 +262,11 @@ export default function Todo() {
                     } else if (activeCategory.icon === "") {
                         categoryType = 'project';
                     } else {
-                        alert('Cannot add TODO to "Other" category directly. Please define it as a project or add to a git repo file.');
+                        alert('Cannot add TODO to "Other" category directly. Please define it as a project or add to a git repo file.'); // UNITODO_IGNORE_LINE
                         return;
                     }
                 } else {
-                    alert('No active tab selected to add TODO to.');
+                    alert('No active tab selected to add TODO to.'); // UNITODO_IGNORE_LINE
                     return;
                 }
             } else {
@@ -282,11 +282,11 @@ export default function Todo() {
                     } else if (focusedCategory.icon === "") {
                         categoryType = 'project';
                     } else {
-                        alert('Cannot add TODO to "Other" category directly.');
+                        alert('Cannot add TODO to "Other" category directly.'); // UNITODO_IGNORE_LINE
                         return;
                     }
                 } else {
-                    alert('No section/item focused to determine where to add TODO.');
+                    alert('No section/item focused to determine where to add TODO.'); // UNITODO_IGNORE_LINE
                     return;
                 }
             }

@@ -187,51 +187,59 @@ export default function ConfigPage() {
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="New project name"
                   className="mr-1 px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-700 rounded-sm 
-                           dark:bg-gray-800 dark:text-gray-200 w-32"
+                           dark:bg-gray-800 dark:text-gray-200 w-32 focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color"
                 />
                 <button 
                   type="button"
                   onClick={handleAddProject}
-                  className="px-2 py-0.5 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color"
+                  className="px-3 py-0.5 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color transition-opacity flex items-center"
+                  disabled={!newProjectName.trim()}
                 >
-                  Add
+                  <span className="mr-1">+</span> Add
                 </button>
               </div>
             </div>
             
             {Object.entries(projects).length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400 italic">No projects defined yet. Add a project to categorize TODOs.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 italic">No projects defined yet. Add a project to categorize TODOs.</p>// UNITODO_IGNORE_LINE
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {Object.entries(projects).map(([projectName, projectConfig]) => (
-                    <div key={projectName} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm relative">
-                        <div className="flex justify-between items-center mb-1">
-                          <h3 className="text-xs font-medium dark:text-gray-300">{projectName}</h3>
+                    <div key={projectName} className="p-3 border border-gray-200 dark:border-gray-700 rounded-sm relative hover:border-gray-300 dark:hover:border-gray-600 transition-colors bg-white dark:bg-gray-800">
+                        <div className="flex justify-between items-center mb-2">
+                          <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300">{projectName}</h3>
                           <button 
                             type="button"
                             onClick={() => removeProject(projectName)}
-                            className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center"
+                            aria-label={`Remove ${projectName} project`}
                           >
-                            Remove
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <span>Remove</span>
                           </button>
                         </div>
-                        <textarea
-                            className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-sm
-                                      dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent-color"
-                            rows={2}
-                            placeholder="Path glob patterns (one per line)"
-                            value={projectConfig.patterns.join('\n')}
-                            onChange={(e) => handleProjectPatternChange(projectName, e)}
-                        />
+                        <div className="mb-2">
+                          <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Path Patterns</label>
+                          <textarea
+                              className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-sm
+                                        dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent-color"
+                              rows={2}
+                              placeholder="Path glob patterns (one per line, e.g., src/**/*.js)"
+                              value={projectConfig.patterns.join('\n')}
+                              onChange={(e) => handleProjectPatternChange(projectName, e)}
+                          />
+                        </div>
                         <InputField
-                          label="Append TODO File Path (Optional)"
-                          description="Path to the file where new TODOs for this project will be appended."
+                          label="Append TODO File Path" // UNITODO_IGNORE_LINE
+                          description="Path where new TODOs for this project will be added" // UNITODO_IGNORE_LINE
                           type="text"
                           id={`project_append_path_${projectName}`}
                           name={`project_append_path_${projectName}`}
                           value={projectConfig.append_file_path || ''}
                           onChange={(e) => updateProjectAppendPath(projectName, e.target.value)}
-                          className="mt-2"
+                          placeholder="Optional: /path/to/todo.md"
                         />
                     </div>
                 ))}
@@ -239,17 +247,17 @@ export default function ConfigPage() {
             )}
         </section>
 
-        {/* TODO/DONE Pattern Pairs Settings */}
-        <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
-          <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">TODO/DONE Pattern Pairs</h2>
-          <div className="mb-3 p-2 border border-gray-200 dark:border-gray-700 rounded-sm">
-            <div className="grid grid-cols-2 gap-2 mb-2">
+        <section className="mb-4 p-2 border border-gray-200 dark:border-gray-700 rounded-sm">
+          <h2 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">TODO/DONE Pattern Pairs</h2> {/* UNITODO_IGNORE_LINE */}
+          <div className="mb-3 p-2 border border-gray-200 dark:border-gray-700 rounded-sm bg-white dark:bg-gray-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
               <InputField
-                label="New TODO Pattern"
+                label="New TODO Pattern" // UNITODO_IGNORE_LINE
                 type="text"
                 value={newTodoPattern}
                 onChange={(e) => setNewTodoPattern(e.target.value)}
                 placeholder="e.g., - [ ] or TODO:"
+                className="focus:z-10 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-sm px-2 py-1"
               />
               <InputField
                 label="New DONE Pattern"
@@ -257,41 +265,48 @@ export default function ConfigPage() {
                 value={newDonePattern}
                 onChange={(e) => setNewDonePattern(e.target.value)}
                 placeholder="e.g., - [x] or DONE:"
+                className="focus:z-10 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-sm px-2 py-1"
               />
             </div>
             <button 
               type="button"
               onClick={handleAddTodoDonePair}
-              className="px-2 py-0.5 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color"
+              className="px-3 py-1 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color transition-opacity flex items-center"
             >
-              Add Pair
+              <span className="mr-1">+</span> Add Pattern Pair
             </button>
           </div>
 
           {config.todo_done_pairs && config.todo_done_pairs.length > 0 ? (
             <div className="space-y-2">
               {config.todo_done_pairs.map((pair, index) => (
-                <div key={index} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm flex justify-between items-center">
-                  <div className="flex-grow">
-                    <p className="text-xs dark:text-gray-300">
-                      <span className="font-medium">From:</span> {pair[0]}
-                    </p>
-                    <p className="text-xs dark:text-gray-300">
-                      <span className="font-medium">To:</span> {pair[1]}
-                    </p>
+                <div key={index} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm flex justify-between items-center bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                  <div className="flex-grow grid grid-cols-2 gap-2">
+                    <div className="text-xs dark:text-gray-300">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">TODO:</span> {/* UNITODO_IGNORE_LINE */}
+                      {/* making sure blank chars are shown via .replace(/ /g, '\u00A0') */}
+                      <code className="ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{pair[0].replace(/ /g, '\u00A0')}</code>
+                    </div>
+                    <div className="text-xs dark:text-gray-300">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">DONE:</span> 
+                      <code className="ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{pair[1].replace(/ /g, '\u00A0')}</code>
+                    </div>
                   </div>
                   <button 
                     type="button"
                     onClick={() => removeTodoDonePair(index)}
-                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-2"
+                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-4 flex items-center"
+                    aria-label="Remove pattern pair"
                   >
-                    Remove
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400 italic">No TODO/DONE pattern pairs defined. Defaults will be used.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 italic">No TODO/DONE pattern pairs defined. Defaults will be used.</p> // UNITODO_IGNORE_LINE
           )}
         </section>
 
@@ -299,10 +314,25 @@ export default function ConfigPage() {
         <div className="flex justify-end">
           <button 
             type="submit" 
-            className="px-3 py-1 bg-accent-color rounded-sm hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-accent-color disabled:opacity-50 text-xs border border-accent-color"
+            className="px-4 py-1.5 bg-accent-color rounded-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-accent-color disabled:opacity-50 text-xs font-medium border border-accent-color transition-all shadow-sm"
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save Configuration'}
+            {isSaving ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <svg className="mr-1.5 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Save Configuration
+              </span>
+            )}
           </button>
         </div>
       </form>

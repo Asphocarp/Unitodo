@@ -172,9 +172,9 @@ fn default_editor_uri_scheme() -> String {
 
 fn default_todo_done_pairs() -> Vec<Vec<String>> {
     vec![
-        vec!["- [ ] ".to_string(), "- [x] ".to_string()],
-        vec!["TODO:".to_string(), "DONE:".to_string()],
-        vec!["TODO".to_string(), "DONE".to_string()],   // General fallback
+        vec!["- [ ] ".to_string(), "- [x] ".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO:".to_string(), "DONE:".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO".to_string(), "DONE".to_string()],   // General fallback // UNITODO_IGNORE_LINE
     ]
 }
 
@@ -810,7 +810,7 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
     if sanitized_content.is_empty() {
          return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item"));
     }
-    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content);
+    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content); // UNITODO_IGNORE_LINE
 
     // 3. Open the file, lock it, determine if newline prefix is needed, then write once.
     if let Some(parent_dir) = target_append_file_path.parent() {
@@ -870,11 +870,11 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
     // The file offset might have been changed by previous seek/read_exact, but O_APPEND handles this for writes.
     println!("DEBUG: Attempting to write: [{}]", final_line_to_append);
     // Using writeln! will add another newline *after* final_line_to_append.
-    // If final_line_to_append already starts with \n, we get \nTODO\n.
-    // If file was empty, we get TODO\n.
-    // If file had content ending in no newline, we get \nTODO\n.
-    // If file had content ending in newline, we get TODO\n.
-    // This seems correct for ensuring each TODO is on its own line and files end with newline.
+    // If final_line_to_append already starts with \n, we get \nTODO\n. // UNITODO_IGNORE_LINE
+    // If file was empty, we get TODO\n. // UNITODO_IGNORE_LINE
+    // If file had content ending in no newline, we get \nTODO\n. // UNITODO_IGNORE_LINE
+    // If file had content ending in newline, we get TODO\n. // UNITODO_IGNORE_LINE
+    // This seems correct for ensuring each TODO is on its own line and files end with newline. // UNITODO_IGNORE_LINE
     if let Err(e) = writeln!(file, "{}", final_line_to_append) {
         eprintln!("ERROR: Failed to write to file {}: {}", target_append_file_path.display(), e);
         file.unlock()?; // Attempt to unlock before propagating error
@@ -940,44 +940,53 @@ fn mark_todo_as_done_in_file(config: &Config, payload: &MarkDonePayload) -> Resu
         let mut new_line_for_file = original_line.clone();
         let mut marker_changed = false;
         let mut original_marker_len = 0;
-        let mut new_marker_str = "".to_string();
+        let mut new_marker_str = String::new(); // Default, will be updated
         let mut prefix_before_marker_len = 0;
 
-        for pair in &todo_done_pairs_to_use {
-            if pair.len() == 2 {
-                let todo_marker = &pair[0];
-                let done_marker = &pair[1];
-                if let Some(marker_start_idx) = original_line.find(todo_marker) {
-                    new_line_for_file = original_line.replacen(todo_marker, done_marker, 1);
-                    marker_changed = true;
-                    original_marker_len = todo_marker.len();
-                    new_marker_str = done_marker.clone();
-                    prefix_before_marker_len = marker_start_idx;
-                    break;
-                }
-            } else {
-                // Log or handle malformed pair if necessary
-                if cfg!(debug_assertions) {
-                    eprintln!("Warning: Malformed todo_done_pair in config: {:?}", pair);
-                }
-            }
-        }
+        // Use effective_rg_pattern to find the marker first
+        let effective_pattern_for_transform = config.get_effective_rg_pattern();
+        let marker_re = Regex::new(&effective_pattern_for_transform)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, 
+                format!("Invalid effective regex pattern for transformation ('{}'): {}", effective_pattern_for_transform, e)))?;
 
-        if !marker_changed {
-            // If no specific marker was changed (e.g. rg.pattern is "FIXME" and not in pairs),
-            // we might still want to append the timestamp.
-            // For now, let's assume if no pair matches, we don't alter the prefix.
-            // The user request implies specific pattern changes.
-            // However, we MUST have a conceptual "marker end" to find where the content starts for timestamping.
-            // Fallback to config.rg.pattern match end.
-            let rg_pattern_re = Regex::new(&effective_rg_pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Bad effective_rg_pattern"))?;
-            if let Some(mat) = rg_pattern_re.find(&original_line) {
-                 prefix_before_marker_len = mat.start(); // This is the prefix before the general pattern
-                 original_marker_len = mat.len(); // Length of the general pattern itself
-                 new_marker_str = mat.as_str().to_string(); // No change to marker string itself
-            } else {
-                return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern (effective_rg_pattern) not found on line for timestamping."));
+        if let Some(mat) = marker_re.find(&original_line) {
+            // A ToDo pattern was found by the regex.
+            prefix_before_marker_len = mat.start();
+            original_marker_len = mat.len();
+            let matched_todo_text = mat.as_str();
+
+            // Default to the matched text itself, in case no specific "done" version is found.
+            // This ensures new_marker_str is set for timestamping logic later.
+            new_marker_str = matched_todo_text.to_string();
+
+            // Attempt to find a corresponding "done" marker to transform.
+            for pair in &todo_done_pairs_to_use {
+                if pair.len() == 2 && pair[0] == matched_todo_text {
+                    let done_marker = &pair[1];
+                    new_marker_str = done_marker.clone(); // Update to the "done" marker
+                    
+                    // Reconstruct the line with the transformed marker
+                    new_line_for_file = format!("{}{}{}",
+                        &original_line[..prefix_before_marker_len],
+                        new_marker_str, // This is the done_marker
+                        &original_line[prefix_before_marker_len + original_marker_len..]
+                    );
+                    marker_changed = true; // A "todo" to "done" transformation occurred.
+                    break; // Found the pair, transformation applied.
+                }
             }
+            // If marker_changed is still false here, it means the regex matched a todo pattern (e.g. "FIXME"),
+            // but that pattern didn't have a specific "done" counterpart in todo_done_pairs.
+            // In this case, new_marker_str remains matched_todo_text, 
+            // prefix_before_marker_len and original_marker_len are set from `mat`,
+            // and new_line_for_file remains original_line.clone().
+            // The timestamping logic will proceed with these values.
+        } else {
+            // No todo pattern (derived from todo_done_pairs) found on the line.
+            // This line cannot be marked as done according to current rules.
+            return Err(io::Error::new(io::ErrorKind::NotFound, 
+                format!("TODO pattern ('{}') not found on line {} of file '{}' for marking done.", 
+                effective_pattern_for_transform, line_number, file_path_str)));
         }
         
         // 3. Timestamp and First Word Modification
@@ -1082,8 +1091,8 @@ async fn get_todos_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> Act
         // Correctly handle nested Result from web::block
         Ok(Ok(data)) => Ok(web::Json(data)),
         Ok(Err(e)) => {
-            eprintln!("Error processing TODOs: {}", e);
-            Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))
+            eprintln!("Error processing TODOs: {}", e); // UNITODO_IGNORE_LINE
+            Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))// UNITODO_IGNORE_LINE
         },
         Err(e) => {
             eprintln!("Error running blocking task for get_todos: {}", e);
@@ -1200,8 +1209,8 @@ async fn add_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload
 
     match result {
         Ok(Ok(())) => {
-            println!("Successfully added TODO"); // Debug
-            Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success", "message": "TODO added successfully." })))
+            println!("Successfully added TODO"); // Debug // UNITODO_IGNORE_LINE
+            Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success", "message": "TODO added successfully." }))) // UNITODO_IGNORE_LINE
         },
         Ok(Err(e)) => {
             eprintln!("Error adding TODO: {}", e);
@@ -1239,7 +1248,7 @@ async fn mark_done_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payloa
 
     match result {
         Ok(Ok((new_content, completed))) => {
-            println!("Successfully marked TODO as done. New content: {}", new_content);
+            println!("Successfully marked TODO as done. New content: {}", new_content); // UNITODO_IGNORE_LINE
             Ok(HttpResponse::Ok().json(serde_json::json!({
                 "status": "success",
                 "message": "TODO marked as done successfully.",
@@ -1248,7 +1257,7 @@ async fn mark_done_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payloa
             })))
         },
         Ok(Err(e)) => {
-            eprintln!("Error marking TODO as done: {}", e);
+            eprintln!("Error marking TODO as done: {}", e); // UNITODO_IGNORE_LINE
             let status_code = match e.kind() {
                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
                 io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
