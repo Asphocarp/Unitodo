@@ -56,3 +56,37 @@ export async function editTodoItem(payload: EditTodoPayload): Promise<any> { // 
     throw error; // Re-throw for component handling
   }
 } 
+
+// Define the payload structure for adding a todo item
+interface AddTodoPayload {
+  category_type: string; // "git" or "project"
+  category_name: string; // Name of the repo or project
+  content: string; // The raw content for the new TODO
+  example_item_location?: string; // Required for "git" type
+}
+
+// Function to add a new todo item via the backend
+export async function addTodoItem(payload: AddTodoPayload): Promise<any> {
+  try {
+    const response = await fetch('/api/todos/add', { // Assuming endpoint is /api/todos/add
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        error: 'Could not parse error response from add todo endpoint',
+        code: response.status 
+      }));
+      throw new Error(`API error adding todo: ${response.status} ${response.statusText} - ${errorData.error || 'No details'}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error adding todo item:', error);
+    throw error;
+  }
+} 

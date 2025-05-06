@@ -13,9 +13,15 @@ export interface TodoCategory {
 // Corresponds to the Rust Config struct
 export interface Config {
   rg: RgConfig;
-  projects: Record<string, string[]>; // HashMap<String, Vec<String>> -> Record<string, string[]>
+  projects: Record<string, ProjectConfig>; // Updated: Value is now ProjectConfig
   refresh_interval: number; // u32 -> number
   editor_uri_scheme: string;
+}
+
+// Added: Corresponds to the Rust ProjectConfig struct
+export interface ProjectConfig {
+  patterns: string[];
+  append_file_path?: string; // Optional path for appending TODOs
 }
 
 // Corresponds to the Rust RgConfig struct

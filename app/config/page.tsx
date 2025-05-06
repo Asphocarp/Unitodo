@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import useConfigStore from '../store/configStore';
 import { useDarkMode } from '../utils/darkMode';
-import { Config, RgConfig } from '../types';
+import { Config, ProjectConfig, RgConfig } from '../types';
 import Link from 'next/link';
 
 // Reusable Input Component with more compact, stylish design
@@ -58,6 +58,7 @@ export default function ConfigPage() {
     updateConfigField, 
     updateRgField,
     updateProjectField,
+    updateProjectAppendPath,
     addProject,
     removeProject
   } = useConfigStore();
@@ -95,7 +96,7 @@ export default function ConfigPage() {
     return <div className="text-xs flex items-center justify-center h-screen">Configuration not available. Attempting to load or create default...</div>;
   }
 
-  const projects = config.projects as Record<string, string[]>;
+  const projects: Record<string, ProjectConfig> = config.projects as Record<string, ProjectConfig>;
 
   return (
     <div className={`max-w-4xl mx-auto p-2 ${isDarkMode ? 'dark' : ''}`}>
@@ -197,7 +198,7 @@ export default function ConfigPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 italic">No projects defined yet. Add a project to categorize TODOs.</p>
             ) : (
               <div className="space-y-2">
-                {Object.entries(projects).map(([projectName, patterns]) => (
+                {Object.entries(projects).map(([projectName, projectConfig]) => (
                     <div key={projectName} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm relative">
                         <div className="flex justify-between items-center mb-1">
                           <h3 className="text-xs font-medium dark:text-gray-300">{projectName}</h3>
@@ -214,8 +215,18 @@ export default function ConfigPage() {
                                       dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent-color"
                             rows={2}
                             placeholder="Path glob patterns (one per line)"
-                            value={patterns.join('\n')}
+                            value={projectConfig.patterns.join('\n')}
                             onChange={(e) => handleProjectPatternChange(projectName, e)}
+                        />
+                        <InputField
+                          label="Append TODO File Path (Optional)"
+                          description="Path to the file where new TODOs for this project will be appended."
+                          type="text"
+                          id={`project_append_path_${projectName}`}
+                          name={`project_append_path_${projectName}`}
+                          value={projectConfig.append_file_path || ''}
+                          onChange={(e) => updateProjectAppendPath(projectName, e.target.value)}
+                          className="mt-2"
                         />
                     </div>
                 ))}

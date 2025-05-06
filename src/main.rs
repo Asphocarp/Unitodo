@@ -19,13 +19,76 @@ use fs2::FileExt;
 use parking_lot::{Mutex as ParkingMutex, RwLock};
 use lazy_static::lazy_static;
 
+// --- Helper Functions ---
+fn get_primary_config_path() -> io::Result<PathBuf> {
+    home::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not find home directory"))
+        .map(|h| h.join(".config").join("unitodo").join("config.toml"))
+}
+
+fn get_append_file_path_in_dir(dir_path: &Path) -> PathBuf {
+    dir_path.join("unitodo.append.md")
+}
+
+fn generate_short_timestamp() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let now = SystemTime::now();
+    let current_unix_timestamp = now.duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
+    let custom_epoch: u64 = 1735689600;
+    let seconds_since_custom_epoch = current_unix_timestamp.saturating_sub(custom_epoch);
+    let url_safe_base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut base64_timestamp = String::with_capacity(5);
+    let mask6bit = 0x3F;
+    let timestamp_value = seconds_since_custom_epoch & 0x3FFFFFFF;
+    base64_timestamp.push(url_safe_base64_chars.chars().nth(((timestamp_value >> 24) & mask6bit) as usize).unwrap_or('A'));
+    base64_timestamp.push(url_safe_base64_chars.chars().nth(((timestamp_value >> 18) & mask6bit) as usize).unwrap_or('A'));
+    base64_timestamp.push(url_safe_base64_chars.chars().nth(((timestamp_value >> 12) & mask6bit) as usize).unwrap_or('A'));
+    base64_timestamp.push(url_safe_base64_chars.chars().nth(((timestamp_value >> 6) & mask6bit) as usize).unwrap_or('A'));
+    base64_timestamp.push(url_safe_base64_chars.chars().nth((timestamp_value & mask6bit) as usize).unwrap_or('A'));
+    base64_timestamp
+}
+
+fn get_parent_dir(p: &Path) -> Option<PathBuf> {
+    if p.is_file() {
+        p.parent().map(|pd| pd.to_path_buf())
+    } else if p.is_dir() {
+        Some(p.to_path_buf())
+    } else {
+        None
+    }
+}
+
+fn find_git_repo_root(start_path: &Path) -> io::Result<Option<PathBuf>> {
+    let mut current_path = match get_parent_dir(start_path) {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    loop {
+        let git_dir = current_path.join(".git");
+        if git_dir.exists() && git_dir.is_dir() {
+            return Ok(Some(current_path));
+        }
+        if let Some(parent) = current_path.parent() {
+            if parent == current_path {
+                break;
+            }
+            current_path = parent.to_path_buf();
+        } else {
+            break;
+        }
+    }
+    Ok(None)
+}
+
+// --- End Helper Functions ---
+
 // --- Configuration Structure ---
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 struct Config {
     #[serde(default)]
     rg: RgConfig,
     #[serde(default)]
-    projects: HashMap<String, Vec<String>>,
+    projects: HashMap<String, ProjectConfig>,
     #[serde(default = "default_refresh_interval")]
     refresh_interval: u32,
     #[serde(default = "default_editor_uri_scheme")]
@@ -42,6 +105,12 @@ struct RgConfig {
     ignore: Option<Vec<String>>,
     #[serde(default)]
     file_types: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+struct ProjectConfig {
+    patterns: Vec<String>,
+    append_file_path: Option<String>,
 }
 
 fn default_rg_pattern() -> String {
@@ -64,13 +133,7 @@ fn default_editor_uri_scheme() -> String {
 
 // --- Configuration Loading & Saving ---
 
-// Define the primary config path (~/.config/unitodo/config.toml)
-fn get_primary_config_path() -> io::Result<PathBuf> {
-    home::home_dir()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not find home directory"))
-        .map(|h| h.join(".config").join("unitodo").join("config.toml"))
-}
-
+// Helper function to find the configuration file path
 fn find_config_path() -> Option<PathBuf> {
     let primary_path = get_primary_config_path().ok();
 
@@ -78,7 +141,7 @@ fn find_config_path() -> Option<PathBuf> {
         // 1. Primary path
         primary_path.clone(), // Clone Option<PathBuf>
         // 2. Fallback ~/.unitodo (legacy?) - Consider removing later
-        home::home_dir().map(|h| h.join(".unitodo")), // Use map directly
+        home::home_dir().map(|h| h.join(".unitodo")),
         // 3. Fallback ./unitodo.toml (local override)
         Some(PathBuf::from("./unitodo.toml")),
     ];
@@ -236,6 +299,16 @@ struct EditTodoPayload {
     completed: bool, // The new completion status
 }
 
+// --- Request Payload for Adding ---
+#[derive(Deserialize, Debug)]
+struct AddTodoPayload {
+    category_type: String, // "git" or "project"
+    category_name: String, // Name of the repo or project
+    content: String, // The raw content for the new todo item
+    // Used to find git repo root if category_type is "git"
+    example_item_location: Option<String>,
+}
+
 // --- todo Category Enum ---
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 enum TodoCategory {
@@ -320,8 +393,8 @@ impl<'a> Sink for TodoSink<'a> {
             let mut category = TodoCategory::Other;
             let mut project_match = false;
             // Use the borrowed config's projects
-            for (project_name, glob_patterns) in &self.config.projects {
-                for pattern_str in glob_patterns {
+            for (project_name, project_config) in &self.config.projects {
+                for pattern_str in &project_config.patterns {
                     match Pattern::new(pattern_str) {
                         Ok(pattern) => {
                             if pattern.matches(&file_path_str) {
@@ -634,6 +707,106 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
     result
 }
 
+// --- Core todo Adding Logic ---
+fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()> {
+    let target_append_file_path: PathBuf;
+
+    // 1. Determine the target file path based on category type
+    match payload.category_type.as_str() {
+        "git" => {
+            // Need an example location to start the search for .git
+            let example_loc = payload.example_item_location.as_ref()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing 'example_item_location' for git category type"))?;
+
+            let example_path_str = example_loc.split(':').next()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid 'example_item_location' format"))?;
+
+            let example_path = Path::new(example_path_str);
+
+            let repo_root = find_git_repo_root(example_path)?
+                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Could not find git repository root starting from {}", example_path_str)))?;
+
+            target_append_file_path = get_append_file_path_in_dir(&repo_root);
+            println!("Determined git append path: {}", target_append_file_path.display()); // Debug
+        }
+        "project" => {
+            let project_config = config.projects.get(&payload.category_name)
+                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Project configuration not found for '{}'", payload.category_name)))?;
+
+            let append_path_str = project_config.append_file_path.as_ref()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("'append_file_path' not configured for project '{}'", payload.category_name)))?;
+
+            target_append_file_path = PathBuf::from(append_path_str);
+            println!("Determined project append path: {}", target_append_file_path.display()); // Debug
+        }
+        _ => {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid category_type: '{}'. Must be 'git' or 'project'.", payload.category_type)));
+        }
+    }
+
+    // 2. Prepare the content to append
+    // Format: 1@<timestamp> <content>
+    let timestamp = generate_short_timestamp();
+    // Basic sanitization: ensure content doesn't have newlines that would break the single-line format
+    let sanitized_content = payload.content.replace('\n', " ").trim().to_string();
+    if sanitized_content.is_empty() {
+         return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item"));
+    }
+    let line_to_append = format!("1@{} {}", timestamp, sanitized_content);
+
+    // 3. Open the file for appending (create if not exists) with locking
+     // Ensure parent directory exists
+    if let Some(parent_dir) = target_append_file_path.parent() {
+        fs::create_dir_all(parent_dir)?;
+        println!("Ensured directory exists: {}", parent_dir.display()); // Debug
+    } else {
+         return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid target append file path (no parent directory): {}", target_append_file_path.display())));
+    }
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true) // Create the file if it doesn't exist
+        .open(&target_append_file_path)?;
+
+    println!("Opened/Created file for append: {}", target_append_file_path.display()); // Debug
+
+    // Lock the file exclusively for writing
+    file.lock_exclusive()?;
+    println!("Locked file: {}", target_append_file_path.display()); // Debug
+
+    let write_result = (|| { // Inner scope for unlock on drop
+        // Check if file needs a newline before appending
+        let metadata = file.metadata()?;
+        let needs_newline = metadata.len() > 0;
+
+        if needs_newline {
+            // Check if the file already ends with a newline
+            // Seek to the end to check the last character
+            file.seek(SeekFrom::End(-1))?;
+            let mut last_char_buf = [0; 1];
+            file.read_exact(&mut last_char_buf)?;
+            if last_char_buf[0] != b'\n' {
+                writeln!(file)?; // Add a newline first
+                println!("Added preceding newline to: {}", target_append_file_path.display()); // Debug
+            }
+             // Seek back to end for appending the actual line
+            file.seek(SeekFrom::End(0))?;
+        }
+
+        // Append the new todo line
+        writeln!(file, "{}", line_to_append)?;
+        println!("Appended line to: {}", target_append_file_path.display()); // Debug
+        Ok(()) // Indicate success within the closure
+    })(); // Immediately invoke the closure
+
+    // Unlock the file (happens automatically when `file` goes out of scope after the closure)
+    // Explicit unlock for clarity and immediate release
+    file.unlock()?;
+    println!("Unlocked file: {}", target_append_file_path.display()); // Debug
+
+    write_result // Return the result of the write operation
+}
+
 // --- API Handler - Get Todos --- (Uses Read Lock)
 async fn get_todos_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
     let debug_mode = false; // Keep debug off for API
@@ -756,6 +929,44 @@ async fn update_config_handler(shared_config: web::Data<Arc<RwLock<Config>>>, ne
     }
 }
 
+// --- API Handler - Add Todo ---
+async fn add_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<AddTodoPayload>) -> ActixResult<impl Responder> {
+    let config_arc_clone = shared_config.clone();
+    let payload_inner = payload.into_inner();
+
+    println!("Received add_todo request: {:?}", payload_inner); // Debug
+
+    let result = web::block(move || {
+        let config_guard = config_arc_clone.read();
+        add_todo_to_file(&config_guard, &payload_inner)
+    }).await;
+
+    match result {
+        Ok(Ok(())) => {
+            println!("Successfully added TODO"); // Debug
+            Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success", "message": "TODO added successfully." })))
+        },
+        Ok(Err(e)) => {
+            eprintln!("Error adding TODO: {}", e);
+            let status_code = match e.kind() {
+                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
+                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
+                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
+                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            };
+             let error_response = serde_json::json!({
+                 "status": "error",
+                 "error": e.to_string(),
+                 "code": status_code.as_u16()
+            });
+            Ok(HttpResponse::build(status_code).json(error_response))
+        },
+        Err(e) => { // Blocking task error
+            eprintln!("Error running blocking task for add_todo: {}", e);
+            Err(ErrorInternalServerError(format!("Internal server error during add task: {}", e)))
+        }
+    }
+}
 
 // --- Main Function (Actix Server Setup) ---
 #[actix_web::main]
@@ -787,6 +998,7 @@ async fn main() {
             .route("/edit-todo", web::post().to(edit_todo_handler))
             .route("/config", web::get().to(get_config_handler))
             .route("/config", web::post().to(update_config_handler))
+            .route("/add-todo", web::post().to(add_todo_handler))
     })
     .bind((server_address, server_port))
     .expect("Failed to bind server")

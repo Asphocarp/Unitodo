@@ -57,6 +57,7 @@ export default function Todo() {
   const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
   const navigateTodos = useTodoStore(state => state.navigateTodos);
   const navigateTabs = useTodoStore(state => state.navigateTabs);
+  const addNewTodo = useTodoStore(state => state.addNewTodo);
   
   const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(useTodoStore.getState());
   
@@ -237,6 +238,61 @@ export default function Todo() {
              toggleDisplayMode();
            }
            break;
+        case 'o':
+          if (!isEditingContext) {
+            e.preventDefault();
+            const currentFocusedItem = useTodoStore.getState().focusedItem;
+            const currentCategories = getFilteredCategories(useTodoStore.getState());
+            const currentDisplayMode = useTodoStore.getState().displayMode;
+            const currentActiveTabIndex = useTodoStore.getState().activeTabIndex;
+
+            let categoryType: 'git' | 'project';
+            let categoryName: string;
+            let exampleItemLocation: string | undefined = undefined;
+
+            if (currentDisplayMode === 'tab') {
+                if (currentActiveTabIndex >= 0 && currentActiveTabIndex < currentCategories.length) {
+                    const activeCategory = currentCategories[currentActiveTabIndex];
+                    categoryName = activeCategory.name;
+                    if (activeCategory.icon === "󰊢") {
+                        categoryType = 'git';
+                        if (activeCategory.todos.length > 0) {
+                            exampleItemLocation = activeCategory.todos[0].location;
+                        }
+                    } else if (activeCategory.icon === "") {
+                        categoryType = 'project';
+                    } else {
+                        alert('Cannot add TODO to "Other" category directly. Please define it as a project or add to a git repo file.');
+                        return;
+                    }
+                } else {
+                    alert('No active tab selected to add TODO to.');
+                    return;
+                }
+            } else {
+                if (currentFocusedItem.categoryIndex !== -1 && currentFocusedItem.categoryIndex < currentCategories.length) {
+                    const focusedCategory = currentCategories[currentFocusedItem.categoryIndex];
+                    categoryName = focusedCategory.name;
+                    if (focusedCategory.icon === "󰊢") {
+                        categoryType = 'git';
+                        if (focusedCategory.todos.length > 0) {
+                            const itemToUse = focusedCategory.todos[currentFocusedItem.itemIndex] || focusedCategory.todos[0];
+                            exampleItemLocation = itemToUse?.location;
+                        }
+                    } else if (focusedCategory.icon === "") {
+                        categoryType = 'project';
+                    } else {
+                        alert('Cannot add TODO to "Other" category directly.');
+                        return;
+                    }
+                } else {
+                    alert('No section/item focused to determine where to add TODO.');
+                    return;
+                }
+            }
+            addNewTodo(categoryType, categoryName, exampleItemLocation);
+          }
+          break;
       }
     };
     
@@ -248,7 +304,7 @@ export default function Todo() {
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, addNewTodo]);
 
   useEffect(() => {
     if (scrollTimeoutRef.current) {

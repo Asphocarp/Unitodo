@@ -16,6 +16,7 @@ interface ConfigState {
   updateConfigField: <K extends keyof Config>(field: K, value: Config[K]) => void;
   updateRgField: <K extends keyof Config['rg']>(field: K, value: Config['rg'][K]) => void;
   updateProjectField: (projectName: string, patterns: string[]) => void;
+  updateProjectAppendPath: (projectName: string, path: string) => void;
   addProject: (projectName: string) => void;
   removeProject: (projectName: string) => void;
 }
@@ -86,7 +87,26 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       set((state) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
-          const newProjects = { ...currentProjects, [projectName]: patterns };
+          const updatedProject = { 
+              ...(currentProjects[projectName] || {}),
+              patterns: patterns 
+          };
+          const newProjects = { ...currentProjects, [projectName]: updatedProject };
+          return {
+              config: { ...state.config, projects: newProjects },
+          };
+      });
+  },
+
+  updateProjectAppendPath: (projectName, path) => {
+      set((state) => {
+          if (!state.config) return {};
+          const currentProjects = state.config.projects || {};
+          const updatedProject = { 
+              ...(currentProjects[projectName] || { patterns: [] }),
+              append_file_path: path 
+          };
+          const newProjects = { ...currentProjects, [projectName]: updatedProject };
           return {
               config: { ...state.config, projects: newProjects },
           };
@@ -98,7 +118,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
           if (currentProjects[projectName]) return {}; 
-          const newProjects = { ...currentProjects, [projectName]: [] };
+          const newProjects = { ...currentProjects, [projectName]: { patterns: [], append_file_path: undefined } };
           return {
               config: { ...state.config, projects: newProjects },
           };
