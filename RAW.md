@@ -48,14 +48,12 @@ where:
 
 ## todo
 - [ ] 0-1 prove it to be useful by doing a project
-
-- [ ] 0 unique-id can be fucking doomed! (with checking before applying)
-    - [ ] 2 render timestamp / remove it?
-- [ ] 0 fix: profile and optimize frontend performance, when the list is >800 items.
 - [ ] 0 feat: allow for adding todo to a project/glob (press `o`), by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
-- [ ] 0 feat: show est time, like @1h; record time?
 - [ ] 0 more config from frontend: 0. project setting 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml) - more payload for both apis
 
+- [ ] 1 unique-id can be fucking doomed! (with checking before applying)
+    - [ ] 2 render timestamp (even when not leading) / remove it?
+- [ ] 1 feat: show est time, like @1h; record time?
 - [ ] 1 feat: fix hotkeys, toggle-checkbox, search (via `/`)
 - [ ] 1 do not scroll twice (when 5j too low)
 
@@ -77,6 +75,7 @@ where:
 
 ---
 
+- [x] 0 fix: profile and optimize frontend performance, when the list is >800 items. via virtualized list.
 - [x] 3 maybe optimize via hash of ori-content? X - no need, the content is not long
 - [x] 0 X fancy: merge rust-module into node.js via napi-rs - X only to -5ms json parsing, tranmission is not bottleneck!
 - [x] 1 X store entire line in the json, to future-proof when writing back to the file? no need, we only change the todo content
