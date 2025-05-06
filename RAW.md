@@ -48,7 +48,6 @@ where:
 
 ## todo
 - [ ] 0-1 prove it to be useful by doing a project
-- [ ] 0 more config from frontend: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml) - via more payload for both apis (modify the rust api accordingly)
 - [ ] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
 
 - [ ] 1 unique-id can be fucking doomed! (with checking before applying)
@@ -75,6 +74,7 @@ where:
 
 ---
 
+- [x] 0 all a config page for the frontend, where almost anything can be configed, including: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list. At best replace entire toml config file via more payload for both apis (modify the rust api @main.rs accordingly)
 - [x] 0 fix: profile and optimize frontend performance, when the list is >800 items. via virtualized list.
 - [x] 3 maybe optimize via hash of ori-content? X - no need, the content is not long
 - [x] 0 X fancy: merge rust-module into node.js via napi-rs - X only to -5ms json parsing, tranmission is not bottleneck!
