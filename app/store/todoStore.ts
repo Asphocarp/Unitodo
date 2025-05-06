@@ -338,12 +338,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
 
     try {
-      set({ loading: true, error: null }); // Indicate loading
+    //   set({ loading: true, error: null }); // TODO 2 you can Indicate loading, but you should not hide all items in this process
       await addTodoItem(payload);
       await loadData(); // Reload data to show the new todo
       // Optionally, could try to focus the newly added todo if possible
       // but that would require the backend to return its location/id
-      alert('TODO added successfully!'); // UNITODO_IGNORE_LINE
+      // X alert('TODO added successfully!'); // UNITODO_IGNORE_LINE
     } catch (err: any) {
       console.error('Error adding new todo:', err);
       set({ error: err.message || 'Failed to add new TODO.', loading: false }); // UNITODO_IGNORE_LINE
