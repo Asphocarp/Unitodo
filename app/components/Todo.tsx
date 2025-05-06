@@ -13,6 +13,7 @@ import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../t
 import { useDarkMode } from '../utils/darkMode';
 import { parseTodoContent } from '../utils';
 import Link from 'next/link';
+import AddTodoModal from './AddTodoModal';
 
 const ITEM_HEIGHT = 24;
 const CATEGORY_HEADER_HEIGHT = 30;
@@ -45,6 +46,8 @@ export default function Todo() {
   const activeTabIndex = useTodoStore(state => state.activeTabIndex);
   const focusedItem = useTodoStore(state => state.focusedItem);
   const showKeyboardHelp = useTodoStore(state => state.showKeyboardHelp);
+  const showAddTodoModal = useTodoStore(state => state.showAddTodoModal);
+  const addTodoModalData = useTodoStore(state => state.addTodoModalData);
   
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   
@@ -57,7 +60,9 @@ export default function Todo() {
   const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
   const navigateTodos = useTodoStore(state => state.navigateTodos);
   const navigateTabs = useTodoStore(state => state.navigateTabs);
-  const addNewTodo = useTodoStore(state => state.addNewTodo);
+  const openAddTodoModal = useTodoStore(state => state.openAddTodoModal);
+  const closeAddTodoModal = useTodoStore(state => state.closeAddTodoModal);
+  const submitAddTodo = useTodoStore(state => state.submitAddTodo);
   
   const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(useTodoStore.getState());
   
@@ -333,7 +338,7 @@ export default function Todo() {
                     return;
                 }
             }
-            addNewTodo(categoryType, categoryName, exampleItemLocation);
+            openAddTodoModal(categoryType, categoryName, exampleItemLocation);
           }
           break;
       }
@@ -347,7 +352,7 @@ export default function Todo() {
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, addNewTodo]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal]);
 
   useEffect(() => {
     if (scrollTimeoutRef.current) {
@@ -739,6 +744,17 @@ export default function Todo() {
       </div>
       
       {renderKeyboardShortcutsHelp()}
+      
+      {/* Add Todo Modal */}
+      {showAddTodoModal && addTodoModalData && (
+        <AddTodoModal
+          isOpen={showAddTodoModal}
+          onClose={closeAddTodoModal}
+          onSubmit={submitAddTodo}
+          categoryName={addTodoModalData.categoryName}
+          categoryType={addTodoModalData.categoryType}
+        />
+      )}
     </div>
   );
 } 

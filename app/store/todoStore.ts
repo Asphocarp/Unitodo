@@ -26,6 +26,14 @@ interface TodoState {
   focusedItem: { categoryIndex: number, itemIndex: number };
   showKeyboardHelp: boolean;
   
+  // Modal state
+  showAddTodoModal: boolean;
+  addTodoModalData: {
+    categoryType: 'git' | 'project';
+    categoryName: string;
+    exampleItemLocation?: string;
+  } | null;
+  
   // Actions
   loadData: () => Promise<void>;
   setFilter: (filter: 'all' | 'completed' | 'active') => void;
@@ -37,7 +45,9 @@ interface TodoState {
   updateTodo: (updatedTodo: TodoItem) => void;
   navigateTodos: (direction: 'up' | 'down', jumpSize?: number) => void;
   navigateTabs: (direction: 'left' | 'right') => void;
-  addNewTodo: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => Promise<void>;
+  openAddTodoModal: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => void;
+  closeAddTodoModal: () => void;
+  submitAddTodo: (content: string) => Promise<void>;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -53,6 +63,10 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   activeTabIndex: 0,
   focusedItem: { categoryIndex: -1, itemIndex: -1 },
   showKeyboardHelp: false,
+  
+  // Modal state
+  showAddTodoModal: false,
+  addTodoModalData: null,
   
   // Actions
   loadData: async () => {
@@ -306,26 +320,49 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
   },
 
-  addNewTodo: async (categoryType, categoryName, exampleItemLocation) => {
-    const { loadData } = get();
-    const appConfig = useConfigStore.getState().config;
+  // Open the add todo modal with the given data
+  openAddTodoModal: (categoryType, categoryName, exampleItemLocation) => {
+    set({ 
+      showAddTodoModal: true, 
+      addTodoModalData: { 
+        categoryType, 
+        categoryName, 
+        exampleItemLocation 
+      } 
+    });
+  },
 
-    const todoContent = prompt('Enter new TODO content:'); // UNITODO_IGNORE_LINE
-    if (!todoContent || todoContent.trim() === '') {
-      console.log('TODO content cannot be empty.');
+  // Close the add todo modal
+  closeAddTodoModal: () => {
+    set({ 
+      showAddTodoModal: false, 
+      addTodoModalData: null 
+    });
+  },
+
+  // Submit the new todo content from the modal
+  submitAddTodo: async (content) => {
+    const { addTodoModalData, loadData, closeAddTodoModal } = get();
+    
+    if (!addTodoModalData || !content || content.trim() === '') {
+      console.log('Invalid todo data or empty content');
       return;
     }
+
+    const { categoryType, categoryName, exampleItemLocation } = addTodoModalData;
+    const appConfig = useConfigStore.getState().config;
 
     let payload: Parameters<typeof addTodoItem>[0] = {
       category_type: categoryType,
       category_name: categoryName,
-      content: todoContent.trim(),
+      content: content.trim(),
     };
 
     if (categoryType === 'git') {
       if (!exampleItemLocation) {
         alert('Cannot add TODO to git section without an example item location to find the repository.'); // UNITODO_IGNORE_LINE
         console.error('Missing exampleItemLocation for git type');
+        closeAddTodoModal();
         return;
       }
       payload.example_item_location = exampleItemLocation;
@@ -333,22 +370,28 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       // Check if append_file_path is configured for this project
       if (!appConfig || !appConfig.projects[categoryName]?.append_file_path) {
         alert(`Cannot add TODO: 'append_file_path' is not configured for project "${categoryName}". Please configure it on the Config page.`); // UNITODO_IGNORE_LINE
+        closeAddTodoModal();
         return;
       }
     }
 
     try {
-    //   set({ loading: true, error: null }); // TODO 2 you can Indicate loading, but you should not hide all items in this process
+      set({ error: null });
       await addTodoItem(payload);
       await loadData(); // Reload data to show the new todo
-      // Optionally, could try to focus the newly added todo if possible
-      // but that would require the backend to return its location/id
-      // X alert('TODO added successfully!'); // UNITODO_IGNORE_LINE
+      closeAddTodoModal();
     } catch (err: any) {
       console.error('Error adding new todo:', err);
-      set({ error: err.message || 'Failed to add new TODO.', loading: false }); // UNITODO_IGNORE_LINE
-      alert(`Error adding TODO: ${err.message || 'Unknown error'}`) // UNITODO_IGNORE_LINE
+      set({ error: err.message || 'Failed to add new TODO.' }); // UNITODO_IGNORE_LINE
+      alert(`Error adding TODO: ${err.message || 'Unknown error'}`); // UNITODO_IGNORE_LINE
+      closeAddTodoModal();
     }
+  },
+
+  // Legacy function to handle the old approach, now uses the modal
+  addNewTodo: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => {
+    const { openAddTodoModal } = get();
+    openAddTodoModal(categoryType, categoryName, exampleItemLocation);
   }
 }));
 
