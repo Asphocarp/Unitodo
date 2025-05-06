@@ -99,7 +99,7 @@ fn extract_cleaned_content_from_line(line: &str, effective_rg_pattern: &str) -> 
     } else {
         // This case should ideally not be hit if the line was correctly identified as a todo.
         // For verification, if the pattern isn't found, it's a mismatch.
-        Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found in line for content extraction"))
+        Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found in line for content extraction")) // UNITODO_IGNORE_LINE
     }
 }
 
@@ -624,7 +624,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
         Ok(mutex) => mutex.into_inner(), // No unwrap needed for ParkingMutex
         Err(_) => {
             eprintln!("Error: Could not obtain exclusive access to grouped_todos after parallel walk.");
-            return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping"));
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping")); // UNITODO_IGNORE_LINE
         }
     };
     let mut categories: Vec<TodoCategory> = final_grouped_todos.keys().cloned().collect();
@@ -814,7 +814,7 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
     let timestamp = generate_short_timestamp();
     let sanitized_content = payload.content.replace('\n', " ").trim().to_string();
     if sanitized_content.is_empty() {
-         return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item"));
+         return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item")); // UNITODO_IGNORE_LINE
     }
     let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content); // UNITODO_IGNORE_LINE
 
@@ -991,7 +991,7 @@ fn mark_todo_as_done_in_file(config: &Config, payload: &MarkDonePayload) -> Resu
             // No todo pattern (derived from todo_done_pairs) found on the line.
             // This line cannot be marked as done according to current rules.
             return Err(io::Error::new(io::ErrorKind::NotFound, 
-                format!("TODO pattern ('{}') not found on line {} of file '{}' for marking done.", 
+                format!("TODO pattern ('{}') not found on line {} of file '{}' for marking done.", // UNITODO_IGNORE_LINE
                 effective_pattern_for_transform, line_number, file_path_str)));
         }
         
@@ -1124,7 +1124,7 @@ async fn edit_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payloa
         // Correctly handle nested Result
         Ok(Ok(())) => Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))),
         Ok(Err(e)) => {
-            eprintln!("Error editing TODO in file: {}", e);
+            eprintln!("Error editing TODO in file: {}", e); // UNITODO_IGNORE_LINE
             let status_code = match e.kind() {
                  io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
                  io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
@@ -1219,7 +1219,7 @@ async fn add_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload
             Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success", "message": "TODO added successfully." }))) // UNITODO_IGNORE_LINE
         },
         Ok(Err(e)) => {
-            eprintln!("Error adding TODO: {}", e);
+            eprintln!("Error adding TODO: {}", e); // UNITODO_IGNORE_LINE
             let status_code = match e.kind() {
                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
                 io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
@@ -1257,7 +1257,7 @@ async fn mark_done_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payloa
             println!("Successfully marked TODO as done. New content: {}", new_content); // UNITODO_IGNORE_LINE
             Ok(HttpResponse::Ok().json(serde_json::json!({
                 "status": "success",
-                "message": "TODO marked as done successfully.",
+                "message": "TODO marked as done successfully.", // UNITODO_IGNORE_LINE
                 "new_content": new_content,
                 "completed": completed
             })))

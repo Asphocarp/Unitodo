@@ -17,7 +17,7 @@ export interface Config {
   refresh_interval: number; // u32 -> number
   editor_uri_scheme: string;
   todo_done_pairs: string[][]; // Added: Array of [todo_pattern, done_pattern] strings
-  default_append_basename: string; // Default filename for appending TODOs in git repos
+  default_append_basename: string; // Default filename for appending todos in git repos
 }
 
 // Added: Corresponds to the Rust ProjectConfig struct

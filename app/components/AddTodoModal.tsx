@@ -62,7 +62,7 @@ export default function AddTodoModal({
             type="text"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Enter TODO content..."
+            placeholder="Enter TODO content..." // UNITODO_IGNORE_LINE
             className="w-full px-2 py-1.5 mb-3 text-sm border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm 
                     focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color 
                     dark:bg-gray-800 dark:text-gray-200"
