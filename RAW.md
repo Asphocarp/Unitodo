@@ -99,7 +99,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 2 check command injection safety
-- [ ] 2@AoVtD (fancy) show dependency of todos?
+- [ ] 2 (fancy) show dependency of todos?
 - [ ] 2 DB instead of json (200KB though)?
 - [ ] 3 rg: file types?
 - [ ] 3 curious of battery consumption
@@ -140,4 +140,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE"
 - [x] 1@ApYt7@@ApcuT add a config item for the default append todo file basename for a git section (currently it is `unitodo.append.md`)
 - [x] 1@ApYun@@ApZG2 no more succeed huge alert, just a simple pop info should be ok
-- [ ] 1@ApZNj allow no more cursor inside a Lexical chip/node; render the `@fffff` chip as readable format, but keep the text-content behind it same as before;
+- [x] 1@ApZNj@@ApdML allow no more cursor inside a Lexical chip/node; render the `@fffff` chip as readable format, but keep the text-content behind it same as before; - but maybe make it a table col is better
