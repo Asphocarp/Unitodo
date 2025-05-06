@@ -50,11 +50,9 @@ where:
 - [ ] 0-1 prove it to be useful by doing a project
 
 - [ ] 1 add search via `/`
-- [ ] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
-- [ ] 1 unique-id can be fucking doomed! (with checking before applying)
+- [ ] 2 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
 - [ ] 1 feat: show est time, like @1h; record time?
-- [ ] 1 do not scroll twice (when 5j too low)
 
 - [ ] 1 fancy: make native rn/swift frontend?
 - [ ] 2 maybe to move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
@@ -74,6 +72,8 @@ where:
 
 ---
 
+- [x] 1 do not scroll twice (when 5j too low)
+- [x] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
 - [x] 1@@ApYJ6 feat: fix hotkeys, toggle-checkbox
 - [x] 1@@ApYQO add feat: `space` to mark the todo item as done via: 1. change `TODO`/`TODO:`/`- [ ]` to `DONE`/`DONE:`/`- [x]` 2. append `@@fffff` (the finished timestamp) to the-first-word
   - [x] 2 make it configurable, like pairs of `TODO`&`DONE`/`TODO:`&`DONE:`/`- [ ]`&`- [x]`
