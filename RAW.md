@@ -48,10 +48,12 @@ where:
 
 ## todo
 - [ ] 0-1 prove it to be useful by doing a project
-- [ ] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
-- [ ] 1 using "display: flex" or "display: inline-flex" on an element containing content editable, Chrome may have unwanted focusing behavior when clicking outside of it. Consider wrapping the content editable within a non-flex element.
-- [ ] 1 when appended it should start with "- [ ] " prefix
+- [ ] 1 fix: using "display: flex" or "display: inline-flex" on an element containing content editable, Chrome may have unwanted focusing behavior when clicking outside of it. Consider wrapping the content editable within a non-flex element.
+- [ ] 1 add feat: `space` to mark the todo item as done via: 1. change `TODO`/`TODO:`/`- [ ]` to `DONE`/`DONE:`/`- [x]` 2. append `@@fffff` (the finished timestamp) to the-first-word
+  - [ ] 2 make it configurable, like pairs of `TODO`&`DONE`/`TODO:`&`DONE:`/`- [ ]`&`- [x]`
+  - [ ] 2 `dd` to mark as done?
 
+- [ ] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
 - [ ] 1 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
 - [ ] 1 feat: show est time, like @1h; record time?
@@ -76,6 +78,7 @@ where:
 
 ---
 
+- [x] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
 - [x] 0 all a config page for the frontend, where almost anything can be configed, including: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list. At best replace entire toml config file via more payload for both apis (modify the rust api @main.rs accordingly)
 - [x] 0 fix: profile and optimize frontend performance, when the list is >800 items. via virtualized list.
 - [x] 3 maybe optimize via hash of ori-content? X - no need, the content is not long
