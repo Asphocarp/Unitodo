@@ -95,7 +95,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 
 - [ ] 1 fancy: make it a native app? (rn/swift?)
 - [ ] 2 move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
-- [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 - [ ] 1 feat: show est time, like @1h; record time?
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
@@ -111,6 +110,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 
 ---
 
+- [x] 2@@ApcTI make dev-run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 - [x] 1@@ApYk0 add search via `/`
 - [x] 2@AoVsq@@ApW8A make this repo public
 - [x] 1 do not scroll twice (when 5j too low)
