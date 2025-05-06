@@ -26,8 +26,8 @@ fn get_primary_config_path() -> io::Result<PathBuf> {
         .map(|h| h.join(".config").join("unitodo").join("config.toml"))
 }
 
-fn get_append_file_path_in_dir(dir_path: &Path) -> PathBuf {
-    dir_path.join("unitodo.append.md")
+fn get_append_file_path_in_dir(dir_path: &Path, default_basename: &str) -> PathBuf {
+    dir_path.join(default_basename)
 }
 
 fn generate_short_timestamp() -> String {
@@ -118,6 +118,8 @@ struct Config {
     editor_uri_scheme: String,
     #[serde(default = "default_todo_done_pairs")]
     todo_done_pairs: Vec<Vec<String>>,
+    #[serde(default = "default_append_basename")]
+    default_append_basename: String,
 }
 
 impl Config {
@@ -176,6 +178,10 @@ fn default_todo_done_pairs() -> Vec<Vec<String>> {
         vec!["TODO:".to_string(), "DONE:".to_string()], // UNITODO_IGNORE_LINE
         vec!["TODO".to_string(), "DONE".to_string()],   // General fallback // UNITODO_IGNORE_LINE
     ]
+}
+
+fn default_append_basename() -> String {
+    "unitodo.append.md".to_string()
 }
 
 // --- Configuration Loading & Saving ---
@@ -786,7 +792,7 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
             let repo_root = find_git_repo_root(example_path)?
                 .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Could not find git repository root starting from {}", example_path_str)))?;
 
-            target_append_file_path = get_append_file_path_in_dir(&repo_root);
+            target_append_file_path = get_append_file_path_in_dir(&repo_root, &config.default_append_basename);
             println!("Determined git append path: {}", target_append_file_path.display()); // Debug
         }
         "project" => {

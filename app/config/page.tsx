@@ -154,6 +154,14 @@ export default function ConfigPage() {
               value={config.editor_uri_scheme}
               onChange={(e) => updateConfigField('editor_uri_scheme', e.target.value)}
             />
+            <InputField
+              label="Default Append File Basename"
+              description="Default filename for appending TODOs in git repos (e.g., unitodo.append.md)"
+              type="text"
+              id="default_append_basename"
+              value={config.default_append_basename}
+              onChange={(e) => updateConfigField('default_append_basename', e.target.value)}
+            />
           </section>
           
           {/* Backend Settings (rg) */}
@@ -248,7 +256,7 @@ export default function ConfigPage() {
         </section>
 
         <section className="mb-4 p-2 border border-gray-200 dark:border-gray-700 rounded-sm">
-          <h2 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">TODO/DONE Pattern Pairs</h2> {/* UNITODO_IGNORE_LINE */}
+          <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">TODO/DONE Pattern Pairs</h2> {/* UNITODO_IGNORE_LINE */}
           <div className="mb-3 p-2 border border-gray-200 dark:border-gray-700 rounded-sm bg-white dark:bg-gray-800">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
               <InputField
