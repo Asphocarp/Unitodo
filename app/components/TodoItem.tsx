@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TodoItem as TodoItemType } from '../types';
-import { editTodoItem } from '../services/todoService';
+import { editTodoItem, markTodoAsDone } from '../services/todoService';
 import { parseTodoContent } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
@@ -232,74 +232,38 @@ export default function TodoItem({
     }
   };
 
-  const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleToggleDoneViaAPI = async () => {
     if (isReadOnly || isSaving) return;
-    const newCompletedStatus = e.target.checked;
     setError(null);
     setIsSaving(true);
     try {
-      const contentToSave = isEditing ? editedContent : todo.content;
-      
-      // Call API first
-      await editTodoItem({
+      // Call the new markTodoAsDone service
+      const response = await markTodoAsDone({
         location: todo.location,
-        new_content: contentToSave,
-        original_content: todo.content, // Add original content for verification
-        completed: newCompletedStatus,
+        original_content: todo.content, // Send current content for verification
       });
-      
-      // Update store
+
+      // Update store with the new content and completed status from backend
       updateTodo({
         ...todo,
-        content: contentToSave,
-        completed: newCompletedStatus
+        content: response.new_content,
+        completed: response.completed,
       });
-      
+
     } catch (err: any) {
-      console.error('Error saving checkbox state:', err);
-      
-      // Special handling for content conflicts
+      console.error('Error toggling completion status via API:', err);
       if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
-        setError('This todo has been modified elsewhere. Please refresh and try again.');
+        setError('This todo was modified elsewhere. Please refresh and try again.');
       } else {
-        setError(err.message || 'Failed to save completion status.');
+        setError(err.message || 'Failed to update completion status.');
       }
+      // Optionally, if we had an optimistic update, revert it here.
+      // For now, we wait for backend so no optimistic update to revert.
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleToggleCompletion = () => {
-    if (isReadOnly || isSaving) return;
-    
-    const newCompletedStatus = !todo.completed;
-    
-    // Update store (optimistic update)
-    updateTodo({
-      ...todo,
-      completed: newCompletedStatus
-    });
-    
-    // Call API in background
-    editTodoItem({
-      location: todo.location,
-      new_content: todo.content,
-      original_content: todo.content, // Add original content for verification
-      completed: newCompletedStatus,
-    }).catch(err => {
-        console.error('Error toggling completion:', err);
-        
-        // Special handling for content conflicts
-        if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
-          setError('This todo has been modified elsewhere. Please refresh and try again.');
-        } else {
-          // Revert on error
-          updateTodo(todo);
-          setError('Failed to toggle completion status.');
-        }
-      });
-  };
-  
   const handleAddIgnoreComment = async () => {
     if (isSaving) return;
     
@@ -402,7 +366,7 @@ export default function TodoItem({
         case 'Spacebar':
           if (!isReadOnly) {
             e.preventDefault();
-            handleToggleCompletion();
+            handleToggleDoneViaAPI();
           }
           break;
         case 'ArrowUp':
@@ -478,16 +442,20 @@ export default function TodoItem({
         onClick={(e) => {
           // Let the event through, but still toggle checkbox
           if (!isReadOnly && !isSaving) {
-            handleCheckboxChange({
-              target: { checked: !todo.completed }
-            } as React.ChangeEvent<HTMLInputElement>);
+            handleToggleDoneViaAPI();
           }
         }}
       >
         <input
           type="checkbox"
           checked={todo.completed}
-          onChange={handleCheckboxChange}
+          onChange={(e) => {
+            // This onChange is mostly for visual feedback now, the actual logic is in onClick of parent div
+            // or could directly call handleToggleDoneViaAPI if preferred, but might cause double calls with parent div's onClick
+            // For simplicity, we let the parent div's onClick handle the API call.
+            // If we wanted direct checkbox interaction to call API, we'd need to stopPropagation in parent's onClick
+            // or remove the parent div's onClick effect for checkbox changes.
+          }}
           disabled={isReadOnly || isSaving}
           className={`hn-checkbox ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'} ${isSaving ? 'opacity-50' : ''}`}
           aria-label={`Mark todo as ${todo.completed ? 'incomplete' : 'complete'}`}
