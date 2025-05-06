@@ -310,7 +310,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const { loadData } = get();
     const appConfig = useConfigStore.getState().config;
 
-    const todoContent = prompt('Enter new TODO content:');
+    const todoContent = prompt('Enter new TODO content:'); // UNITODO_IGNORE_LINE
     if (!todoContent || todoContent.trim() === '') {
       console.log('TODO content cannot be empty.');
       return;
@@ -324,7 +324,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
     if (categoryType === 'git') {
       if (!exampleItemLocation) {
-        alert('Cannot add TODO to git section without an example item location to find the repository.');
+        alert('Cannot add TODO to git section without an example item location to find the repository.'); // UNITODO_IGNORE_LINE
         console.error('Missing exampleItemLocation for git type');
         return;
       }
@@ -332,7 +332,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     } else if (categoryType === 'project') {
       // Check if append_file_path is configured for this project
       if (!appConfig || !appConfig.projects[categoryName]?.append_file_path) {
-        alert(`Cannot add TODO: 'append_file_path' is not configured for project "${categoryName}". Please configure it on the Config page.`);
+        alert(`Cannot add TODO: 'append_file_path' is not configured for project "${categoryName}". Please configure it on the Config page.`); // UNITODO_IGNORE_LINE
         return;
       }
     }
@@ -343,11 +343,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       await loadData(); // Reload data to show the new todo
       // Optionally, could try to focus the newly added todo if possible
       // but that would require the backend to return its location/id
-      alert('TODO added successfully!');
+      alert('TODO added successfully!'); // UNITODO_IGNORE_LINE
     } catch (err: any) {
       console.error('Error adding new todo:', err);
-      set({ error: err.message || 'Failed to add new TODO.', loading: false });
-      alert(`Error adding TODO: ${err.message || 'Unknown error'}`)
+      set({ error: err.message || 'Failed to add new TODO.', loading: false }); // UNITODO_IGNORE_LINE
+      alert(`Error adding TODO: ${err.message || 'Unknown error'}`) // UNITODO_IGNORE_LINE
     }
   }
 }));

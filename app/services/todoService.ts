@@ -61,7 +61,7 @@ export async function editTodoItem(payload: EditTodoPayload): Promise<any> { // 
 interface AddTodoPayload {
   category_type: string; // "git" or "project"
   category_name: string; // Name of the repo or project
-  content: string; // The raw content for the new TODO
+  content: string; // The raw content for the new todo item
   example_item_location?: string; // Required for "git" type
 }
 

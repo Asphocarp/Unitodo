@@ -22,7 +22,7 @@ export interface Config {
 // Added: Corresponds to the Rust ProjectConfig struct
 export interface ProjectConfig {
   patterns: string[];
-  append_file_path?: string; // Optional path for appending TODOs
+  append_file_path?: string; // Optional path for appending todos
 }
 
 // Corresponds to the Rust RgConfig struct
