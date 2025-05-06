@@ -138,4 +138,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] X 3 switch to SolidJS (for better performance), instead of RaectJS
 - [x] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE"
 - [ ] 1@ApYt7 1 config for the default append todo file basename
-- [ ] 1@ApYun 1 no more succeed huge alert, just a simple pop info should be ok
+- [x] 1@ApYun@@ApZG2 1 no more succeed huge alert, just a simple pop info should be ok
