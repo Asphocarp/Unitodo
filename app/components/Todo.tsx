@@ -276,7 +276,7 @@ export default function Todo() {
           }
           break;
         case 'm':
-           if (e.ctrlKey) {
+           if (!isEditingContext) {
              e.preventDefault();
              toggleDisplayMode();
            }
@@ -580,8 +580,8 @@ export default function Todo() {
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">?</kbd> Toggle this shortcut help</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">m</kbd> Switch view mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">R</kbd> Refresh data</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">M</kbd> Switch view mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">1</kbd> Show all todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">2</kbd> Show active todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">3</kbd> Show completed todos</div>
@@ -668,7 +668,7 @@ export default function Todo() {
         <button
           className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-gray-700 dark:text-gray-300`}
           onClick={toggleDisplayMode}
-          title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode (Ctrl+M)`}
+          title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode (m)`}
         >
           {displayMode === 'section' ? '⊞' : '≡'}
         </button>
