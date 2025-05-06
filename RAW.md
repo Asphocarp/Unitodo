@@ -49,7 +49,7 @@ where:
 ## todo
 - [ ] 0-1 prove it to be useful by doing a project
 - [ ] 0 more config from frontend: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list (at best replace entire toml) - via more payload for both apis (modify the rust api accordingly)
-- [ ] 0 feat: allow for adding todo to a project/glob (press `o`), by append to `unitodo.append.md` file beside the `.git` folder.\n As for projects, the user should assign a project default folder for the `new.todo` file.
+- [ ] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
 
 - [ ] 1 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
