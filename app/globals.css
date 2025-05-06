@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Electron specific styles */
+.app-drag-region {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* TailwindCSS directives will be processed during build */
+
 /* Add scroll-padding to ensure focused items aren't hidden under sticky headers */
 html {
   /* Default value for when the dynamic calculation hasn't run yet */

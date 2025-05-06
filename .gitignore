@@ -31,3 +31,5 @@ unitodo.sync.*
 node_modules
 .next
 *.ignore.*
+
+/out

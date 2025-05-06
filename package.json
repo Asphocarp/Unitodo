@@ -1,13 +1,20 @@
 {
-  "name": "unitodo-frontend",
+  "name": "unitodo",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "next dev",
     "dev:backend": "cargo run --release",
     "build": "next build",
-    "start": "next start"
+    "build:electron": "electron-builder",
+    "start": "next start",
+    "electron:dev": "concurrently \"npm run dev:frontend\" \"cross-env NODE_ENV=development electron .\"",
+    "electron:build": "next build && electron-builder build",
+    "electron:start": "cross-env NODE_ENV=production electron .",
+    "electron:package": "npm run build && npm run electron:build",
+    "electron:package:mac": "npm run build && electron-builder build --mac"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -32,8 +39,39 @@
     "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.16",
     "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
+  },
+  "build": {
+    "appId": "app.jyu.unitodo",
+    "productName": "Unitodo",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "public/icon.icns",
+      "target": [
+        "dmg"
+      ]
+    },
+    "files": [
+      "electron/**/*",
+      "out/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "target/release",
+        "to": "rust-backend",
+        "filter": [
+          "unitodo"
+        ]
+      }
+    ],
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist"
+    }
   }
 }

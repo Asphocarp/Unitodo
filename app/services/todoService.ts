@@ -1,15 +1,9 @@
 import { TodoCategory } from '../types';
+import { fetchApi, postApi } from '../utils/apiUtils';
 
 export async function fetchTodoData(): Promise<TodoCategory[]> {
   try {
-    // Always use the API endpoint which now runs the Rust program
-    const response = await fetch('/api/todos');
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
+    const data = await fetchApi<{categories: TodoCategory[]}>('/api/todos');
     return data.categories || [];
   } catch (error) {
     console.error('Error fetching todo data:', error);
@@ -25,32 +19,9 @@ interface EditTodoPayload {
   completed: boolean;
 }
 
-export async function editTodoItem(payload: EditTodoPayload): Promise<any> { // Return type can be more specific if backend sends data
+export async function editTodoItem(payload: EditTodoPayload): Promise<any> {
   try {
-    const response = await fetch('/api/todos/edit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        error: 'Could not parse error response',
-        code: response.status 
-      }));
-      
-      // Special handling for 409 Conflict status - content was modified by someone else
-      if (response.status === 409) {
-        throw new Error('CONFLICT_ERROR: Todo content was modified by someone else. Please refresh and try again.');
-      }
-      
-      throw new Error(`API error: ${response.status} ${response.statusText} - ${errorData.error || 'No details'}`);
-    }
-
-    // Assuming the backend sends back a success status or updated item
-    return await response.json(); 
+    return await postApi<any>('/api/todos/edit', payload);
   } catch (error) {
     console.error('Error editing todo item:', error);
     throw error; // Re-throw for component handling
@@ -68,23 +39,7 @@ interface AddTodoPayload {
 // Function to add a new todo item via the backend
 export async function addTodoItem(payload: AddTodoPayload): Promise<any> {
   try {
-    const response = await fetch('/api/todos/add', { // Assuming endpoint is /api/todos/add
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        error: 'Could not parse error response from add todo endpoint',
-        code: response.status 
-      }));
-      throw new Error(`API error adding todo: ${response.status} ${response.statusText} - ${errorData.error || 'No details'}`);
-    }
-
-    return await response.json();
+    return await postApi<any>('/api/todos/add', payload);
   } catch (error) {
     console.error('Error adding todo item:', error);
     throw error;
@@ -111,30 +66,7 @@ export interface MarkDoneResponse {
 // Function to mark a todo item as done via the backend
 export async function markTodoAsDone(payload: MarkDonePayload): Promise<MarkDoneResponse> {
   try {
-    const response = await fetch('/api/todos/mark-done', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store' // Ensure the request is always sent
-    });
-
-    const responseData: MarkDoneResponse = await response.json();
-
-    if (!response.ok) {
-      // Throw an error that includes backend-provided details if available
-      const errorMessage = responseData.error || 'Failed to mark todo as done';
-      const errorDetails = responseData.details || 'No specific details provided by the backend.';
-      const errorCode = responseData.code || response.status;
-      
-      if (response.status === 409) { // Conflict error from backend
-          throw new Error(`CONFLICT_ERROR: ${errorMessage} - ${errorDetails}`);
-      }
-      throw new Error(`API error ${errorCode}: ${errorMessage} - ${errorDetails}`);
-    }
-
-    return responseData;
+    return await postApi<MarkDoneResponse>('/api/todos/mark-done', payload);
   } catch (error) {
     console.error('Error marking todo as done:', error);
     throw error; // Re-throw for component handling
