@@ -30,7 +30,7 @@ export class PriorityNode extends TextNode {
 
   constructor(text: string, key?: NodeKey) {
     super(text, key);
-    this.__mode = 2; 
+    this.__mode = 1; // Make it immutable and atomic for cursor movement
   }
 
   createDOM(config: EditorConfig): HTMLElement {
@@ -88,7 +88,7 @@ export class IdNode extends TextNode {
 
   constructor(text: string, key?: NodeKey) {
     super(text, key);
-    this.__mode = 2; // Make it immutable
+    this.__mode = 1; // Make it immutable and atomic for cursor movement
   }
 
   createDOM(config: EditorConfig): HTMLElement {
@@ -168,7 +168,7 @@ export class DoneNode extends TextNode {
 
   constructor(text: string, key?: NodeKey) {
     super(text, key);
-    this.__mode = 2; // Make it immutable
+    this.__mode = 1; // Make it immutable and atomic for cursor movement
   }
 
   createDOM(config: EditorConfig): HTMLElement {
