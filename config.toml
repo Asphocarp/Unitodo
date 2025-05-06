@@ -1,0 +1,54 @@
+refresh_interval = 500
+editor_uri_scheme = "cursor://file/"
+todo_done_pairs = [
+    [
+    "TODO:",
+    "DONE:",
+],
+    [
+    "TODO",
+    "DONE",
+],
+    [
+    "- [ ] ",
+    "- [x] ",
+],
+]
+
+[rg]
+paths = [
+    "/Users/asc/repo",
+    "/Users/asc/Documents/Obsidian/alpha-vault",
+]
+ignore = [
+    ".git",
+    "target",
+    "node_modules",
+    "build",
+    "dist",
+    "*.toml",
+    "/Users/asc/repo/_cloned_/**",
+    "/Users/asc/repo/_study_/**",
+    "/Users/asc/repo/tmp/**",
+    "/Users/asc/repo/_archive_/**",
+    "*/unitodo.sync.*",
+    "*.temp.*",
+    "/Users/asc/repo/Unitodo/README.md",
+    "/Users/asc/repo/Ray/render-markdown.nvim/**",
+    "/Users/asc/repo/tex/StealingPartofaProductionLanguageModel_arXiv-2403.06634v2/**",
+    "/Users/asc/repo/tex/SS_arXiv-2303.15435v2/macros.tex/**",
+]
+
+[projects.Ceal]
+patterns = [
+    "**/Ceal.*",
+    "**/Ceal/**",
+]
+append_file_path = "/Users/asc/Documents/Obsidian/alpha-vault/Work/Ceal.md"
+
+[projects.Unitodo]
+patterns = [
+    "**/Unitodo.md",
+    "**/Unitodo/**",
+]
+append_file_path = "/Users/asc/repo/Unitodo/RAW.md"
