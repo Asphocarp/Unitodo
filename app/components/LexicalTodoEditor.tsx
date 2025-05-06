@@ -220,7 +220,11 @@ export default function LexicalTodoEditor({
     <LexicalComposer initialConfig={initialConfig}>
       <div className="editor-container relative inline-block w-full max-w-full overflow-hidden flex items-center">
         <RichTextPlugin
-          contentEditable={<ContentEditable className="outline-none focus:ring-0 focus:ring-offset-0 py-0 px-0 min-h-[16px] h-5 whitespace-nowrap overflow-hidden text-ellipsis w-full flex items-center dark:text-gray-200" />}
+          contentEditable={
+            <div className="w-full h-5 min-h-[16px]">
+              <ContentEditable className="outline-none focus:ring-0 focus:ring-offset-0 py-0 px-0 h-full w-full whitespace-nowrap overflow-hidden text-ellipsis dark:text-gray-200 leading-5" />
+            </div>
+          }
           placeholder={<div className="editor-placeholder absolute top-0 bottom-0 my-auto h-fit left-0 text-subtle-color dark:text-gray-500 pointer-events-none p-0">Enter todo...</div>}
           ErrorBoundary={StandardErrorBoundary}
         />
