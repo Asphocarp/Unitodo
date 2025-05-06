@@ -744,67 +744,88 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
         }
     }
 
-    // 2. Prepare the content to append
-    // Format: 1@<timestamp> <content>
+    // 2. Prepare the base content to append
     let timestamp = generate_short_timestamp();
-    // Basic sanitization: ensure content doesn't have newlines that would break the single-line format
     let sanitized_content = payload.content.replace('\n', " ").trim().to_string();
     if sanitized_content.is_empty() {
          return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item"));
     }
-    let line_to_append = format!("1@{} {}", timestamp, sanitized_content);
+    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content);
 
-    // 3. Open the file for appending (create if not exists) with locking
-     // Ensure parent directory exists
+    // 3. Open the file, lock it, determine if newline prefix is needed, then write once.
     if let Some(parent_dir) = target_append_file_path.parent() {
         fs::create_dir_all(parent_dir)?;
-        println!("Ensured directory exists: {}", parent_dir.display()); // Debug
+        println!("Ensured directory exists: {}", parent_dir.display());
     } else {
          return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid target append file path (no parent directory): {}", target_append_file_path.display())));
     }
 
     let mut file = OpenOptions::new()
-        .append(true)
-        .create(true) // Create the file if it doesn't exist
+        .read(true)   // Explicitly enable read for checking last char
+        .write(true)  // Explicitly enable write
+        .append(true) // Writes go to the end
+        .create(true) // Create if not exists
         .open(&target_append_file_path)?;
+    
+    println!("Opened/Created file for R/W/Append: {}", target_append_file_path.display());
 
-    println!("Opened/Created file for append: {}", target_append_file_path.display()); // Debug
-
-    // Lock the file exclusively for writing
     file.lock_exclusive()?;
-    println!("Locked file: {}", target_append_file_path.display()); // Debug
+    println!("Locked file: {}", target_append_file_path.display());
 
-    let write_result = (|| { // Inner scope for unlock on drop
-        // Check if file needs a newline before appending
-        let metadata = file.metadata()?;
-        let needs_newline = metadata.len() > 0;
+    let final_line_to_append: String;
+    let needs_initial_newline_before_write: bool;
 
-        if needs_newline {
-            // Check if the file already ends with a newline
-            // Seek to the end to check the last character
-            file.seek(SeekFrom::End(-1))?;
-            let mut last_char_buf = [0; 1];
-            file.read_exact(&mut last_char_buf)?;
-            if last_char_buf[0] != b'\n' {
-                writeln!(file)?; // Add a newline first
-                println!("Added preceding newline to: {}", target_append_file_path.display()); // Debug
-            }
-             // Seek back to end for appending the actual line
-            file.seek(SeekFrom::End(0))?;
+    // Determine if a newline is needed *before* our content
+    let metadata = file.metadata()?;
+    if metadata.len() > 0 {
+        // File has content, check last character
+        println!("DEBUG: File has content (len {}), checking last char.", metadata.len());
+        // Seek to the last byte of the file for reading
+        // Note: append mode affects writes; reads can be from anywhere after seeking.
+        file.seek(SeekFrom::End(-1))?;
+        let mut last_char_buf = [0; 1];
+        file.read_exact(&mut last_char_buf)?;
+        if last_char_buf[0] == b'\n' {
+            println!("DEBUG: Last char is already newline.");
+            needs_initial_newline_before_write = false;
+        } else {
+            println!("DEBUG: Last char is NOT newline. Newline will be prepended.");
+            needs_initial_newline_before_write = true;
         }
+    } else {
+        // File is empty, no preceding newline needed from our side
+        println!("DEBUG: File is empty.");
+        needs_initial_newline_before_write = false;
+    }
+    
+    // Construct the final line, potentially prefixing with a newline
+    if needs_initial_newline_before_write {
+        final_line_to_append = format!("\n{}", base_line_to_append);
+    } else {
+        final_line_to_append = base_line_to_append;
+    }
 
-        // Append the new todo line
-        writeln!(file, "{}", line_to_append)?;
-        println!("Appended line to: {}", target_append_file_path.display()); // Debug
-        Ok(()) // Indicate success within the closure
-    })(); // Immediately invoke the closure
+    // Perform the single write operation. 
+    // O_APPEND (from .append(true)) should ensure this write goes to the current end of file.
+    // The file offset might have been changed by previous seek/read_exact, but O_APPEND handles this for writes.
+    println!("DEBUG: Attempting to write: [{}]", final_line_to_append);
+    // Using writeln! will add another newline *after* final_line_to_append.
+    // If final_line_to_append already starts with \n, we get \nTODO\n.
+    // If file was empty, we get TODO\n.
+    // If file had content ending in no newline, we get \nTODO\n.
+    // If file had content ending in newline, we get TODO\n.
+    // This seems correct for ensuring each TODO is on its own line and files end with newline.
+    if let Err(e) = writeln!(file, "{}", final_line_to_append) {
+        eprintln!("ERROR: Failed to write to file {}: {}", target_append_file_path.display(), e);
+        file.unlock()?; // Attempt to unlock before propagating error
+        return Err(e);
+    }
+    println!("Successfully wrote to file: {}", target_append_file_path.display());
 
-    // Unlock the file (happens automatically when `file` goes out of scope after the closure)
-    // Explicit unlock for clarity and immediate release
     file.unlock()?;
-    println!("Unlocked file: {}", target_append_file_path.display()); // Debug
+    println!("Unlocked file: {}", target_append_file_path.display());
 
-    write_result // Return the result of the write operation
+    Ok(())
 }
 
 // --- API Handler - Get Todos --- (Uses Read Lock)
