@@ -2,7 +2,7 @@
 
 **Unitying Distributed TODOs**
 
-Centralize all your TODOs from across your entire codebase and projects into a single, manageable, vim-able view.
+Centralize all your TODOs from across your entire codebase and projects into a single, manageable, vim-able, high-performance view.
 
 <!-- ![Unitodo Logo](assets/logo.png) -->
 
