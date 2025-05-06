@@ -391,6 +391,7 @@ struct TodoSink {
     current_path: PathBuf,
     debug: bool,
     start_time: Instant,
+    projects: HashMap<String, ProjectConfig>,
 }
 
 impl Sink for TodoSink {
@@ -441,31 +442,41 @@ impl Sink for TodoSink {
 
             let location = format!("{}:{}", file_path_str, line_num);
 
-            // TEMPORARY: Simplified categorization to avoid needing full Config in Sink for this specific fix.
-            // This part will need to be revisited to correctly categorize by project/git.
             let mut category = TodoCategory::Other;
             let mut project_match = false;
-            // Determine category based on project patterns in the main config
-            // This part still needs access to the main config. 
-            // For simplicity in this step, we will assume `TodoSink` gets project definitions if needed,
-            // or this categorization logic is refactored. 
-            // Quick Fix: For now, let's assume all todos go to "Other" if config isn't passed to Sink for project checks.
-            // This is a temporary simplification to fix the immediate linter error.
-            // A proper fix would involve passing necessary parts of Config or refactoring category determination.
-            // find_git_repo_name is also a dependency for categorization.
+            
+            // Reinstate project-based categorization using self.projects
+            for (project_name, project_config) in &self.projects {
+                for pattern_str in &project_config.patterns {
+                    match Pattern::new(pattern_str) {
+                        Ok(pattern) => {
+                            if pattern.matches(&file_path_str) {
+                                category = TodoCategory::Project(project_name.clone());
+                                project_match = true;
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            if self.debug {
+                                eprintln!("[Sink] Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
+                            }
+                        }
+                    }
+                }
+                if project_match { break; }
+            }
 
-            // TEMPORARY: Simplified categorization to avoid needing full Config in Sink for this specific fix.
-            // This part will need to be revisited to correctly categorize by project/git.
-            match find_git_repo_name(file_path) {
-                Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
-                Ok(None) => {} // Stays Other
-                Err(e) => {
-                    if self.debug {
-                        eprintln!("Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+            if !project_match {
+                match find_git_repo_name(file_path) {
+                    Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
+                    Ok(None) => {} // Stays Other
+                    Err(e) => {
+                        if self.debug {
+                            eprintln!("[Sink] Warning: Failed to check git repo for {}: {}", file_path.display(), e);
+                        }
                     }
                 }
             }
-            // Project categorization would need to be added back here by accessing config.projects
 
             let todo_item = TodoItem {
                 content: cleaned_content.to_string(),
@@ -560,8 +571,8 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     builder.build_parallel().run(|| {
         let current_matcher = matcher.clone();
         let current_todos = Arc::clone(&grouped_todos);
-        // Pass the effective_pattern to the sink
-        let effective_pattern = effective_pattern.clone(); // Clone for the sink
+        let sink_effective_pattern = effective_pattern.clone(); // Clone for the sink
+        let sink_projects = config.projects.clone(); // Clone projects for the sink
         let is_debug = debug;
         let start_time_ref = start_time;
         let current_custom_ignores = Arc::clone(&custom_ignores);
@@ -573,15 +584,14 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 
             if entry.file_type().map_or(false, |ft| ft.is_file()) {
                 let mut searcher = Searcher::new();
-                // Pass the effective_pattern to the sink
-                let sink_effective_pattern = effective_pattern.clone(); // Clone for the sink
                 let mut sink = TodoSink {
-                    effective_rg_pattern: sink_effective_pattern,
+                    effective_rg_pattern: sink_effective_pattern.clone(), // Clone if used multiple times or further nested
                     matcher: current_matcher.clone(),
                     grouped_todos: Arc::clone(&current_todos),
                     current_path: path.to_path_buf(),
                     debug: is_debug,
                     start_time: start_time_ref,
+                    projects: sink_projects.clone(), // Pass cloned projects to the sink
                  };
 
                 let result = searcher.search_path(&current_matcher, path, &mut sink);
