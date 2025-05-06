@@ -317,6 +317,10 @@ export default function Todo() {
 
       if (categoryIndex === -1 || itemIndex === -1) return;
 
+      if (searchInputRef.current && document.activeElement === searchInputRef.current) {
+        return;
+      }
+
       if (currentDisplayMode === 'tab' && tabListRef.current) {
         tabListRef.current.scrollToItem(itemIndex, 'smart');
       } else if (currentDisplayMode === 'section' && sectionListRef.current) {
@@ -384,7 +388,10 @@ export default function Todo() {
     const TabRow = ({ index, style }: { index: number, style: React.CSSProperties }) => {
       if (!activeCategoryData) return null;
       const todo = activeCategoryData.todos[index];
-      const isFocused = focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === index;
+      
+      const searchInputIsActive = !!(searchInputRef.current && document.activeElement === searchInputRef.current);
+      const isFocused = !searchInputIsActive && focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === index;
+
       return (
         <div style={style}>
           <TodoItem
@@ -472,7 +479,8 @@ export default function Todo() {
     }
     
     if (item.type === 'item') {
-        const isFocused = focusedItem.categoryIndex === item.categoryIndex && focusedItem.itemIndex === item.itemIndex;
+        const searchInputIsActive = !!(searchInputRef.current && document.activeElement === searchInputRef.current);
+        const isFocused = !searchInputIsActive && focusedItem.categoryIndex === item.categoryIndex && focusedItem.itemIndex === item.itemIndex;
         return (
             <div style={style}>
                 <TodoItem
