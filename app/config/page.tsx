@@ -140,7 +140,7 @@ export default function ConfigPage() {
             <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">Frontend Settings</h2>
             <InputField
               label="Auto-Refresh Interval (ms)"
-              description="Refresh frequency for TODO list"
+              description="Refresh frequency for TODO list" // UNITODO_IGNORE_LINE
               type="number"
               id="refresh_interval"
               value={config.refresh_interval}
@@ -156,7 +156,7 @@ export default function ConfigPage() {
             />
             <InputField
               label="Default Append File Basename"
-              description="Default filename for appending TODOs in git repos (e.g., unitodo.append.md)"
+              description="Default filename for appending TODOs in git repos (e.g., unitodo.append.md)" // UNITODO_IGNORE_LINE
               type="text"
               id="default_append_basename"
               value={config.default_append_basename}
@@ -264,7 +264,7 @@ export default function ConfigPage() {
                 type="text"
                 value={newTodoPattern}
                 onChange={(e) => setNewTodoPattern(e.target.value)}
-                placeholder="e.g., - [ ] or TODO:"
+                placeholder="e.g., - [ ] or TODO:" // UNITODO_IGNORE_LINE
                 className="focus:z-10 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-sm px-2 py-1"
               />
               <InputField

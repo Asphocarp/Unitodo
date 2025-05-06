@@ -116,8 +116,8 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 1 do not scroll twice (when 5j too low)
 - [x] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
 - [x] 1@@ApYJ6 feat: fix hotkeys, toggle-checkbox
-- [x] 1@@ApYQO add feat: `space` to mark the todo item as done via: 1. change `TODO`/`TODO:`/`- [ ]` to `DONE`/`DONE:`/`- [x]` 2. append `@@fffff` (the finished timestamp) to the-first-word
-  - [x] 2 make it configurable, like pairs of `TODO`&`DONE`/`TODO:`&`DONE:`/`- [ ]`&`- [x]`
+- [x] 1@@ApYQO add feat: `space` to mark the todo item as done via: 1. change `TODO`/`TODO:`/`- [ ]` to `DONE`/`DONE:`/`- [x]` 2. append `@@fffff` (the finished timestamp) to the-first-word // UNITODO_IGNORE_LINE
+  - [x] 2 make it configurable, like pairs of `TODO`&`DONE`/`TODO:`&`DONE:`/`- [ ]`&`- [x]` // UNITODO_IGNORE_LINE
 - [x] 1 fix: using "display: flex" or "display: inline-flex" on an element containing content editable, Chrome may have unwanted focusing behavior when clicking outside of it. Consider wrapping the content editable within a non-flex element.
 - [x] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
 - [x] 0 all a config page for the frontend, where almost anything can be configed, including: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list. At best replace entire toml config file via more payload for both apis (modify the rust api @main.rs accordingly)
