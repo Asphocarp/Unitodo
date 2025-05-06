@@ -153,11 +153,51 @@ export default function Todo() {
 
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       const isEditingContext = 
-        e.target instanceof HTMLInputElement || 
+        (e.target instanceof HTMLInputElement && e.target !== searchInputRef.current) ||
         e.target instanceof HTMLTextAreaElement || 
         (e.target instanceof HTMLElement && e.target.getAttribute('contenteditable') === 'true') ||
         (e.target instanceof HTMLElement && e.target.closest('.editor-container')) ||
         (e.target instanceof HTMLElement && e.target.closest('[contenteditable="true"]'));
+      
+      if (e.target === searchInputRef.current) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          searchInputRef.current?.blur();
+          const { focusedItem: currentFocusedItem, displayMode: currentDisplayMode, activeTabIndex: currentActiveTabIndex } = useTodoStore.getState();
+          const currentFilteredCategories = getFilteredCategories(useTodoStore.getState());
+
+          let newFocusCategoryIndex = -1;
+          let newFocusItemIndex = -1;
+
+          if (currentDisplayMode === 'tab') {
+            if (currentFilteredCategories[currentActiveTabIndex]?.todos.length > 0) {
+              newFocusCategoryIndex = currentActiveTabIndex;
+              newFocusItemIndex = 0;
+            }
+          } else {
+            if (flattenedList.length > 0) {
+              const firstItem = flattenedList.find(item => item.type === 'item') as FlatTodoItem | undefined;
+              if (firstItem) {
+                newFocusCategoryIndex = firstItem.categoryIndex;
+                newFocusItemIndex = firstItem.itemIndex;
+              }
+            }
+          }
+
+          if (newFocusCategoryIndex !== -1 && newFocusItemIndex !== -1) {
+            setFocusedItem({ categoryIndex: newFocusCategoryIndex, itemIndex: newFocusItemIndex });
+            setTimeout(() => {
+              const itemSelector = `[data-category-index="${newFocusCategoryIndex}"][data-item-index="${newFocusItemIndex}"] .todo-item-main-content`;
+              const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
+              focusedElement?.focus();
+            }, 0);
+          } else {
+            containerRef.current?.focus();
+          }
+          return;
+        }
+        return;
+      }
       
       if (isEditingContext && e.key !== '?' && !(e.ctrlKey || e.metaKey)) {
         return;
@@ -222,6 +262,9 @@ export default function Todo() {
           break;
         case '/':
           if (e.ctrlKey) {
+            e.preventDefault();
+            searchInputRef.current?.focus();
+          } else if (!isEditingContext) {
             e.preventDefault();
             searchInputRef.current?.focus();
           }
@@ -536,7 +579,7 @@ export default function Todo() {
           <div className="col-span-2 font-semibold mt-1">Global</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">?</kbd> Toggle this shortcut help</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">R</kbd> Refresh data</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">M</kbd> Switch view mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">1</kbd> Show all todos</div>
@@ -587,7 +630,7 @@ export default function Todo() {
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Search todos... (Ctrl+/)"
+          placeholder="Search todos... (/)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="hn-search dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:placeholder-gray-500"
