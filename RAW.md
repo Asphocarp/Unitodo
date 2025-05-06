@@ -68,7 +68,7 @@ where:
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
 - [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
-- [ ] 1 FANCY: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
+- [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
 
 ---
 
