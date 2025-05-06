@@ -607,7 +607,7 @@ export default function TodoItem({
                     // Note: No need to refocus here as entering edit mode
                   }}
                   className="hn-action-button text-xs px-0.5 py-0"
-                  title="Edit todo (Enter)"
+                  title="Edit todo (a/i)"
                   tabIndex={-1} // Change from 0 to -1 to prevent focus
                 >
                   edit
@@ -627,7 +627,7 @@ export default function TodoItem({
                   }}
                   disabled={isSaving}
                   className="hn-action-button text-xs px-0.5 py-0"
-                  title="Add ignore comment (g)"
+                  title="Add ignore comment (x)"
                   tabIndex={-1}
                 >
                   ignore
