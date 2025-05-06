@@ -139,3 +139,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0 can you find a most high-performance way to implement this (maybe using `rg`'s grep-searcher + grep-regex): if the line contain "UNITODO_IGNORE_LINE"
 - [ ] 1@ApYt7 1 config for the default append todo file basename
 - [x] 1@ApYun@@ApZG2 1 no more succeed huge alert, just a simple pop info should be ok
+- [ ] 1@ApZNj 1 no more cursor inside chip/node; render the `@fffff` chip as readable format, but keep the actually text behind it same as before;
