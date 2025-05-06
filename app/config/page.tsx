@@ -4,39 +4,44 @@ import React, { useEffect, useState } from 'react';
 import useConfigStore from '../store/configStore';
 import { useDarkMode } from '../utils/darkMode';
 import { Config, RgConfig } from '../types';
+import Link from 'next/link';
 
-// Reusable Input Component
+// Reusable Input Component with more compact, stylish design
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   description?: string;
 }
 
 const InputField: React.FC<InputProps> = ({ label, description, ...props }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium mb-1" htmlFor={props.id || props.name}>{label}</label>
+  <div className="mb-3">
+    <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300" htmlFor={props.id || props.name}>{label}</label>
     <input 
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-gray-200" 
+      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm 
+                focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color 
+                dark:bg-gray-800 dark:text-gray-200" 
       {...props} 
     />
-    {description && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
+    {description && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
   </div>
 );
 
-// Reusable Textarea Component
+// Reusable Textarea Component with more compact, stylish design
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
   description?: string;
 }
 
 const TextareaField: React.FC<TextareaProps> = ({ label, description, ...props }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium mb-1" htmlFor={props.id || props.name}>{label}</label>
+  <div className="mb-3">
+    <label className="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300" htmlFor={props.id || props.name}>{label}</label>
     <textarea 
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-gray-200" 
+      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-sm shadow-sm 
+                focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color
+                dark:bg-gray-800 dark:text-gray-200" 
       rows={3}
       {...props} 
     />
-    {description && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
+    {description && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
   </div>
 );
 
@@ -62,7 +67,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     if (!config && !loading) {
-        loadConfig();
+      loadConfig();
     }
   }, [loadConfig, config, loading]);
 
@@ -79,145 +84,150 @@ export default function ConfigPage() {
   };
 
   if (loading && !config) {
-    return <div>Loading configuration...</div>;
+    return <div className="flex items-center justify-center h-screen text-xs">Loading configuration...</div>;
   }
 
   if (error && !config) {
-    return <div className="text-red-600 dark:text-red-400">Error loading configuration: {error}</div>;
+    return <div className="text-red-600 dark:text-red-400 text-xs flex items-center justify-center h-screen">Error: {error}</div>;
   }
 
   if (!config) {
-    return <div>Configuration not available. Attempting to load or create default...</div>;
+    return <div className="text-xs flex items-center justify-center h-screen">Configuration not available. Attempting to load or create default...</div>;
   }
 
-  // Type guard for config.projects
   const projects = config.projects as Record<string, string[]>;
 
   return (
-    <div className={`container mx-auto p-4 ${isDarkMode ? 'dark' : ''}`}>
-      <h1 className="text-2xl font-bold mb-4 dark:text-gray-100">Configuration</h1>
+    <div className={`max-w-4xl mx-auto p-2 ${isDarkMode ? 'dark' : ''}`}>
+      {/* Header with back button */}
+      <div className="hn-header dark:border-gray-700 flex items-center mb-3">
+        <Link href="/" className="hn-meta text-gray-200 mr-2">
+          &larr;
+        </Link>
+        <h1 className="hn-title">Unitodo Configuration</h1>
+      </div>
 
+      {/* Notifications */}
       {error && (
-         <div className="mb-4 p-3 rounded bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm">
+         <div className="mb-2 py-1 px-2 rounded bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs">
             Error: {error}
          </div>
       )}
       {saveMessage && (
-        <div className="mb-4 p-3 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm">
+        <div className="mb-2 py-1 px-2 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
           {saveMessage}
         </div>
       )}
 
-      <form onSubmit={(e) => { e.preventDefault(); saveConfig(); }}>
-        {/* Frontend Settings */}
-        <section className="mb-6 p-4 border rounded dark:border-gray-700">
-          <h2 className="text-xl font-semibold mb-3 dark:text-gray-200">Frontend Settings</h2>
-          <InputField
-            label="Auto-Refresh Interval (ms)"
-            description="How often the TODO list refreshes automatically (in milliseconds). Requires UI refresh to take effect."
-            type="number"
-            id="refresh_interval"
-            value={config.refresh_interval}
-            onChange={(e) => updateConfigField('refresh_interval', parseInt(e.target.value, 10) || 0)}
-          />
-          <InputField
-            label="Editor URI Scheme"
-            description="The URI scheme used to open files in your editor (e.g., vscode://file/, cursor://file/). Requires UI refresh to take effect."
-            type="text"
-            id="editor_uri_scheme"
-            value={config.editor_uri_scheme}
-            onChange={(e) => updateConfigField('editor_uri_scheme', e.target.value)}
-          />
-        </section>
-        
-        {/* Backend Settings (rg) */}
-        <section className="mb-6 p-4 border rounded dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-3 dark:text-gray-200">Backend: Search Settings (rg)</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Changes here require restarting the backend service.</p>
+      <form onSubmit={(e) => { e.preventDefault(); saveConfig(); }} className="text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Frontend Settings */}
+          <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
+            <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">Frontend Settings</h2>
             <InputField
-              label="Search Pattern (Regex)"
-              description="The regular expression used by the backend (ripgrep) to find TODO lines."
+              label="Auto-Refresh Interval (ms)"
+              description="Refresh frequency for TODO list"
+              type="number"
+              id="refresh_interval"
+              value={config.refresh_interval}
+              onChange={(e) => updateConfigField('refresh_interval', parseInt(e.target.value, 10) || 0)}
+            />
+            <InputField
+              label="Editor URI Scheme"
+              description="URI to open files (e.g., vscode://file/, cursor://file/)"
               type="text"
-              id="rg_pattern"
-              value={config.rg.pattern}
-              onChange={(e) => updateRgField('pattern', e.target.value)}
+              id="editor_uri_scheme"
+              value={config.editor_uri_scheme}
+              onChange={(e) => updateConfigField('editor_uri_scheme', e.target.value)}
             />
-            <TextareaField
-                label="Search Paths"
-                description="List of directories or files for the backend to search (one per line)."
-                id="rg_paths"
-                value={config.rg.paths.join('\n')}
-                onChange={(e) => updateRgField('paths', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
-            />
-            <TextareaField
-                label="Ignore Patterns (Globs)"
-                description="Files/directories to ignore during the backend search (one glob pattern per line). Standard .gitignore/.ignore rules also apply."
-                id="rg_ignore"
-                value={config.rg.ignore?.join('\n') || ''}
-                onChange={(e) => updateRgField('ignore', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
-            />
-             {/* file_types is not supported by backend searcher, maybe hide or show warning */}
-             <TextareaField
-                label="File Types (Glob - Currently Informational)"
-                description="Specific file types to include (e.g., *.ts, *.rs). Note: This setting is not currently used by the internal backend searcher but is saved."
-                id="rg_file_types"
-                value={config.rg.file_types?.join('\n') || ''}
-                onChange={(e) => updateRgField('file_types', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
-                className="opacity-60" // Indicate it's not fully used
-            />
-        </section>
+          </section>
+          
+          {/* Backend Settings (rg) */}
+          <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
+              <h2 className="text-sm font-semibold mb-2 text-subtle-color dark:text-gray-400">Search Settings</h2>
+              <InputField
+                label="Search Pattern (Regex)"
+                description="Pattern for finding TODOs"
+                type="text"
+                id="rg_pattern"
+                value={config.rg.pattern}
+                onChange={(e) => updateRgField('pattern', e.target.value)}
+              />
+              <TextareaField
+                  label="Search Paths"
+                  description="Locations to scan (one per line)"
+                  id="rg_paths"
+                  value={config.rg.paths.join('\n')}
+                  onChange={(e) => updateRgField('paths', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
+              />
+              <TextareaField
+                  label="Ignore Patterns (Globs)"
+                  description="Files/dirs to ignore (one per line)"
+                  id="rg_ignore"
+                  value={config.rg.ignore?.join('\n') || ''}
+                  onChange={(e) => updateRgField('ignore', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
+              />
+          </section>
+        </div>
 
         {/* Backend Settings (Projects) */}
-        <section className="mb-6 p-4 border rounded dark:border-gray-700">
-            <h2 className="text-xl font-semibold mb-3 dark:text-gray-200">Backend: Project Definitions</h2>
-             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Define project categories based on file paths (globs). Changes require restarting the backend service.</p>
-            
-            {Object.entries(projects).map(([projectName, patterns]) => (
-                <div key={projectName} className="mb-4 p-3 border rounded dark:border-gray-600 relative">
-                    <h3 className="text-lg font-medium mb-2 dark:text-gray-300">{projectName}</h3>
-                    <TextareaField
-                        label="Path Globs (one per line)"
-                        description={`Glob patterns that define files belonging to the '${projectName}' project.`}
-                        id={`project_${projectName}`}
-                        value={patterns.join('\n')}
-                        onChange={(e) => handleProjectPatternChange(projectName, e)}
-                    />
-                     <button 
-                        type="button"
-                        onClick={() => removeProject(projectName)}
-                        className="absolute top-2 right-2 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                        title="Remove project"
-                    >
-                        Remove
-                    </button>
-                </div>
-            ))}
-
-            <div className="mt-4 flex items-end gap-2">
-                <InputField
-                    label="New Project Name"
-                    type="text"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    placeholder="Enter new project name"
-                    className="flex-grow mb-0" // Adjust styling for inline
+        <section className="mb-4 p-2 border-t border-l border-r border-b border-border-color dark:border-gray-700 rounded-sm">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold text-subtle-color dark:text-gray-400">Project Definitions</h2>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="New project name"
+                  className="mr-1 px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-700 rounded-sm 
+                           dark:bg-gray-800 dark:text-gray-200 w-32"
                 />
                 <button 
-                    type="button"
-                    onClick={handleAddProject}
-                    className="px-4 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm h-[37px]" // Match height approx
+                  type="button"
+                  onClick={handleAddProject}
+                  className="px-2 py-0.5 bg-accent-color hover:opacity-90 rounded-sm text-xs border border-accent-color"
                 >
-                    Add Project
+                  Add
                 </button>
+              </div>
             </div>
+            
+            {Object.entries(projects).length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400 italic">No projects defined yet. Add a project to categorize TODOs.</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(projects).map(([projectName, patterns]) => (
+                    <div key={projectName} className="p-2 border border-gray-200 dark:border-gray-700 rounded-sm relative">
+                        <div className="flex justify-between items-center mb-1">
+                          <h3 className="text-xs font-medium dark:text-gray-300">{projectName}</h3>
+                          <button 
+                            type="button"
+                            onClick={() => removeProject(projectName)}
+                            className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <textarea
+                            className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-sm
+                                      dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent-color"
+                            rows={2}
+                            placeholder="Path glob patterns (one per line)"
+                            value={patterns.join('\n')}
+                            onChange={(e) => handleProjectPatternChange(projectName, e)}
+                        />
+                    </div>
+                ))}
+              </div>
+            )}
         </section>
 
-
-        <div className="mt-6 flex justify-end space-x-3">
-            {/* Maybe add a reset button later */}
+        {/* Save Button */}
+        <div className="flex justify-end">
           <button 
             type="submit" 
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="px-3 py-1 bg-accent-color rounded-sm hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-accent-color disabled:opacity-50 text-xs border border-accent-color"
             disabled={isSaving}
           >
             {isSaving ? 'Saving...' : 'Save Configuration'}
