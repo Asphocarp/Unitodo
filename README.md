@@ -14,7 +14,10 @@ Centralize all your TODOs from across your entire codebase and projects into a s
 
 Unitodo is a powerful solution that helps developers and teams track all their TODOs across different files, projects, and repositories. The tool assigns unique IDs to each TODO item, collects them in real-time, and presents them in a unified interface for easy management.
 
-![Unitodo Demo](assets/demo.png)
+![Unitodo Demo light](assets/demo-light.png)
+![Unitodo Demo dark](assets/demo-dark.png)
+![Unitodo Config light](assets/demo-config-light.png)
+![Unitodo Config dark](assets/demo-config-dark.png)
 
 ### Architecture
 
