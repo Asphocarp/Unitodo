@@ -1,6 +1,10 @@
 import { create } from 'zustand';
-import { TodoCategory, TodoItem } from '../types';
-import { fetchTodoData, editTodoItem } from '../services/todoService';
+import { devtools } from 'zustand/middleware';
+import { TodoCategory, TodoItem, Config as AppConfig } from '../types';
+import { fetchTodoData } from '../services/todoService';
+import { editTodoItem, addTodoItem } from '../services/todoService';
+import { parseTodoContent } from '../utils';
+import useConfigStore from './configStore';
 
 interface FilteredCategoryInfo {
   name: string;
@@ -33,6 +37,7 @@ interface TodoState {
   updateTodo: (updatedTodo: TodoItem) => void;
   navigateTodos: (direction: 'up' | 'down', jumpSize?: number) => void;
   navigateTabs: (direction: 'left' | 'right') => void;
+  addNewTodo: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => Promise<void>;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -74,7 +79,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
           set({ activeTabIndex: 0 });
         }
       } else {
-        console.log("Data unchanged, skipping state update.");
+        // console.log("Data unchanged, skipping state update.");
       }
       
       set({ error: null });
@@ -299,6 +304,51 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         }
       });
     }
+  },
+
+  addNewTodo: async (categoryType, categoryName, exampleItemLocation) => {
+    const { loadData } = get();
+    const appConfig = useConfigStore.getState().config;
+
+    const todoContent = prompt('Enter new TODO content:');
+    if (!todoContent || todoContent.trim() === '') {
+      console.log('TODO content cannot be empty.');
+      return;
+    }
+
+    let payload: Parameters<typeof addTodoItem>[0] = {
+      category_type: categoryType,
+      category_name: categoryName,
+      content: todoContent.trim(),
+    };
+
+    if (categoryType === 'git') {
+      if (!exampleItemLocation) {
+        alert('Cannot add TODO to git section without an example item location to find the repository.');
+        console.error('Missing exampleItemLocation for git type');
+        return;
+      }
+      payload.example_item_location = exampleItemLocation;
+    } else if (categoryType === 'project') {
+      // Check if append_file_path is configured for this project
+      if (!appConfig || !appConfig.projects[categoryName]?.append_file_path) {
+        alert(`Cannot add TODO: 'append_file_path' is not configured for project "${categoryName}". Please configure it on the Config page.`);
+        return;
+      }
+    }
+
+    try {
+      set({ loading: true, error: null }); // Indicate loading
+      await addTodoItem(payload);
+      await loadData(); // Reload data to show the new todo
+      // Optionally, could try to focus the newly added todo if possible
+      // but that would require the backend to return its location/id
+      alert('TODO added successfully!');
+    } catch (err: any) {
+      console.error('Error adding new todo:', err);
+      set({ error: err.message || 'Failed to add new TODO.', loading: false });
+      alert(`Error adding TODO: ${err.message || 'Unknown error'}`)
+    }
   }
 }));
 
@@ -335,7 +385,7 @@ export const getFilteredCategories = (state: TodoState) => {
   }
   
   const endTime = performance.now();
-  console.log(`getFilteredCategories took ${endTime - startTime}ms`);
+//   console.log(`getFilteredCategories took ${endTime - startTime}ms`);
   return result;
 };
 
@@ -379,7 +429,7 @@ const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
   }
   
   const endTime = performance.now();
-  console.log(`getFilteredCategoryInfo took ${endTime - startTime}ms`);
+//   console.log(`getFilteredCategoryInfo took ${endTime - startTime}ms`);
   return result;
 };
 
