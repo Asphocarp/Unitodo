@@ -90,3 +90,53 @@ export async function addTodoItem(payload: AddTodoPayload): Promise<any> {
     throw error;
   }
 } 
+
+// Define the payload structure for marking a todo item as done
+export interface MarkDonePayload {
+  location: string;
+  original_content: string;
+}
+
+// Define the expected response structure from the mark-done endpoint
+export interface MarkDoneResponse {
+  status: string;
+  message: string;
+  new_content: string;
+  completed: boolean;
+  error?: string; // Optional error field from backend if status is error
+  details?: string; // Optional details field
+  code?: number; // Optional HTTP status code from backend error
+}
+
+// Function to mark a todo item as done via the backend
+export async function markTodoAsDone(payload: MarkDonePayload): Promise<MarkDoneResponse> {
+  try {
+    const response = await fetch('/api/todos/mark-done', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store' // Ensure the request is always sent
+    });
+
+    const responseData: MarkDoneResponse = await response.json();
+
+    if (!response.ok) {
+      // Throw an error that includes backend-provided details if available
+      const errorMessage = responseData.error || 'Failed to mark todo as done';
+      const errorDetails = responseData.details || 'No specific details provided by the backend.';
+      const errorCode = responseData.code || response.status;
+      
+      if (response.status === 409) { // Conflict error from backend
+          throw new Error(`CONFLICT_ERROR: ${errorMessage} - ${errorDetails}`);
+      }
+      throw new Error(`API error ${errorCode}: ${errorMessage} - ${errorDetails}`);
+    }
+
+    return responseData;
+  } catch (error) {
+    console.error('Error marking todo as done:', error);
+    throw error; // Re-throw for component handling
+  }
+} 

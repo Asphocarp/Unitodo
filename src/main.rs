@@ -80,6 +80,29 @@ fn find_git_repo_root(start_path: &Path) -> io::Result<Option<PathBuf>> {
     Ok(None)
 }
 
+// Helper function to extract cleaned content from a line, similar to TodoSink logic
+fn extract_cleaned_content_from_line(line: &str, config_pattern: &str) -> Result<String, io::Error> {
+    let todo_pattern_re = Regex::new(config_pattern)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Invalid regex pattern in config for extraction: {}", e)))?;
+
+    if let Some(found_match) = todo_pattern_re.find(line) {
+        let raw_todo_content = line[found_match.end()..].trim_start(); // Trim start here, full trim later
+        let mut cleaned_content = raw_todo_content;
+
+        // Order matters: specific markers like "[ ]" before general ones like "-"
+        if cleaned_content.starts_with("[ ]") || cleaned_content.starts_with("[x]") || cleaned_content.starts_with("[X]") {
+            cleaned_content = cleaned_content[3..].trim_start();
+        }
+        // Remove other common list markers if they are at the beginning of the content part
+        cleaned_content = cleaned_content.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace()).trim();
+        Ok(cleaned_content.to_string())
+    } else {
+        // This case should ideally not be hit if the line was correctly identified as a todo.
+        // For verification, if the pattern isn't found, it's a mismatch.
+        Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found in line for content extraction"))
+    }
+}
+
 // --- End Helper Functions ---
 
 // --- Configuration Structure ---
@@ -307,6 +330,13 @@ struct AddTodoPayload {
     content: String, // The raw content for the new todo item
     // Used to find git repo root if category_type is "git"
     example_item_location: Option<String>,
+}
+
+// --- Request Payload for Marking Done ---
+#[derive(Deserialize, Debug)]
+struct MarkDonePayload {
+    location: String, // "path/to/file.rs:123"
+    original_content: String, // The 'content' field from the frontend's TodoItemType, used for verification
 }
 
 // --- todo Category Enum ---
@@ -828,6 +858,171 @@ fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()>
     Ok(())
 }
 
+// --- Core Logic for Marking Todo as Done ---
+fn mark_todo_as_done_in_file(config: &Config, payload: &MarkDonePayload) -> Result<(String, bool), io::Error> {
+    let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
+    if location_parts.len() != 2 {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format. Expected 'path/to/file:line_number'"));
+    }
+    let file_path_str = location_parts[0];
+    let line_number: usize = match location_parts[1].parse() {
+        Ok(num) if num > 0 => num,
+        _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid line number in location")),
+    };
+    let line_index = line_number - 1;
+
+    let file_path = Path::new(file_path_str);
+    if !file_path.exists() || !file_path.is_file() {
+        return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
+    }
+
+    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
+    file.lock_exclusive()?;
+
+    let result: Result<(String, bool), io::Error> = (|| {
+        let mut original_file_content_string = String::new();
+        let mut reader = BufReader::new(&file);
+        reader.read_to_string(&mut original_file_content_string)?;
+        let mut lines: Vec<String> = original_file_content_string.lines().map(String::from).collect();
+
+        if line_index >= lines.len() {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Line {} out of bounds", line_number)));
+        }
+        let original_line = lines[line_index].clone(); // Clone to modify
+
+        // 1. Verification
+        let current_disk_cleaned_content = extract_cleaned_content_from_line(&original_line, &config.rg.pattern)?;
+        if current_disk_cleaned_content.trim() != payload.original_content.trim() {
+            eprintln!("Content mismatch: Disk='{}', Payload='{}'", current_disk_cleaned_content.trim(), payload.original_content.trim());
+            return Err(io::Error::new(io::ErrorKind::Other, "Content has been modified since it was loaded. Edit aborted."));
+        }
+
+        // 2. Transformation
+        let todo_done_pairs = vec![
+            ("- [ ]", "- [x]"),
+            ("TODO:", "DONE:"),
+            ("T0DO", "D0NE"), // Assuming T0DO is literal, adjust if 0 is a placeholder
+            ("TODO", "DONE"), // General fallback
+        ];
+
+        let mut new_line_for_file = original_line.clone();
+        let mut marker_changed = false;
+        let mut original_marker_len = 0;
+        let mut new_marker_str = "".to_string();
+        let mut prefix_before_marker_len = 0;
+
+        for (todo_marker, done_marker) in todo_done_pairs {
+            if let Some(marker_start_idx) = original_line.find(todo_marker) {
+                new_line_for_file = original_line.replacen(todo_marker, done_marker, 1);
+                marker_changed = true;
+                original_marker_len = todo_marker.len();
+                new_marker_str = done_marker.to_string();
+                prefix_before_marker_len = marker_start_idx;
+                break;
+            }
+        }
+
+        if !marker_changed {
+            // If no specific marker was changed (e.g. rg.pattern is "FIXME" and not in pairs),
+            // we might still want to append the timestamp.
+            // For now, let's assume if no pair matches, we don't alter the prefix.
+            // The user request implies specific pattern changes.
+            // However, we MUST have a conceptual "marker end" to find where the content starts for timestamping.
+            // Fallback to config.rg.pattern match end.
+            let rg_pattern_re = Regex::new(&config.rg.pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Bad rg.pattern"))?;
+            if let Some(mat) = rg_pattern_re.find(&original_line) {
+                 prefix_before_marker_len = mat.start(); // This is the prefix before the general pattern
+                 original_marker_len = mat.len(); // Length of the general pattern itself
+                 new_marker_str = mat.as_str().to_string(); // No change to marker string itself
+            } else {
+                return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern (rg.pattern) not found on line for timestamping."));
+            }
+        }
+        
+        // 3. Timestamp and First Word Modification
+        // The content for timestamping starts after the original marker.
+        let content_starts_at = prefix_before_marker_len + original_marker_len;
+        let content_part_from_original_line = original_line.get(content_starts_at..).unwrap_or("").trim_start();
+        
+        let parts: Vec<&str> = content_part_from_original_line.splitn(2, ' ').collect();
+        let mut first_word_segment = parts.get(0).map_or("", |s| *s).to_string();
+        let actual_task_description = parts.get(1).map_or("", |s| *s);
+
+        let done_ts_str = format!("@@{}", generate_short_timestamp());
+        let done_ts_regex = Regex::new(r"@@[A-Za-z0-9\-_]{5}").unwrap();
+
+        if done_ts_regex.is_match(&first_word_segment) {
+            first_word_segment = done_ts_regex.replace(&first_word_segment, &done_ts_str).to_string();
+        } else {
+            if !first_word_segment.is_empty() && !first_word_segment.ends_with(char::is_whitespace) {
+                 // No space if first_word_segment exists and is not just whitespace.
+                 // e.g. "prio@id" becomes "prio@id@@ts"
+            } else if !first_word_segment.is_empty() && first_word_segment.ends_with(char::is_whitespace) {
+                // If it ends with whitespace, just append: "prio@id " becomes "prio@id @@ts"
+            } else {
+                // If first_word_segment is empty, the timestamp becomes the first word.
+                // No leading space needed.
+            }
+            first_word_segment.push_str(&done_ts_str);
+        }
+        
+        let new_cleaned_content_for_frontend = if actual_task_description.is_empty() {
+            first_word_segment.clone()
+        } else {
+            format!("{} {}", first_word_segment, actual_task_description)
+        }.trim().to_string();
+
+        // Reconstruct the line for the file
+        // Prefix + new_marker_str + (space after marker from original) + first_word_segment + (space) + actual_task_description
+        let prefix_str = &original_line[..prefix_before_marker_len];
+        
+        // Determine original spacing after marker
+        let mut spacing_after_original_marker = "";
+        if content_starts_at < original_line.len() { // Ensure content_starts_at is a valid index
+            let potential_spacing_and_content = &original_line[content_starts_at..];
+            if let Some(content_start_char_idx) = potential_spacing_and_content.find(|c: char| !c.is_whitespace()) {
+                 spacing_after_original_marker = &potential_spacing_and_content[..content_start_char_idx];
+            } else if !potential_spacing_and_content.is_empty() { // All whitespace after marker
+                 spacing_after_original_marker = potential_spacing_and_content;
+            }
+        }
+
+
+        let final_task_part = if actual_task_description.is_empty() {
+            "".to_string()
+        } else {
+            // Ensure a space separates first_word from description if description exists
+            format!(" {}", actual_task_description)
+        };
+        
+        new_line_for_file = format!("{}{}{}{}{}", 
+            prefix_str, 
+            new_marker_str, // This is the 'DONE' or equivalent marker
+            spacing_after_original_marker,
+            first_word_segment, // This now contains the @@ts
+            final_task_part
+        );
+        
+        lines[line_index] = new_line_for_file;
+        
+        let new_file_content = lines.join("\n");
+        let final_content_to_write = if original_file_content_string.ends_with('\n') && !new_file_content.is_empty() {
+            format!("{}\n", new_file_content)
+        } else {
+            new_file_content
+        };
+
+        file.set_len(0)?;
+        file.seek(io::SeekFrom::Start(0))?;
+        io::Write::write_all(&mut &file, final_content_to_write.as_bytes())?;
+        
+        Ok((new_cleaned_content_for_frontend, true))
+    })();
+
+    file.unlock()?;
+    result
+}
+
 // --- API Handler - Get Todos --- (Uses Read Lock)
 async fn get_todos_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
     let debug_mode = false; // Keep debug off for API
@@ -989,6 +1184,51 @@ async fn add_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload
     }
 }
 
+// --- API Handler - Mark Todo as Done ---
+async fn mark_done_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<MarkDonePayload>) -> ActixResult<impl Responder> {
+    let config_arc_clone = shared_config.clone();
+    let payload_inner = payload.into_inner();
+
+    println!("Received mark_done request: {:?}", payload_inner);
+
+    let result = web::block(move || {
+        let config_guard = config_arc_clone.read();
+        mark_todo_as_done_in_file(&config_guard, &payload_inner)
+    }).await;
+
+    match result {
+        Ok(Ok((new_content, completed))) => {
+            println!("Successfully marked TODO as done. New content: {}", new_content);
+            Ok(HttpResponse::Ok().json(serde_json::json!({
+                "status": "success",
+                "message": "TODO marked as done successfully.",
+                "new_content": new_content,
+                "completed": completed
+            })))
+        },
+        Ok(Err(e)) => {
+            eprintln!("Error marking TODO as done: {}", e);
+            let status_code = match e.kind() {
+                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
+                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
+                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
+                io::ErrorKind::Other if e.to_string().contains("Content has been modified") => actix_web::http::StatusCode::CONFLICT,
+                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            let error_response = serde_json::json!({
+                "status": "error",
+                "error": e.to_string(),
+                "code": status_code.as_u16()
+            });
+            Ok(HttpResponse::build(status_code).json(error_response))
+        },
+        Err(e) => { // Blocking task error
+            eprintln!("Error running blocking task for mark_done: {}", e);
+            Err(ErrorInternalServerError(format!("Internal server error during mark done task: {}", e)))
+        }
+    }
+}
+
 // --- Main Function (Actix Server Setup) ---
 #[actix_web::main]
 async fn main() {
@@ -1020,6 +1260,7 @@ async fn main() {
             .route("/config", web::get().to(get_config_handler))
             .route("/config", web::post().to(update_config_handler))
             .route("/add-todo", web::post().to(add_todo_handler))
+            .route("/mark-done", web::post().to(mark_done_handler))
     })
     .bind((server_address, server_port))
     .expect("Failed to bind server")

@@ -64,7 +64,7 @@ where:
 - [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
-- [ ] 2@AoVsq make this repo public
+- [x] 2@AoVsq@@ApW8A make this repo public
 - [ ] 2 check command injection safety
 - [ ] 2@AoVtD (fancy) show dependency of todos?
 - [ ] 2 DB instead of json (200KB though)?
