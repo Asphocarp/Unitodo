@@ -3,43 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TodoItem as TodoItemType } from '../types';
 import { editTodoItem, markTodoAsDone } from '../services/todoService';
-import { parseTodoContent } from '../utils';
+import { parseTodoContent, generateTimestamp } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
 import { useTodoStore } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
-
-// Function to generate a 5-character timestamp in URL-safe base64 format
-// Starting from 25.1.1 (as specified in the README)
-function generateTimestamp(): string {
-  // Custom Epoch: January 1, 2025 00:00:00 UTC
-  const now = new Date();
-  const currentUnixTimestamp = Math.floor(now.getTime() / 1000);
-  const customEpoch = Math.floor(new Date('2025-01-01T00:00:00Z').getTime() / 1000);
-  const secondsSinceCustomEpoch = currentUnixTimestamp - customEpoch;
-  // const secondsSinceCustomEpoch = currentUnixTimestamp;
-
-  // Ensure the timestamp is non-negative (for dates before 2025)
-  const timestampValue = Math.max(0, secondsSinceCustomEpoch);
-
-  // --- Direct 30-bit Number to 5 URL-Safe Base64 Chars ---
-  const urlSafeBase64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-  let base64Timestamp = '';
-
-  // Extract 5x 6-bit chunks directly from the 30-bit timestampValue
-  // (Assuming timestampValue fits within 30 bits for the next ~34 years; 2025-2059)
-  const mask6bit = 0x3F; // === 63 === 111111 in binary
-
-  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 24) & mask6bit); // Bits 29-24
-  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 18) & mask6bit); // Bits 23-18
-  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 12) & mask6bit); // Bits 17-12
-  base64Timestamp += urlSafeBase64Chars.charAt((timestampValue >> 6) & mask6bit);  // Bits 11-6
-  base64Timestamp += urlSafeBase64Chars.charAt(timestampValue & mask6bit);        // Bits 5-0
-  // --- End of Direct Encoding ---
-
-  return base64Timestamp;
-}
 
 interface TodoItemProps {
   todo: TodoItemType;

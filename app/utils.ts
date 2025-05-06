@@ -110,6 +110,86 @@ export function categorizeTodos(todos: TodoItem[]) {
   return categorized;
 }
 
+// Constants for timestamp encoding/decoding
+const URL_SAFE_BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+const CUSTOM_EPOCH_SECONDS = Math.floor(new Date('2025-01-01T00:00:00Z').getTime() / 1000);
+
+/**
+ * Generates a 5-character timestamp in URL-safe base64 format.
+ * Starting from a custom epoch (Jan 1, 2025).
+ * @returns A 5-character base64 string.
+ */
+export function generateTimestamp(): string {
+  const now = new Date();
+  const currentUnixTimestamp = Math.floor(now.getTime() / 1000);
+  const secondsSinceCustomEpoch = currentUnixTimestamp - CUSTOM_EPOCH_SECONDS;
+  const timestampValue = Math.max(0, secondsSinceCustomEpoch); // Ensure non-negative
+
+  let base64Timestamp = '';
+  const mask6bit = 0x3F; // 63
+
+  base64Timestamp += URL_SAFE_BASE64_CHARS.charAt((timestampValue >> 24) & mask6bit);
+  base64Timestamp += URL_SAFE_BASE64_CHARS.charAt((timestampValue >> 18) & mask6bit);
+  base64Timestamp += URL_SAFE_BASE64_CHARS.charAt((timestampValue >> 12) & mask6bit);
+  base64Timestamp += URL_SAFE_BASE64_CHARS.charAt((timestampValue >> 6) & mask6bit);
+  base64Timestamp += URL_SAFE_BASE64_CHARS.charAt(timestampValue & mask6bit);
+
+  return base64Timestamp;
+}
+
+/**
+ * Decodes a 5-character base64 ID back into a Date object.
+ * The encoding is based on seconds since a custom epoch (Jan 1, 2025).
+ * @param encodedId The 5-character base64 string (e.g., "fffff").
+ * @returns A Date object if decoding is successful, otherwise null.
+ */
+export function decodeTimestampId(encodedId: string): Date | null {
+  if (typeof encodedId !== 'string' || encodedId.length !== 5) {
+    return null;
+  }
+
+  let secondsSinceCustomEpoch = 0;
+  for (let i = 0; i < 5; i++) {
+    const char = encodedId[i];
+    const charValue = URL_SAFE_BASE64_CHARS.indexOf(char);
+    if (charValue === -1) {
+      return null; // Invalid character in encodedId
+    }
+    // Reconstruct the 30-bit number. The first char is the most significant 6 bits.
+    secondsSinceCustomEpoch = (secondsSinceCustomEpoch << 6) | charValue;
+  }
+
+  const unixTimestampSeconds = CUSTOM_EPOCH_SECONDS + secondsSinceCustomEpoch;
+  return new Date(unixTimestampSeconds * 1000); // Date constructor expects milliseconds
+}
+
+/**
+ * Abbreviates a time distance string from 'X unit(s)' to 'Xu'.
+ * E.g., '5 minutes' becomes '5m', '2 days' becomes '2d'.
+ * @param distanceString The string from date-fns formatDistanceStrict (e.g., "5 minutes").
+ * @returns Abbreviated string (e.g., "5m") or original if no match.
+ */
+export function abbreviateTimeDistanceString(distanceString: string): string {
+  if (!distanceString) return '';
+  const parts = distanceString.split(' '); // e.g., ["5", "minutes"]
+  if (parts.length !== 2) return distanceString; // Expects 'X unit'
+
+  const value = parts[0];
+  const unit = parts[1].toLowerCase();
+
+  if (unit.startsWith('second')) return `${value}s`;
+  if (unit.startsWith('minute')) return `${value}m`;
+  if (unit.startsWith('hour')) return `${value}h`;
+  if (unit.startsWith('day')) return `${value}d`;
+  // formatDistanceStrict typically doesn't output weeks by default without specific options,
+  // but we can add it for completeness if other functions might produce it.
+  if (unit.startsWith('week')) return `${value}w`; 
+  if (unit.startsWith('month')) return `${value}mo`;
+  if (unit.startsWith('year')) return `${value}y`;
+
+  return distanceString; // Fallback to the original string if unit is not recognized
+}
+
 // Regex explanation:
 // ^                                      - Start of the string
 // (\\s*)?                                - Start group 1 (optional): Leading whitespace

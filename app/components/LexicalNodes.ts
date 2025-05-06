@@ -6,6 +6,8 @@ import {
   SerializedTextNode,
   Spread,
 } from 'lexical';
+import { decodeTimestampId, abbreviateTimeDistanceString } from '../utils';
+import { formatDistanceStrict } from 'date-fns';
 
 // --- PriorityNode ---
 
@@ -92,6 +94,30 @@ export class IdNode extends TextNode {
   createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
     dom.className = 'unitodo-id-node';
+
+    let displayText = this.__text; // Default to original text
+
+    if (this.__text.startsWith('@') && this.__text.length === 6) {
+      const encodedPart = this.__text.substring(1);
+      const decodedDate = decodeTimestampId(encodedPart);
+      if (decodedDate) {
+        // Get strict distance, e.g., "5 minutes"
+        const strictDistance = formatDistanceStrict(decodedDate, new Date());
+        // Abbreviate to "5m"
+        const abbreviated = abbreviateTimeDistanceString(strictDistance);
+        // Add "ago" and brackets
+        displayText = `[${abbreviated} ago]`;
+      } else {
+        // If decoding fails but it looks like a timestamp ID, show with prefix
+        displayText = `ID: ${encodedPart}`;
+      }
+    } else if (this.__text.startsWith('#') || this.__text.startsWith('##')) {
+      // For NanoID or incremented IDs, show with prefix
+      displayText = `ID: ${this.__text.substring(this.__text.startsWith('##') ? 2 : 1)}`;
+    } 
+    // else: for any other IdNode content, it will display as is (original displayText)
+
+    dom.innerText = displayText;
     return dom;
   }
 
