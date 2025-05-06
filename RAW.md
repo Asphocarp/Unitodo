@@ -141,3 +141,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 1@ApYt7@@ApcuT add a config item for the default append todo file basename for a git section (currently it is `unitodo.append.md`)
 - [x] 1@ApYun@@ApZG2 no more succeed huge alert, just a simple pop info should be ok
 - [x] 1@ApZNj@@ApdML allow no more cursor inside a Lexical chip/node; render the `@fffff` chip as readable format, but keep the text-content behind it same as before; - but maybe make it a table col is better
+- [ ] 1@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
+- [ ] 0@ApdyT add feat: convert this entire app to a Electron app (e.g. for macos)
+- [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
