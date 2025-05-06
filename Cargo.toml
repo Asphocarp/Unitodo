@@ -9,19 +9,21 @@ edition = "2021"
 clap = { version = "4.4.8", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8.1" # Updated TOML version
-home = "0.5.5"
-glob = "0.3.1"
-regex = "1.9.5"
-actix-web = "4" # Added actix-web
-env_logger = "0.11" # Added env_logger
+toml = "0.8"
+home = "0.5"
+glob = "0.3"
+regex = "1"
+actix-web = "4"
+env_logger = "0.11.3"
 grep-searcher = "0.1"
 grep-regex = "0.1"
 ignore = "0.4"
 walkdir = "2"
-globset = "0.4" # Add globset
-natord = "1.0.9" # Add natord for natural sorting
-fs2 = "0.4.3"
+globset = "0.4"
+natord = "1.0.9"
+fs2 = "0.4"
+lazy_static = "1.4.0"
+parking_lot = "0.12"
 
 [profile.release]
 lto = true

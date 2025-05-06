@@ -1,7 +1,7 @@
-use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middleware, error::ErrorInternalServerError, HttpResponse};
+use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middleware, error::ErrorInternalServerError, HttpResponse, error::ErrorBadRequest, error::ErrorNotFound};
 use std::sync::Arc;
 use std::str;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Read, Write, Seek, SeekFrom, BufReader};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
@@ -17,17 +17,23 @@ use std::time::Instant;
 use std::sync::Mutex;
 use std::fs::OpenOptions;
 use fs2::FileExt;
+use parking_lot::Mutex as ParkingMutex;
+use lazy_static::lazy_static;
 
 // --- Configuration Structure ---
-#[derive(Deserialize, Debug, Default, Clone)] // Added Clone
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Config {
     #[serde(default)]
     rg: RgConfig,
-    #[serde(default)] // Projects map: Project name -> List of glob patterns
+    #[serde(default)]
     projects: HashMap<String, Vec<String>>,
+    #[serde(default = "default_refresh_interval")]
+    refresh_interval: u32,
+    #[serde(default = "default_editor_uri_scheme")]
+    editor_uri_scheme: String,
 }
 
-#[derive(Deserialize, Debug, Default, Clone)] // Add Clone here
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 struct RgConfig {
     #[serde(default = "default_rg_pattern")]
     pattern: String,
@@ -48,26 +54,61 @@ fn default_search_paths() -> Vec<String> {
     vec![".".to_string()] 
 }
 
-// --- Configuration Loading ---
-fn find_config_path() -> Option<PathBuf> {
-    let home_dir = home::home_dir();
+// --- Defaults for Frontend settings ---
+fn default_refresh_interval() -> u32 {
+    5000 // Default 5 seconds
+}
 
-    let paths_to_check = [
-        // ~/.config/unitodo/config.toml
-        home_dir.as_ref().map(|h| h.join(".config").join("unitodo").join("config.toml")),
-        // ~/.unitodo
-        home_dir.as_ref().map(|h| h.join(".unitodo")),
-        // ./unitodo.toml
+fn default_editor_uri_scheme() -> String {
+    "vscode://file/".to_string() // Default VSCode URI
+}
+
+// Add a default implementation
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            rg: RgConfig::default(),
+            projects: HashMap::new(),
+            refresh_interval: default_refresh_interval(),
+            editor_uri_scheme: default_editor_uri_scheme(),
+        }
+    }
+}
+
+// --- Configuration Loading & Saving ---
+
+// Define the primary config path (~/.config/unitodo/config.toml)
+fn get_primary_config_path() -> io::Result<PathBuf> {
+    home::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not find home directory"))
+        .map(|h| h.join(".config").join("unitodo").join("config.toml"))
+}
+
+fn find_config_path() -> Option<PathBuf> {
+    let primary_path = get_primary_config_path().ok();
+
+    let paths_to_check: [Option<PathBuf>; 3] = [
+        // 1. Primary path
+        primary_path.clone(), // Clone Option<PathBuf>
+        // 2. Fallback ~/.unitodo (legacy?) - Consider removing later
+        home::home_dir().map(|h| h.join(".unitodo")), // Use map directly
+        // 3. Fallback ./unitodo.toml (local override)
         Some(PathBuf::from("./unitodo.toml")),
     ];
 
-    paths_to_check.iter().flatten().find(|p| p.exists() && p.is_file()).cloned()
+    paths_to_check.iter().filter_map(|p| p.as_ref()).find(|p| p.exists() && p.is_file()).cloned()
+}
+
+// Global Mutex to protect config file access
+lazy_static! {
+    static ref CONFIG_FILE_MUTEX: ParkingMutex<()> = ParkingMutex::new(());
 }
 
 fn load_config() -> io::Result<Config> {
+    let _guard = CONFIG_FILE_MUTEX.lock(); // Lock before accessing file system
     match find_config_path() {
         Some(path) => {
-            println!("Loading config from: {}", path.display()); // Info message
+            println!("Loading config from: {}", path.display());
             let mut file = File::open(path)?;
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
@@ -75,10 +116,39 @@ fn load_config() -> io::Result<Config> {
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse TOML: {}", e)))
         }
         None => {
-            println!("No config file found, using defaults."); // Info message
-            Ok(Config::default()) // Return default config if no file found
+            println!("No config file found. Attempting to create default config...");
+            let default_config = Config::default();
+            let primary_path = get_primary_config_path()?;
+
+            // Ensure the directory exists
+            if let Some(parent) = primary_path.parent() {
+                fs::create_dir_all(parent)?;
+                println!("Created config directory: {}", parent.display());
+            }
+
+            // Write the default config
+            write_config_to_path(&default_config, &primary_path)?;
+            println!("Created default config at: {}", primary_path.display());
+
+            Ok(default_config)
         }
     }
+}
+
+// Helper to write config to a specific path
+fn write_config_to_path(config: &Config, path: &Path) -> io::Result<()> {
+    let toml_string = toml::to_string_pretty(config)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to serialize config to TOML: {}", e)))?;
+
+    // Write atomically: write to temp file, then rename
+    let temp_path = path.with_extension("tmp");
+    let mut temp_file = File::create(&temp_path)?;
+    temp_file.write_all(toml_string.as_bytes())?;
+    temp_file.sync_all()?; // Ensure data is written to disk
+
+    fs::rename(&temp_path, path)?; // Atomic rename
+
+    Ok(())
 }
 
 // --- Git Repository Helper ---
@@ -659,11 +729,66 @@ async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<Ed
     }
 }
 
+// --- API Handler for Getting Config ---
+async fn get_config_handler() -> ActixResult<impl Responder> {
+    // Use web::block as loading might involve file I/O
+    let result = web::block(|| load_config()).await;
+
+    match result {
+        Ok(Ok(config)) => Ok(HttpResponse::Ok().json(config)), // Return config as JSON
+        Ok(Err(e)) => {
+            eprintln!("Error loading config for GET /config: {}", e);
+            Err(ErrorInternalServerError(format!("Failed to load configuration: {}", e)))
+        },
+        Err(e) => {
+             eprintln!("Error running blocking task for GET /config: {}", e);
+             Err(ErrorInternalServerError(format!("Internal server error loading config: {}", e)))
+        }
+    }
+}
+
+// --- API Handler for Updating Config ---
+async fn update_config_handler(new_config: web::Json<Config>) -> ActixResult<impl Responder> {
+    let config_to_save = new_config.into_inner();
+
+    // Use web::block as saving involves file I/O
+    let result = web::block(move || {
+        let _guard = CONFIG_FILE_MUTEX.lock(); // Lock before writing
+        // Determine the path to write to (use the primary path)
+        let target_path = get_primary_config_path()?;
+        // Ensure the directory exists
+        if let Some(parent) = target_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        write_config_to_path(&config_to_save, &target_path)
+    }).await;
+
+    match result {
+        Ok(Ok(())) => {
+            println!("Configuration updated successfully.");
+             Ok(HttpResponse::Ok().json(serde_json::json!({
+                 "status": "success",
+                 "message": "Configuration saved. Please restart the backend service for changes to take effect."
+             })))
+        },
+        Ok(Err(e)) => {
+            eprintln!("Error saving config for POST /config: {}", e);
+            Err(ErrorInternalServerError(format!("Failed to save configuration: {}", e)))
+        },
+        Err(e) => {
+             eprintln!("Error running blocking task for POST /config: {}", e);
+             Err(ErrorInternalServerError(format!("Internal server error saving config: {}", e)))
+        }
+    }
+}
+
 // --- Main Function (Actix Server Setup) ---
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     // Initialize logging
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    // Ensure lazy_static initialization (optional, usually happens on first use)
+    lazy_static::initialize(&CONFIG_FILE_MUTEX);
 
     println!("Loading configuration...");
     let config = match load_config() {
@@ -690,6 +815,8 @@ async fn main() -> io::Result<()> {
             // Define API routes
             .route("/todos", web::get().to(get_todos_handler))       // Route to get all todos
             .route("/edit-todo", web::post().to(edit_todo_handler))  // Route to edit a todo
+            .route("/config", web::get().to(get_config_handler))     // Route to get config
+            .route("/config", web::post().to(update_config_handler)) // Route to update config
     })
     .bind((server_address, server_port))?
     .run()
