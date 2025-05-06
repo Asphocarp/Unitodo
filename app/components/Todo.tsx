@@ -519,19 +519,21 @@ export default function Todo() {
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Esc</kbd> Exit edit mode</div>
           
           <div className="col-span-2 font-semibold mt-1">Todo actions</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Space</kbd> Toggle completion</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">a</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">i</kbd> Edit todo</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Enter</kbd> Open in VSCode</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">o</kbd> Add todo to current section</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">x</kbd> Append ignore comment</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Space</kbd> Toggle completion</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Enter</kbd> Open in VSCode</div>
           
           <div className="col-span-2 font-semibold mt-1">Global</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">?</kbd> Toggle this shortcut help</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">R</kbd> Refresh data</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">M</kbd> Toggle view mode</div>
+          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">M</kbd> Switch view mode</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">1</kbd> Show all todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">2</kbd> Show active todos</div>
           <div><kbd className="dark:bg-gray-700 dark:border-gray-600">3</kbd> Show completed todos</div>
-          <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
         </div>
       </div>
     );
