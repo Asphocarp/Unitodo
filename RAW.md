@@ -143,4 +143,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 1@ApZNj@@ApdML allow no more cursor inside a Lexical chip/node; render the `@fffff` chip as readable format, but keep the text-content behind it same as before; - but maybe make it a table col is better
 - [ ] 1@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
 - [ ] 0@ApdyT add feat: convert this entire app to a Electron app (e.g. for macos)
+- [ ] 0 fix macos Electron app of `npm run electron:package:mac`
+- [ ] 0 change current RESTful API to gRPC, using tonic (sidecar) for rust backend.
 - [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
