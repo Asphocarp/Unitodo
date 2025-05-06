@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useTodoStore, getFilteredCategories, useTodoSelectors } from '../store/todoStore';
+import useConfigStore from '../store/configStore';
 import TodoCategory from './TodoCategory';
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
@@ -11,6 +12,7 @@ import NerdFontIcon from './NerdFontIcon';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
 import { useDarkMode } from '../utils/darkMode';
 import { parseTodoContent } from '../utils';
+import Link from 'next/link';
 
 const ITEM_HEIGHT = 24;
 const CATEGORY_HEADER_HEIGHT = 30;
@@ -68,6 +70,8 @@ export default function Todo() {
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const tabListRef = useRef<FixedSizeList>(null);
   const sectionListRef = useRef<VariableSizeList>(null);
+
+  const { config: appConfig, loadConfig: loadAppConfig, initialConfigLoaded } = useConfigStore();
 
   const flattenedList = useMemo((): FlatListItem[] => {
     if (displayMode !== 'section') return [];
@@ -131,9 +135,21 @@ export default function Todo() {
 
   useEffect(() => {
     loadData();
-    
-    intervalRef.current = setInterval(loadData, 500);
-    
+    if (!initialConfigLoaded) {
+        loadAppConfig();
+    }
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    if (appConfig?.refresh_interval && appConfig.refresh_interval > 0) {
+        console.log(`Setting refresh interval to ${appConfig.refresh_interval}ms`);
+        intervalRef.current = setInterval(loadData, appConfig.refresh_interval);
+    } else {
+        console.log("Refresh interval not set or invalid, disabling auto-refresh.");
+    }
+
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       const isEditingContext = 
         e.target instanceof HTMLInputElement || 
@@ -232,7 +248,7 @@ export default function Todo() {
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded]);
 
   useEffect(() => {
     if (scrollTimeoutRef.current) {
@@ -559,12 +575,23 @@ export default function Todo() {
         
         <button
           className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
-          title="Keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
           aria-label="Show keyboard shortcuts"
           onClick={toggleKeyboardHelp}
         >
           ⌨️
         </button>
+        
+        <Link href="/config" passHref legacyBehavior>
+            <a 
+                className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
+                title="Configure Unitodo"
+                aria-label="Configure Unitodo"
+            >
+                ⚙️
+            </a>
+        </Link>
+
       </div>
       
       <div className="flex-grow min-h-0 flex flex-col">

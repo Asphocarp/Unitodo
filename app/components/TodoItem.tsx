@@ -8,6 +8,7 @@ import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
 import { useTodoStore } from '../store/todoStore';
+import useConfigStore from '../store/configStore';
 
 // Function to generate a 5-character timestamp in URL-safe base64 format
 // Starting from 25.1.1 (as specified in the README)
@@ -60,6 +61,7 @@ export default function TodoItem({
   // Use Zustand actions
   const updateTodo = useTodoStore(state => state.updateTodo);
   const navigateTodos = useTodoStore(state => state.navigateTodos);
+  const { config: appConfig } = useConfigStore();
   
   const [hovered, setHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -103,7 +105,9 @@ export default function TodoItem({
 
   const getVSCodeUrl = () => {
     if (!fullPath) return null;
-    let url = `cursor://file/${fullPath}`;
+    // Use editor URI scheme from config, fallback to default
+    const editorScheme = appConfig?.editor_uri_scheme || 'vscode://file/';
+    let url = `${editorScheme}${fullPath}`;
     if (lineNumber) {
       url += `:${lineNumber}`;
     }
