@@ -14,11 +14,15 @@ interface ConfigState {
   saveConfig: () => Promise<void>;
   setConfig: (newConfig: Config) => void; // Allow direct setting
   updateConfigField: <K extends keyof Config>(field: K, value: Config[K]) => void;
-  updateRgField: <K extends keyof Config['rg']>(field: K, value: Config['rg'][K]) => void;
+  updateRgField: <K extends keyof Omit<Config['rg'], 'pattern'>>(field: K, value: Config['rg'][K]) => void; // Exclude 'pattern'
   updateProjectField: (projectName: string, patterns: string[]) => void;
   updateProjectAppendPath: (projectName: string, path: string) => void;
   addProject: (projectName: string) => void;
   removeProject: (projectName: string) => void;
+  // Actions for todo_done_pairs
+  addTodoDonePair: (pair: [string, string]) => void;
+  updateTodoDonePair: (index: number, pair: [string, string]) => void;
+  removeTodoDonePair: (index: number) => void;
 }
 
 const useConfigStore = create<ConfigState>((set, get) => ({
@@ -34,7 +38,12 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const config = await fetchConfig();
-      set({ config, loading: false, initialConfigLoaded: true });
+      // Ensure todo_done_pairs exists, default to empty array if backend doesn't send it (should not happen with defaults)
+      const validatedConfig = {
+        ...config,
+        todo_done_pairs: config.todo_done_pairs || [],
+      };
+      set({ config: validatedConfig, loading: false, initialConfigLoaded: true });
     } catch (err: any) {
       set({ error: err.message || 'Failed to load configuration.', loading: false });
     }
@@ -135,6 +144,50 @@ const useConfigStore = create<ConfigState>((set, get) => ({
               config: { ...state.config, projects: newProjects },
           };
       });
+  },
+
+  // --- TodoDonePairs Actions ---
+  addTodoDonePair: (pair) => {
+    set((state) => {
+      if (!state.config) return {};
+      const currentPairs = state.config.todo_done_pairs || [];
+      return {
+        config: {
+          ...state.config,
+          todo_done_pairs: [...currentPairs, pair],
+        },
+      };
+    });
+  },
+
+  updateTodoDonePair: (index, pair) => {
+    set((state) => {
+      if (!state.config) return {};
+      const currentPairs = state.config.todo_done_pairs || [];
+      if (index < 0 || index >= currentPairs.length) return {}; // Invalid index
+      const newPairs = [...currentPairs];
+      newPairs[index] = pair;
+      return {
+        config: {
+          ...state.config,
+          todo_done_pairs: newPairs,
+        },
+      };
+    });
+  },
+
+  removeTodoDonePair: (index) => {
+    set((state) => {
+      if (!state.config) return {};
+      const currentPairs = state.config.todo_done_pairs || [];
+      if (index < 0 || index >= currentPairs.length) return {}; // Invalid index
+      return {
+        config: {
+          ...state.config,
+          todo_done_pairs: currentPairs.filter((_, i) => i !== index),
+        },
+      };
+    });
   }
 }));
 
