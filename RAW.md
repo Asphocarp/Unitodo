@@ -59,7 +59,6 @@ where:
 - [ ] 2 make dev run easier: no need to start both backend and frontend separately (maybe let rust be part of node.js to avoid port-conflict and be simpler)
 
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
-- [x] 2@AoVsq@@ApW8A make this repo public
 - [ ] 2 check command injection safety
 - [ ] 2@AoVtD (fancy) show dependency of todos?
 - [ ] 2 DB instead of json (200KB though)?
@@ -72,6 +71,7 @@ where:
 
 ---
 
+- [x] 2@AoVsq@@ApW8A make this repo public
 - [x] 1 do not scroll twice (when 5j too low)
 - [x] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
 - [x] 1@@ApYJ6 feat: fix hotkeys, toggle-checkbox
