@@ -14,14 +14,13 @@ use ignore::WalkBuilder;
 use globset::{Glob, GlobSetBuilder};
 use regex::Regex;
 use std::time::Instant;
-use std::sync::Mutex;
 use std::fs::OpenOptions;
 use fs2::FileExt;
-use parking_lot::Mutex as ParkingMutex;
+use parking_lot::{Mutex as ParkingMutex, RwLock};
 use lazy_static::lazy_static;
 
 // --- Configuration Structure ---
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 struct Config {
     #[serde(default)]
     rg: RgConfig,
@@ -63,18 +62,6 @@ fn default_editor_uri_scheme() -> String {
     "vscode://file/".to_string() // Default VSCode URI
 }
 
-// Add a default implementation
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            rg: RgConfig::default(),
-            projects: HashMap::new(),
-            refresh_interval: default_refresh_interval(),
-            editor_uri_scheme: default_editor_uri_scheme(),
-        }
-    }
-}
-
 // --- Configuration Loading & Saving ---
 
 // Define the primary config path (~/.config/unitodo/config.toml)
@@ -99,13 +86,13 @@ fn find_config_path() -> Option<PathBuf> {
     paths_to_check.iter().filter_map(|p| p.as_ref()).find(|p| p.exists() && p.is_file()).cloned()
 }
 
-// Global Mutex to protect config file access
+// Global Mutex to protect config *file* access during writes
 lazy_static! {
     static ref CONFIG_FILE_MUTEX: ParkingMutex<()> = ParkingMutex::new(());
 }
 
-fn load_config() -> io::Result<Config> {
-    let _guard = CONFIG_FILE_MUTEX.lock(); // Lock before accessing file system
+// Load config from file system
+fn load_config_from_file() -> io::Result<Config> {
     match find_config_path() {
         Some(path) => {
             println!("Loading config from: {}", path.display());
@@ -126,8 +113,11 @@ fn load_config() -> io::Result<Config> {
                 println!("Created config directory: {}", parent.display());
             }
 
-            // Write the default config
+            // Write the default config using the helper, acquiring the lock there
+            // We acquire lock here temporarily to ensure file creation is safe
+            let _guard = CONFIG_FILE_MUTEX.lock();
             write_config_to_path(&default_config, &primary_path)?;
+            drop(_guard); // Release lock immediately after write
             println!("Created default config at: {}", primary_path.display());
 
             Ok(default_config)
@@ -137,11 +127,19 @@ fn load_config() -> io::Result<Config> {
 
 // Helper to write config to a specific path
 fn write_config_to_path(config: &Config, path: &Path) -> io::Result<()> {
+    // This function is called internally by update_config_handler which holds the RwLock write guard
+    // and also holds the CONFIG_FILE_MUTEX lock.
     let toml_string = toml::to_string_pretty(config)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to serialize config to TOML: {}", e)))?;
 
     // Write atomically: write to temp file, then rename
     let temp_path = path.with_extension("tmp");
+
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
     let mut temp_file = File::create(&temp_path)?;
     temp_file.write_all(toml_string.as_bytes())?;
     temp_file.sync_all()?; // Ensure data is written to disk
@@ -260,9 +258,11 @@ impl TodoCategory {
 // --- Sink for grep-searcher ---
 #[derive(Debug)]
 struct TodoSink<'a> {
-    config: &'a Config, // Need config to access the pattern regex
+    // config is now borrowed for the duration of the search from the read lock
+    config: &'a Config, 
     matcher: RegexMatcher,
-    grouped_todos: Arc<Mutex<HashMap<TodoCategory, Vec<TodoItem>>>>,
+    // No change needed here, result aggregation is separate
+    grouped_todos: Arc<ParkingMutex<HashMap<TodoCategory, Vec<TodoItem>>>>, 
     current_path: PathBuf,
     debug: bool,
     start_time: Instant,
@@ -273,20 +273,18 @@ impl<'a> Sink for TodoSink<'a> {
 
     fn matched(&mut self, _searcher: &Searcher, mat: &SinkMatch<'_>) -> Result<bool, io::Error> {
         let line_bytes = mat.bytes();
-        let line_num = mat.line_number().unwrap_or(0); // Should always have line number
-
-        // Use the path stored in the sink state
+        let line_num = mat.line_number().unwrap_or(0);
         let file_path_str = self.current_path.to_string_lossy().to_string();
-        let file_path = &self.current_path; // Use the PathBuf directly for categorization
+        let file_path = &self.current_path;
 
         let line = match str::from_utf8(line_bytes) {
-            Ok(s) => s.trim_end(), // Trim trailing newline if present
-            Err(_) => {
-                if self.debug {
+             Ok(s) => s.trim_end(),
+             Err(_) => {
+                 if self.debug {
                     eprintln!("[{:.2?}] Warning: Skipping non-UTF8 line in file: {}", self.start_time.elapsed(), self.current_path.display());
-                }
-                return Ok(true); // Continue searching
-            }
+                 }
+                 return Ok(true);
+             }
         };
 
         // --- IGNORE LINE CHECK ---
@@ -294,17 +292,17 @@ impl<'a> Sink for TodoSink<'a> {
             if self.debug {
                 println!("[{:.2?}] Ignoring TODO on line {} of {} due to UNITODO_IGNORE_LINE", self.start_time.elapsed(), line_num, file_path_str);
             }
-            return Ok(true); // Skip this match, continue searching file
+            return Ok(true);
         }
         // --- END IGNORE LINE CHECK ---
 
-        // Now, use the *config* regex to extract the content *after* the pattern
+        // Use the *config* regex from the borrowed config reference (using self.config)
         let todo_pattern_re = match Regex::new(&self.config.rg.pattern) {
             Ok(re) => re,
             Err(_) => {
-                eprintln!("Error: Invalid regex pattern in config during sink processing ('{}')", self.config.rg.pattern);
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern"));
-            }
+                 eprintln!("Error: Invalid regex pattern in config during sink processing ('{}')", self.config.rg.pattern);
+                 return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern"));
+             }
         };
 
         if let Some(found_match) = todo_pattern_re.find(line) {
@@ -314,14 +312,14 @@ impl<'a> Sink for TodoSink<'a> {
             if cleaned_content.starts_with("[ ]") || cleaned_content.starts_with("[x]") || cleaned_content.starts_with("[X]") {
                 cleaned_content = cleaned_content[3..].trim_start();
             }
-             cleaned_content = cleaned_content.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace()).trim();
+            cleaned_content = cleaned_content.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace()).trim();
 
-            // Use file_path_str derived from self.current_path
             let location = format!("{}:{}", file_path_str, line_num);
 
-            // Determine category using file_path (&PathBuf)
+            // Determine category (using self.config)
             let mut category = TodoCategory::Other;
             let mut project_match = false;
+            // Use the borrowed config's projects
             for (project_name, glob_patterns) in &self.config.projects {
                 for pattern_str in glob_patterns {
                     match Pattern::new(pattern_str) {
@@ -342,7 +340,6 @@ impl<'a> Sink for TodoSink<'a> {
                 if project_match { break; }
             }
             if !project_match {
-                // Use file_path (&PathBuf) for find_git_repo_name
                 match find_git_repo_name(file_path) {
                     Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
                     Ok(None) => {} // Stays Other
@@ -360,26 +357,25 @@ impl<'a> Sink for TodoSink<'a> {
                 completed,
             };
 
-            // Lock the mutex to safely insert the item
-            let mut todos_map = self.grouped_todos.lock().unwrap();
+            // Lock the *separate* mutex for the results map
+            let mut todos_map = self.grouped_todos.lock(); // Use ParkingMutex lock
             todos_map.entry(category)
                          .or_insert_with(Vec::new)
                          .push(todo_item);
-
         }
 
         Ok(true) // Continue searching
     }
 }
 
-// --- Core todo Finding Logic ---
+// --- Core todo Finding Logic --- (Accepts &Config)
 fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
     let start_time = Instant::now();
     if debug {
         println!("[{:.2?}] Starting TODO processing using grep-searcher", start_time.elapsed()); // UNITODO_IGNORE_LINE
     }
 
-    // 1. Compile the Regex Matcher for TODO pattern // UNITODO_IGNORE_LINE
+    // 1. Compile the Regex Matcher (using config reference)
     let matcher = match RegexMatcher::new(&config.rg.pattern) {
         Ok(m) => m,
         Err(e) => {
@@ -388,7 +384,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
         }
     };
 
-    // 2. Build GlobSet for custom ignore patterns from config
+    // 2. Build GlobSet for custom ignore patterns (using config reference)
     let mut custom_ignore_builder = GlobSetBuilder::new();
     if let Some(items_to_ignore) = &config.rg.ignore {
         for pattern_str in items_to_ignore {
@@ -416,19 +412,19 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
              GlobSetBuilder::new().build().unwrap() // Build empty set on error
          }
      };
-     let custom_ignores = Arc::new(custom_ignores); // Wrap in Arc for sharing
+     let custom_ignores = Arc::new(custom_ignores);
 
 
-    // 3. Prepare the WalkBuilder (without overrides)
+    // 3. Prepare the WalkBuilder (using config reference)
     let mut builder = WalkBuilder::new(&config.rg.paths[0]);
     for path in config.rg.paths.iter().skip(1) {
         builder.add(path);
     }
-    builder.git_ignore(true);  // Standard gitignore handling
-    builder.ignore(true);  // Standard .ignore handling
-    builder.parents(true); // Standard parent ignore handling
+    builder.git_ignore(true);
+    builder.ignore(true);
+    builder.parents(true);
 
-    // Still warn about file_types being unsupported
+    // Still warn about file_types being unsupported (using config reference)
     if let Some(types) = &config.rg.file_types {
          if debug {
              eprintln!("Warning: config `rg.file_types` ('{:?}') not yet supported with internal search.", types);
@@ -437,38 +433,26 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 
     // 4. Execute the search in parallel
     let search_start = Instant::now();
-    let grouped_todos = Arc::new(Mutex::new(HashMap::<TodoCategory, Vec<TodoItem>>::new()));
+    // Use ParkingMutex for potentially better contention performance
+    let grouped_todos = Arc::new(ParkingMutex::new(HashMap::<TodoCategory, Vec<TodoItem>>::new())); 
 
     builder.build_parallel().run(|| {
         let current_matcher = matcher.clone();
         let current_todos = Arc::clone(&grouped_todos);
-        let config_ref = config;
+        // Pass the borrowed config reference into the closure
+        let config_ref = config; 
         let is_debug = debug;
         let start_time_ref = start_time;
-        let current_custom_ignores = Arc::clone(&custom_ignores); // Clone Arc<GlobSet>
+        let current_custom_ignores = Arc::clone(&custom_ignores);
 
         Box::new(move |result| {
-            let entry = match result {
-                Ok(e) => e,
-                Err(err) => {
-                    if is_debug { eprintln!("[{:.2?}] Warning: Error walking directory: {}", start_time_ref.elapsed(), err); }
-                    return ignore::WalkState::Continue;
-                }
-            };
-
-            // Check custom ignores *after* standard ignores have passed the entry
+            let entry = match result { Ok(e) => e, Err(_) => return ignore::WalkState::Continue };
             let path = entry.path();
-            if current_custom_ignores.is_match(path) {
-                 if is_debug {
-                     println!("[{:.2?}] Ignoring {} due to custom pattern match.", start_time_ref.elapsed(), path.display());
-                 }
-                 return ignore::WalkState::Continue; // Skip this entry
-            }
+            if current_custom_ignores.is_match(path) { return ignore::WalkState::Continue; }
 
-            // Proceed only if it's a file and not matched by custom ignores
             if entry.file_type().map_or(false, |ft| ft.is_file()) {
-                // Create a new searcher for each thread/task
                 let mut searcher = Searcher::new();
+                // Pass the borrowed config_ref to the sink
                 let mut sink = TodoSink {
                     config: config_ref,
                     matcher: current_matcher.clone(),
@@ -480,10 +464,10 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 
                 let result = searcher.search_path(&current_matcher, path, &mut sink);
                 if let Err(err) = result {
-                    if is_debug {
-                        eprintln!("[{:.2?}] Warning: Error searching file {}: {}", start_time_ref.elapsed(), path.display(), err);
-                    }
-                }
+                     if is_debug {
+                         eprintln!("[{:.2?}] Warning: Error searching file {}: {}", start_time_ref.elapsed(), path.display(), err);
+                     }
+                 }
             }
             ignore::WalkState::Continue
         })
@@ -499,11 +483,10 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     let mut output_categories: Vec<TodoCategoryData> = Vec::new();
     // Lock the mutex and get the final map
     let final_grouped_todos = match Arc::try_unwrap(grouped_todos) {
-        Ok(mutex) => mutex.into_inner().unwrap(), // Handle potential poisoning
+        Ok(mutex) => mutex.into_inner(), // No unwrap needed for ParkingMutex
         Err(_) => {
-             // This should ideally not happen if all threads finished, but handle defensively
-             eprintln!("Error: Could not obtain exclusive access to grouped_todos after parallel walk.");
-             return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping")); // UNITODO_IGNORE_LINE
+            eprintln!("Error: Could not obtain exclusive access to grouped_todos after parallel walk.");
+            return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping"));
         }
     };
     let mut categories: Vec<TodoCategory> = final_grouped_todos.keys().cloned().collect();
@@ -512,18 +495,13 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     categories.sort();
 
     for category_key in categories {
-        // Use final_grouped_todos directly
-        if let Some(todos) = final_grouped_todos.get(&category_key) { // Use get, no mut needed now
-            // Sort TodoItems alphabetically by content using natural sort
+        if let Some(todos) = final_grouped_todos.get(&category_key) {
             let mut sorted_todos = todos.clone();
             sorted_todos.sort_by(|a, b| natord::compare(&a.content, &b.content));
-
-
             let (name, icon) = category_key.get_details();
             let category_data = TodoCategoryData {
                 name,
                 icon,
-                // Use the sorted clone
                 todos: sorted_todos,
             };
             output_categories.push(category_data);
@@ -542,9 +520,8 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     Ok(final_data)
 }
 
-// --- Core todo Editing Logic ---
+// --- Core todo Editing Logic --- (Accepts &Config)
 fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<()> {
-    // 1. Parse location
     let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
     if location_parts.len() != 2 {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format. Expected 'path/to/file:line_number'"));
@@ -561,16 +538,10 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
          return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
     }
 
-    // 2. Open file with exclusive lock to prevent concurrent modifications
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(file_path)?;
-    
-    // Acquire an exclusive lock on the file - this will block if another process has it locked
+    // 2. Open file with exclusive lock
+    let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
     file.lock_exclusive()?;
     
-    // Ensure we unlock the file when we're done, even if there's an error
     let result = (|| {
         // Read the file content
         let mut original_content = String::new();
@@ -663,63 +634,64 @@ fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<(
     result
 }
 
-// --- API Handler ---
-async fn get_todos_handler(config: web::Data<Arc<Config>>) -> ActixResult<impl Responder> {
-    // For simplicity, always run in non-debug mode for the API
-    // Could make this configurable later if needed
-    let debug_mode = false;
+// --- API Handler - Get Todos --- (Uses Read Lock)
+async fn get_todos_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
+    let debug_mode = false; // Keep debug off for API
 
-    // Run the core logic
-    // Use web::block for potentially blocking operations like running `ag`
-    let result = web::block(move || find_and_process_todos(&config, debug_mode)).await;
+    // Clone Arc for the blocking task
+    let config_arc_clone = shared_config.clone();
+
+    let result = web::block(move || {
+        // Acquire read lock inside the blocking task
+        let config_guard = config_arc_clone.read(); 
+        // Pass a reference from the guard to the processing function
+        find_and_process_todos(&config_guard, debug_mode) 
+    }).await;
 
     match result {
-        Ok(output_data_result) => match output_data_result {
-             Ok(data) => Ok(web::Json(data)),
-             Err(e) => {
-                 eprintln!("Error processing TODOs: {}", e); // UNITODO_IGNORE_LINE
-                 // Convert the io::Error into an Actix error
-                 Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e))) // UNITODO_IGNORE_LINE
-             }
+        // Correctly handle nested Result from web::block
+        Ok(Ok(data)) => Ok(web::Json(data)),
+        Ok(Err(e)) => {
+            eprintln!("Error processing TODOs: {}", e);
+            Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))
         },
         Err(e) => {
-             eprintln!("Error running blocking task: {}", e);
-             Err(ErrorInternalServerError(format!("Internal server error: {}", e)))
+            eprintln!("Error running blocking task for get_todos: {}", e);
+            Err(ErrorInternalServerError(format!("Internal server error: {}", e)))
         }
     }
 }
 
-// --- API Handler for Editing todos ---
-async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<EditTodoPayload>) -> ActixResult<impl Responder> {
-    let config_clone = config.clone();
+// --- API Handler - Edit Todo --- (Uses Read Lock)
+async fn edit_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<EditTodoPayload>) -> ActixResult<impl Responder> {
+    // Clone Arc for the blocking task
+    let config_arc_clone = shared_config.clone(); 
     let payload_inner = payload.into_inner(); // Move payload into the closure
 
-    // Use web::block for file system operations
-    let result = web::block(move || edit_todo_in_file(&config_clone, &payload_inner)).await;
+    let result = web::block(move || {
+        // Acquire read lock inside the blocking task
+        let config_guard = config_arc_clone.read(); 
+        // Pass reference from guard and the payload
+        edit_todo_in_file(&config_guard, &payload_inner) 
+    }).await;
 
     match result {
+        // Correctly handle nested Result
         Ok(Ok(())) => Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))),
         Ok(Err(e)) => {
-            eprintln!("Error editing TODO in file: {}", e); // UNITODO_IGNORE_LINE
-            // Map specific IO errors to HTTP status codes
+            eprintln!("Error editing TODO in file: {}", e);
             let status_code = match e.kind() {
-                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
-                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
-                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
-                io::ErrorKind::Other if e.to_string().contains("Content has been modified") => {
-                    // Special handling for content modification conflicts
-                    actix_web::http::StatusCode::CONFLICT // 409 Conflict
-                },
-                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
+                 io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
+                 io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
+                 io::ErrorKind::Other if e.to_string().contains("Content has been modified") => actix_web::http::StatusCode::CONFLICT,
+                 _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             };
-            
-            // Create a more detailed error response
             let error_response = serde_json::json!({
-                "status": "error",
-                "error": e.to_string(),
-                "code": status_code.as_u16()
+                 "status": "error",
+                 "error": e.to_string(),
+                 "code": status_code.as_u16()
             });
-            
             Ok(HttpResponse::build(status_code).json(error_response))
         },
         Err(e) => {
@@ -729,96 +701,96 @@ async fn edit_todo_handler(config: web::Data<Arc<Config>>, payload: web::Json<Ed
     }
 }
 
-// --- API Handler for Getting Config ---
-async fn get_config_handler() -> ActixResult<impl Responder> {
-    // Use web::block as loading might involve file I/O
-    let result = web::block(|| load_config()).await;
-
-    match result {
-        Ok(Ok(config)) => Ok(HttpResponse::Ok().json(config)), // Return config as JSON
-        Ok(Err(e)) => {
-            eprintln!("Error loading config for GET /config: {}", e);
-            Err(ErrorInternalServerError(format!("Failed to load configuration: {}", e)))
-        },
-        Err(e) => {
-             eprintln!("Error running blocking task for GET /config: {}", e);
-             Err(ErrorInternalServerError(format!("Internal server error loading config: {}", e)))
-        }
-    }
+// --- API Handler - Get Config --- (Uses Read Lock)
+async fn get_config_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
+    // Acquire read lock
+    let config_guard = shared_config.read();
+    // Clone the data from the guard to return
+    let config_data = config_guard.clone(); 
+    Ok(HttpResponse::Ok().json(config_data))
 }
 
-// --- API Handler for Updating Config ---
-async fn update_config_handler(new_config: web::Json<Config>) -> ActixResult<impl Responder> {
-    let config_to_save = new_config.into_inner();
+// --- API Handler - Update Config --- (Uses Write Lock)
+async fn update_config_handler(shared_config: web::Data<Arc<RwLock<Config>>>, new_config_payload: web::Json<Config>) -> ActixResult<impl Responder> {
+    let config_to_save = new_config_payload.into_inner();
+    let config_arc_clone = shared_config.clone(); // Clone Arc for blocking task
 
     // Use web::block as saving involves file I/O
-    let result = web::block(move || {
-        let _guard = CONFIG_FILE_MUTEX.lock(); // Lock before writing
+    let result = web::block(move || -> Result<(), io::Error> { // Explicitly define closure return type
+        // Lock the *file access* mutex first to prevent race conditions during save
+        let _file_guard = CONFIG_FILE_MUTEX.lock();
+        
+        // Now acquire the write lock for the in-memory state
+        let mut config_guard = config_arc_clone.write();
+        
         // Determine the path to write to (use the primary path)
-        let target_path = get_primary_config_path()?;
-        // Ensure the directory exists
-        if let Some(parent) = target_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        write_config_to_path(&config_to_save, &target_path)
+        let target_path = get_primary_config_path()?; // Returns io::Error
+        
+        // Write to file using the data we intend to put into memory
+        write_config_to_path(&config_to_save, &target_path)?; // Returns io::Error
+        
+        // If file write succeeds, update the in-memory config state
+        *config_guard = config_to_save; 
+        
+        Ok(()) // Closure returns Ok(()) on success
     }).await;
 
     match result {
-        Ok(Ok(())) => {
-            println!("Configuration updated successfully.");
+        // Handle Result<Result<(), io::Error>, BlockingError<io::Error>>
+        Ok(Ok(())) => { // Blocking task succeeded, and inner operation succeeded
+            println!("Configuration updated successfully (in-memory and file).");
              Ok(HttpResponse::Ok().json(serde_json::json!({
                  "status": "success",
-                 "message": "Configuration saved. Please restart the backend service for changes to take effect."
+                 "message": "Configuration saved successfully."
              })))
         },
-        Ok(Err(e)) => {
-            eprintln!("Error saving config for POST /config: {}", e);
+        Ok(Err(e)) => { // Blocking task succeeded, but inner operation failed (io::Error)
+            eprintln!("Error saving config (file I/O or path error): {}", e);
             Err(ErrorInternalServerError(format!("Failed to save configuration: {}", e)))
         },
-        Err(e) => {
+        Err(e) => { // Blocking task itself failed (BlockingError)
              eprintln!("Error running blocking task for POST /config: {}", e);
+              // Distinguish between Cancelled and Panic if needed, otherwise treat as internal error
              Err(ErrorInternalServerError(format!("Internal server error saving config: {}", e)))
         }
     }
 }
 
+
 // --- Main Function (Actix Server Setup) ---
 #[actix_web::main]
-async fn main() -> io::Result<()> {
+async fn main() {
     // Initialize logging
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    // Ensure lazy_static initialization (optional, usually happens on first use)
     lazy_static::initialize(&CONFIG_FILE_MUTEX);
 
-    println!("Loading configuration...");
-    let config = match load_config() {
-        Ok(cfg) => Arc::new(cfg), // Wrap config in Arc for sharing across threads
-        Err(e) => {
-            eprintln!("Fatal: Failed to load configuration: {}", e);
-            return Err(e);
-        }
-    };
-    println!("Configuration loaded successfully.");
-    //println!("Config loaded: {:?}", *config); // Debug print if needed
+    println!("Loading initial configuration...");
+    let initial_config = load_config_from_file()
+        .expect("Fatal: Failed to load initial configuration"); 
+    
+    println!("Initial configuration loaded successfully.");
+
+    let shared_config_state: Arc<RwLock<Config>> = Arc::new(RwLock::new(initial_config)); 
 
     let server_address = "127.0.0.1";
-    let server_port = 8080; // Example port, make configurable later if needed
+    let server_port = 8080;
 
     println!("Starting server at http://{}:{}", server_address, server_port);
 
     HttpServer::new(move || {
+        // Explicitly type the app_data being created
+        let app_data: web::Data<Arc<RwLock<Config>>> = web::Data::new(shared_config_state.clone());
         App::new()
-            // Enable logger middleware
             .wrap(middleware::Logger::default())
-            // Share config with handlers
-            .app_data(web::Data::new(config.clone()))
-            // Define API routes
-            .route("/todos", web::get().to(get_todos_handler))       // Route to get all todos
-            .route("/edit-todo", web::post().to(edit_todo_handler))  // Route to edit a todo
-            .route("/config", web::get().to(get_config_handler))     // Route to get config
-            .route("/config", web::post().to(update_config_handler)) // Route to update config
+            .app_data(app_data) // Pass the explicitly typed data
+            .route("/todos", web::get().to(get_todos_handler))
+            .route("/edit-todo", web::post().to(edit_todo_handler))
+            .route("/config", web::get().to(get_config_handler))
+            .route("/config", web::post().to(update_config_handler))
     })
-    .bind((server_address, server_port))?
+    .bind((server_address, server_port))
+    .expect("Failed to bind server")
     .run()
     .await
+    .expect("Server failed to run")
 }

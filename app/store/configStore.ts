@@ -46,12 +46,11 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     set({ isSaving: true, error: null, saveMessage: null });
     try {
       const response = await updateConfig(currentConfig);
-      set({ 
-        isSaving: false, 
-        saveMessage: response.message || 'Configuration saved successfully. Restart backend required.',
-        config: currentConfig // Keep the current state
-      });
-      // Clear message after a delay
+      set((state) => ({
+        isSaving: false,
+        saveMessage: response.message || 'Configuration saved successfully.',
+        config: state.config, 
+      }));
       setTimeout(() => set({ saveMessage: null }), 5000);
     } catch (err: any) {
       set({ error: err.message || 'Failed to save configuration.', isSaving: false });
@@ -86,7 +85,8 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   updateProjectField: (projectName, patterns) => {
       set((state) => {
           if (!state.config) return {};
-          const newProjects = { ...state.config.projects, [projectName]: patterns };
+          const currentProjects = state.config.projects || {};
+          const newProjects = { ...currentProjects, [projectName]: patterns };
           return {
               config: { ...state.config, projects: newProjects },
           };
@@ -95,8 +95,10 @@ const useConfigStore = create<ConfigState>((set, get) => ({
 
   addProject: (projectName) => {
       set((state) => {
-          if (!state.config || state.config.projects[projectName]) return {}; // Avoid duplicates
-          const newProjects = { ...state.config.projects, [projectName]: [] }; // Add with empty patterns
+          if (!state.config) return {};
+          const currentProjects = state.config.projects || {};
+          if (currentProjects[projectName]) return {}; 
+          const newProjects = { ...currentProjects, [projectName]: [] };
           return {
               config: { ...state.config, projects: newProjects },
           };
@@ -106,7 +108,8 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   removeProject: (projectName) => {
       set((state) => {
           if (!state.config) return {};
-          const newProjects = { ...state.config.projects };
+          const currentProjects = state.config.projects || {};
+          const newProjects = { ...currentProjects };
           delete newProjects[projectName];
           return {
               config: { ...state.config, projects: newProjects },
