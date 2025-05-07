@@ -298,7 +298,7 @@ export default function TodoItem({
     }
   };
   
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (isEditing) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -327,7 +327,42 @@ export default function TodoItem({
           if (todo.location) {
             const url = getVSCodeUrl();
             if (url) {
-              window.open(url, '_blank');
+              try {
+                console.log('[TodoItem] Attempting to open:', url);
+                
+                // Blur the currently active element before opening external URI
+                if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === 'function') {
+                  (document.activeElement as HTMLElement).blur();
+                }
+
+                // For VSCode/Cursor URIs, use our special handler that won't popup a window
+                if ((url.startsWith('vscode://') || url.startsWith('cursor://')) && typeof window.electronApi?.openVSCodeURI === 'function') {
+                  const result = await window.electronApi.openVSCodeURI(url);
+                  if (result.success) {
+                    console.log('[TodoItem] Successfully opened VS Code URI');
+                  } else {
+                    console.error('[TodoItem] Failed to open VS Code URI:', result.error);
+                    // Fall back to regular open if it fails
+                    window.open(url, '_blank');
+                  }
+                } else {
+                  // Use the regular openExternal for non VS Code URIs
+                  if (window.electron && typeof window.electron.openExternal === 'function') {
+                    await window.electron.openExternal(url);
+                    console.log('[TodoItem] Successfully opened URL with openExternal');
+                  } else {
+                    window.open(url, '_blank');
+                  }
+                }
+              } catch (error) {
+                console.error('[TodoItem] Error opening URL:', error);
+                // Last resort fallback
+                try {
+                  window.open(url, '_blank');
+                } catch (secondError) {
+                  console.error('[TodoItem] Fallback also failed:', secondError);
+                }
+              }
             }
           }
           break;

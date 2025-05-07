@@ -6,6 +6,7 @@ interface ElectronAPI {
   sendMessage: (channel: string, data: any) => void;
   on: (channel: string, func: (...args: any[]) => void) => void;
   removeListener: (channel: string, func: (...args: any[]) => void) => void;
+  openExternal: (url: string) => Promise<void>;
   
   minimizeWindow: () => void;
   maximizeWindow: () => void;
@@ -21,5 +22,6 @@ interface Window {
     markDone: (payload: any) => Promise<any>;
     getConfig: () => Promise<any>;
     updateConfig: (config: any) => Promise<any>;
+    openVSCodeURI: (uri: string) => Promise<{success: boolean; error?: string}>;
   };
 } 

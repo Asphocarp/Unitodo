@@ -420,6 +420,25 @@ app.whenReady().then(() => {
   ipcMain.handle('get-config', handleGetConfig);
   ipcMain.handle('update-config', handleUpdateConfig);
   
+  // Add this new handler for VS Code URI opening
+  ipcMain.handle('open-vscode-uri', async (event, uri) => {
+    console.log(`[Main] Opening VS Code URI: ${uri}`);
+    
+    // Verify this is a vscode:// URI for safety
+    if (uri.startsWith('cursor://')) {
+      try {
+        // Use shell.openExternal with the activate option set to true
+        await shell.openExternal(uri, { activate: true });
+        return { success: true };
+      } catch (error) {
+        console.error('[Main] Error opening VS Code URI:', error);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Not a VS Code URI' };
+    }
+  });
+  
   // Create window after IPC handlers are set up, and after backend start attempt
   createWindow(); 
 });
