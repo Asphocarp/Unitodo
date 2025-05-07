@@ -9,6 +9,12 @@ const GRPC_BACKEND_ADDRESS = 'localhost:50051';
 // Removed redundant helper functions as direct mapping will be used with proper types
 
 export async function GET() {
+  // Prevent gRPC calls during Next.js build phase
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.log('[API Route GET /api/todos] Build phase, skipping gRPC call.');
+    return NextResponse.json({ categories: [] }); // Return empty data or appropriate default
+  }
+
   const client = new TodoServiceClient(
     GRPC_BACKEND_ADDRESS,
     grpc.credentials.createInsecure()

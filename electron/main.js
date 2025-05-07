@@ -31,12 +31,18 @@ const {
 // Keep a global reference of objects to prevent garbage collection
 let mainWindow;
 let rustBackendProcess;
+let grpcPort = 0; // Default to 0, indicating port not yet known
 
-const GRPC_BACKEND_ADDRESS = 'localhost:50051';
+// const GRPC_BACKEND_ADDRESS = 'localhost:50051'; // Will be dynamic
 let todoClient;
 let configClient;
 
 function initializeGrpcClients() {
+    if (grpcPort === 0) {
+        console.error("[Electron Main] initializeGrpcClients called before gRPC port is known!");
+        return; // Or throw an error
+    }
+    const GRPC_BACKEND_ADDRESS = `localhost:${grpcPort}`;
     if (!todoClient) {
         todoClient = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
     }
@@ -174,7 +180,14 @@ function startRustBackend() {
 
   if (rustBackendProcess) { // Only set up listeners if spawn attempt was made / successful
     rustBackendProcess.stdout.on('data', (data) => {
-      console.log(`Rust backend stdout: ${data}`);
+      const output = data.toString();
+      // console.log(`Rust backend stdout: ${output}`); // Log raw output if needed for debugging
+      
+      // General stdout logging, but port detection is primarily handled in the startup promise logic
+      // This is more for ongoing logs after startup.
+      if (!output.startsWith("UNITODO_GRPC_PORT=") && !output.includes("Unitodo gRPC server listening")) {
+          console.log(`Rust backend stdout: ${output.trim()}`);
+      }
     });
     rustBackendProcess.stderr.on('data', (data) => {
       console.error(`Rust backend stderr: ${data}`);
@@ -189,57 +202,114 @@ function startRustBackend() {
 
   return new Promise((resolve, reject) => {
     let resolved = false;
-    const resolveOnce = () => {
-        if (!resolved) {
+    let portParsed = false;
+    let listeningSignalReceived = false;
+    let stdoutListener = (data) => {}; // Declare for potential removal
+
+    const attemptResolve = () => {
+        if (!resolved && portParsed && listeningSignalReceived) {
             resolved = true;
-            initializeGrpcClients(); // Initialize clients once backend is presumed started
+            if (typeof readyTimeout !== 'undefined') clearTimeout(readyTimeout);
+            if (typeof cargoReadyTimeout !== 'undefined') clearTimeout(cargoReadyTimeout);
+            if (rustBackendProcess && typeof stdoutListener === 'function') {
+                rustBackendProcess.stdout.removeListener('data', stdoutListener);
+            }
+            console.log(`[Electron Main] Backend ready. Port: ${grpcPort}. Initializing gRPC clients.`);
+            initializeGrpcClients();
             resolve();
         }
     };
-    const rejectOnce = (err) => {
+
+    const rejectStartup = (errMessage) => {
         if (!resolved) {
-            resolved = true; // Prevent calling resolve after reject
-            reject(err);
+            resolved = true;
+            if (typeof readyTimeout !== 'undefined') clearTimeout(readyTimeout);
+            if (typeof cargoReadyTimeout !== 'undefined') clearTimeout(cargoReadyTimeout);
+            console.error(`[Electron Main] Rust backend startup failed: ${errMessage}`);
+            if (rustBackendProcess && typeof stdoutListener === 'function') {
+                 rustBackendProcess.stdout.removeListener('data', stdoutListener);
+            }
+            reject(new Error(errMessage));
         }
     };
 
-    if (rustBackendProcess && rustBackendProcess.pid) {
-        console.log('[Electron Main] Rust backend process spawned, waiting for it to initialize...');
-        // Wait for a specific message from stdout or a timeout
-        const readyTimeout = setTimeout(() => {
-            console.warn('[Electron Main] Timeout waiting for Rust backend ready message. Assuming started.');
-            resolveOnce();
-        }, 5000); // Increased timeout
+    // Define stdoutListener function here to be accessible for both scenarios
+    stdoutListener = (data) => {
+        if (resolved) return;
+        const output = data.toString();
+        // Log all startup output only once for a given chunk to avoid spam if both conditions match
+        let loggedThisChunk = false;
+        const logOnce = (msg) => { if(!loggedThisChunk) { console.log(msg); loggedThisChunk = true; }};
 
-        rustBackendProcess.stdout.on('data', function listener(data) {
-            if (data.toString().includes('Unitodo gRPC server listening')) {
-                console.log('[Electron Main] Rust backend reported gRPC server listening.');
-                clearTimeout(readyTimeout);
-                if (rustBackendProcess) { // check again in case it closed quickly
-                    rustBackendProcess.stdout.removeListener('data', listener);
+        if (!portParsed) {
+            const portMatch = output.match(/UNITODO_GRPC_PORT=(\d+)/);
+            if (portMatch && portMatch[1]) {
+                const parsedPort = parseInt(portMatch[1], 10);
+                if (parsedPort > 0) {
+                    logOnce(`[Startup stdout]: ${output.trim()}`);
+                    console.log(`[Electron Main] Rust backend reported gRPC port: ${parsedPort}`);
+                    grpcPort = parsedPort;
+                    portParsed = true;
+                } else {
+                    console.warn(`[Electron Main] Parsed invalid port: ${parsedPort} from output: ${output.trim()}`);
                 }
-                resolveOnce();
             }
-        });
-        rustBackendProcess.on('error', (err) => { // Catch spawn errors propagated to the process object
-            clearTimeout(readyTimeout);
-            console.error('[Electron Main] Rust backend process object emitted error during startup:', err);
-            rejectOnce(err);
-        });
-        rustBackendProcess.on('close', (code) => { // Handle if backend closes before ready
-            if (!resolved) { // Only act if we haven't already resolved/rejected
-                clearTimeout(readyTimeout);
-                console.error(`[Electron Main] Rust backend closed with code ${code} before gRPC was ready.`);
-                rejectOnce(new Error(`Rust backend closed prematurely with code ${code}`));
-            }
-        });
+        }
 
-    } else if (rustBackendProcess && isDev) {
-        console.log('[Electron Main] Rust backend (cargo run) process object created, waiting...');
-        setTimeout(resolveOnce, 7000); // Longer for cargo
-    } else {
-        console.error('[Electron Main] Rust backend process not found or failed to start. Cannot initialize gRPC clients.');
-        rejectOnce(new Error('Rust backend process failed to start.'));
+        if (output.includes('Unitodo gRPC server listening')) {
+            logOnce(`[Startup stdout]: ${output.trim()}`);
+            console.log('[Electron Main] Rust backend reported gRPC server listening.');
+            listeningSignalReceived = true;
+        }
+        
+        if (!loggedThisChunk && output.trim().length > 0) { // Log if not already logged by specific parsers
+            console.log(`[Startup stdout]: ${output.trim()}`);
+        }
+
+        attemptResolve();
+    };
+
+    // Default timeout, will be cleared and replaced if cargo mode is used
+    let readyTimeout = setTimeout(() => {
+        if (resolved) return;
+        if (portParsed) {
+            console.warn('[Electron Main - Direct Spawn Timeout] Port parsed, assuming listening.');
+            listeningSignalReceived = true; 
+            attemptResolve();
+        } else {
+            rejectStartup('Timeout (direct spawn): Rust backend did not report gRPC port and listening signal.');
+        }
+    }, 10000); // 10s for direct spawn
+
+    let cargoReadyTimeout; // Declare cargo specific timeout
+
+    if (rustBackendProcess && rustBackendProcess.pid) { // Successfully spawned directly
+        console.log('[Electron Main] Rust backend process (direct) spawned, waiting for signals...');
+        rustBackendProcess.stdout.on('data', stdoutListener);
+        rustBackendProcess.on('error', (err) => rejectStartup(`Direct spawn: Rust backend process error: ${err.message}`));
+        rustBackendProcess.on('close', (code) => rejectStartup(`Direct spawn: Rust backend closed (code ${code}).`));
+
+    } else if (rustBackendProcess && isDev) { // Cargo run fallback
+        console.log('[Electron Main] Rust backend (cargo run) process active, waiting for signals...');
+        clearTimeout(readyTimeout); // Clear the default timeout
+
+        rustBackendProcess.stdout.on('data', stdoutListener);
+        rustBackendProcess.on('error', (err) => rejectStartup(`Cargo run: Rust backend process error: ${err.message}`));
+        rustBackendProcess.on('close', (code) => rejectStartup(`Cargo run: Rust backend closed (code ${code}).`));
+
+        cargoReadyTimeout = setTimeout(() => {
+            if (resolved) return;
+            if (portParsed) {
+                console.warn('[Electron Main - Cargo Mode Timeout] Port parsed. Assuming listening.');
+                listeningSignalReceived = true; 
+                attemptResolve();
+            } else {
+                rejectStartup('[Electron Main - Cargo Mode Timeout] Rust backend (cargo run) did not report gRPC port.');
+            }
+        }, 20000); // 20s for cargo run
+
+    } else { // No process was started (both direct and cargo failed or weren't attempted according to prior logic)
+        reject(new Error('Rust backend process could not be initiated (no process found).'));
     }
   });
 }
@@ -248,6 +318,7 @@ function startRustBackend() {
 async function createWindow() {
   try {
     await startRustBackend();
+    console.log("[Electron Main] Backend start process completed. Proceeding with window creation.");
   } catch (error) {
     console.error("[Electron Main] Critical error starting backend. Aborting window creation.", error);
     app.quit(); // Quit if backend fails to start and is critical
