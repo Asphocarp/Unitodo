@@ -817,7 +817,7 @@ fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &s
 
     let timestamp_str = generate_short_timestamp();
     let sanitized_content = content.replace('\n', " ").trim().to_string();
-    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); }
+    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
 
     let priority_marker = "- [ ]";
     let effective_priority_segment: String;
