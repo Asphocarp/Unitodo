@@ -1,52 +1,83 @@
 import { NextResponse } from 'next/server';
+import * as grpc from '@grpc/grpc-js';
+import { TodoServiceClient } from '../../../grpc-generated/unitodo_grpc_pb'; // Adjusted path for nesting
+import { EditTodoRequest, EditTodoResponse } from '../../../grpc-generated/unitodo_pb'; // Adjusted path
 
-// Define the expected structure of the request body from the frontend
-interface EditTodoRequestBody {
+const GRPC_BACKEND_ADDRESS = 'localhost:50051';
+
+interface EditTodoApiRequestBody {
   location: string;
   new_content: string;
+  original_content: string; // Added based on gRPC definition and frontend logic
   completed: boolean;
 }
 
 export async function POST(request: Request) {
+  const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {
-    const payload: EditTodoRequestBody = await request.json();
+    const payload: EditTodoApiRequestBody = await request.json();
 
-    // Forward the request to the Rust backend's /edit-todo endpoint
-    const rustBackendUrl = 'http://127.0.0.1:8080/edit-todo';
-    console.log(`Forwarding edit request to: ${rustBackendUrl}`);
+    const grpcRequest = new EditTodoRequest();
+    grpcRequest.setLocation(payload.location);
+    grpcRequest.setNewContent(payload.new_content);
+    grpcRequest.setOriginalContent(payload.original_content);
+    grpcRequest.setCompleted(payload.completed);
 
-    const response = await fetch(rustBackendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store', // Ensure the request is always sent
+    return new Promise<NextResponse>((resolve) => {
+      client.editTodo(grpcRequest, (error: grpc.ServiceError | null, response: EditTodoResponse | null) => {
+        if (error) {
+          console.error('gRPC Error editing todo:', error);
+          resolve(NextResponse.json(
+            { error: 'Failed to edit todo via backend (gRPC)', details: error.message },
+            { status: grpcStatusToHttpStatus(error.code) }
+          ));
+        } else if (response) {
+          console.log("Edit todo request successful via gRPC.");
+          resolve(NextResponse.json({ status: response.getStatus(), message: response.getMessage() }));
+        } else {
+          resolve(NextResponse.json(
+            { error: 'Failed to edit todo: Empty response from backend', details: 'No status returned' },
+            { status: 500 }
+          ));
+        }
+        client.close();
+      });
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Rust backend edit error: ${response.status} ${response.statusText}`, errorText);
-      // Forward the backend error status and message if possible
+  } catch (error: any) {
+    console.error('Error processing POST /edit-todo request:', error);
+    if (error instanceof SyntaxError) {
       return NextResponse.json(
-        { error: 'Failed to edit todo via backend service', details: errorText },
-        { status: response.status }
+        { error: 'Invalid request body. Expected valid JSON for edit.', details: error.message },
+        { status: 400 }
       );
     }
-
-    // Parse the success response from the Rust backend
-    const data = await response.json();
-    console.log("Edit request successful.");
-
-    // Return the success response to the frontend
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('Error processing edit request:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error processing edit request';
     return NextResponse.json(
-      { error: 'Internal server error processing edit request', details: errorMessage },
+      { error: 'Internal server error processing edit todo request', details: error.message },
       { status: 500 }
     );
   }
+}
+
+// Ensure grpcStatusToHttpStatus is available (e.g. from a shared utils file or define here)
+function grpcStatusToHttpStatus(grpcStatus: grpc.status | undefined): number {
+    switch (grpcStatus) {
+        case grpc.status.OK: return 200;
+        case grpc.status.CANCELLED: return 499;
+        case grpc.status.UNKNOWN: return 500;
+        case grpc.status.INVALID_ARGUMENT: return 400;
+        case grpc.status.DEADLINE_EXCEEDED: return 504;
+        case grpc.status.NOT_FOUND: return 404;
+        case grpc.status.ALREADY_EXISTS: return 409;
+        case grpc.status.PERMISSION_DENIED: return 403;
+        case grpc.status.RESOURCE_EXHAUSTED: return 429;
+        case grpc.status.FAILED_PRECONDITION: return 400;
+        case grpc.status.ABORTED: return 409; // Important for edit conflicts
+        case grpc.status.OUT_OF_RANGE: return 400;
+        case grpc.status.UNIMPLEMENTED: return 501;
+        case grpc.status.INTERNAL: return 500;
+        case grpc.status.UNAVAILABLE: return 503;
+        case grpc.status.DATA_LOSS: return 500;
+        case grpc.status.UNAUTHENTICATED: return 401;
+        default: return 500;
+    }
 } 

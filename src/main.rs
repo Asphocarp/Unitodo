@@ -1,4 +1,3 @@
-use actix_web::{web, App, HttpServer, Responder, Result as ActixResult, middleware, error::ErrorInternalServerError, HttpResponse, error::ErrorBadRequest, error::ErrorNotFound};
 use std::sync::Arc;
 use std::str;
 use std::fs::{self, File};
@@ -6,7 +5,6 @@ use std::io::{self, Read, Write, Seek, SeekFrom, BufReader};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use glob::Pattern;
 use grep_searcher::{Searcher, Sink, SinkMatch};
 use grep_regex::RegexMatcher;
@@ -18,6 +16,95 @@ use std::fs::OpenOptions;
 use fs2::FileExt;
 use parking_lot::{Mutex as ParkingMutex, RwLock};
 use lazy_static::lazy_static;
+
+// Tonic imports
+use tonic::{transport::Server, Request, Response, Status};
+
+// Protobuf generated code module
+// The actual name depends on your .proto package name and build script output.
+// Assuming 'unitodo' package name in .proto and it generates unitodo.rs in OUT_DIR
+pub mod unitodo_proto {
+    tonic::include_proto!("unitodo"); // Matches the package name in unitodo.proto
+}
+
+// Use generated types
+use unitodo_proto::{
+    todo_service_server::{TodoService, TodoServiceServer},
+    config_service_server::{ConfigService, ConfigServiceServer},
+    GetTodosRequest, GetTodosResponse,
+    EditTodoRequest, EditTodoResponse,
+    AddTodoRequest, AddTodoResponse,
+    MarkDoneRequest, MarkDoneResponse,
+    GetConfigRequest, GetConfigResponse,
+    UpdateConfigRequest, UpdateConfigResponse,
+    TodoItem as ProtoTodoItem, // Alias to avoid conflict with internal TodoItem
+    TodoCategory as ProtoTodoCategory, // Alias
+    ConfigMessage as ProtoConfigMessage,
+    RgConfigMessage as ProtoRgConfigMessage,
+    ProjectConfigMessage as ProtoProjectConfigMessage,
+    TodoDonePair as ProtoTodoDonePair,
+};
+
+// --- Mapping functions ---
+fn to_proto_todo_item(item: &TodoItem) -> ProtoTodoItem {
+    ProtoTodoItem {
+        content: item.content.clone(),
+        location: item.location.clone(),
+        completed: item.completed,
+    }
+}
+
+fn to_proto_todo_category(category_data: &TodoCategoryData) -> ProtoTodoCategory {
+    ProtoTodoCategory {
+        name: category_data.name.clone(),
+        icon: category_data.icon.clone(),
+        todos: category_data.todos.iter().map(to_proto_todo_item).collect(),
+    }
+}
+
+fn from_proto_config(proto_config: ProtoConfigMessage) -> Config {
+    Config {
+        rg: RgConfig {
+            paths: proto_config.rg.as_ref().map_or_else(Vec::new, |rg| rg.paths.clone()),
+            ignore: proto_config.rg.as_ref().map_or_else(|| None, |rg| if rg.ignore.is_empty() { None } else { Some(rg.ignore.clone()) }),
+            file_types: proto_config.rg.as_ref().map_or_else(|| None, |rg| if rg.file_types.is_empty() { None } else { Some(rg.file_types.clone()) }),
+        },
+        projects: proto_config.projects.into_iter().map(|(k, v)| {
+            (k, ProjectConfig {
+                patterns: v.patterns.clone(),
+                append_file_path: v.append_file_path.clone(),
+            })
+        }).collect(),
+        refresh_interval: proto_config.refresh_interval,
+        editor_uri_scheme: proto_config.editor_uri_scheme,
+        todo_done_pairs: proto_config.todo_done_pairs.into_iter().map(|p| vec![p.todo_marker, p.done_marker]).collect(),
+        default_append_basename: proto_config.default_append_basename,
+    }
+}
+
+fn to_proto_config(config: &Config) -> ProtoConfigMessage {
+    ProtoConfigMessage {
+        rg: Some(ProtoRgConfigMessage {
+            paths: config.rg.paths.clone(),
+            ignore: config.rg.ignore.clone().unwrap_or_default(),
+            file_types: config.rg.file_types.clone().unwrap_or_default(),
+        }),
+        projects: config.projects.iter().map(|(k, v)| {
+            (k.clone(), ProtoProjectConfigMessage {
+                patterns: v.patterns.clone(),
+                append_file_path: v.append_file_path.clone(),
+            })
+        }).collect(),
+        refresh_interval: config.refresh_interval,
+        editor_uri_scheme: config.editor_uri_scheme.clone(),
+        todo_done_pairs: config.todo_done_pairs.iter().filter_map(|p| {
+            if p.len() == 2 {
+                Some(ProtoTodoDonePair { todo_marker: p[0].clone(), done_marker: p[1].clone() })
+            } else { None }
+        }).collect(),
+        default_append_basename: config.default_append_basename.clone(),
+    }
+}
 
 // --- Helper Functions ---
 fn get_primary_config_path() -> io::Result<PathBuf> {
@@ -103,10 +190,8 @@ fn extract_cleaned_content_from_line(line: &str, effective_rg_pattern: &str) -> 
     }
 }
 
-// --- End Helper Functions ---
-
 // --- Configuration Structure ---
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 struct Config {
     #[serde(default)]
     rg: RgConfig,
@@ -141,7 +226,7 @@ impl Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 struct RgConfig {
     // `pattern` field is removed
     #[serde(default = "default_search_paths")]
@@ -152,7 +237,7 @@ struct RgConfig {
     file_types: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 struct ProjectConfig {
     patterns: Vec<String>,
     append_file_path: Option<String>,
@@ -232,7 +317,7 @@ fn load_config_from_file() -> io::Result<Config> {
             // Write the default config using the helper, acquiring the lock there
             // We acquire lock here temporarily to ensure file creation is safe
             let _guard = CONFIG_FILE_MUTEX.lock();
-            write_config_to_path(&default_config, &primary_path)?;
+            write_config_to_path_internal(&default_config, &primary_path)?;
             drop(_guard); // Release lock immediately after write
             println!("Created default config at: {}", primary_path.display());
 
@@ -242,9 +327,7 @@ fn load_config_from_file() -> io::Result<Config> {
 }
 
 // Helper to write config to a specific path
-fn write_config_to_path(config: &Config, path: &Path) -> io::Result<()> {
-    // This function is called internally by update_config_handler which holds the RwLock write guard
-    // and also holds the CONFIG_FILE_MUTEX lock.
+fn write_config_to_path_internal(config: &Config, path: &Path) -> io::Result<()> {
     let toml_string = toml::to_string_pretty(config)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to serialize config to TOML: {}", e)))?;
 
@@ -310,14 +393,14 @@ fn find_git_repo_name(start_path: &Path) -> io::Result<Option<String>> {
 }
 
 // --- todo Data Structures for JSON Output ---
-#[derive(Serialize, Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 struct TodoItem {
     content: String,
     location: String,
     completed: bool, // Added for consistency, though not currently parsed
 }
 
-#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct TodoCategoryData {
     name: String,
     icon: String,
@@ -338,8 +421,8 @@ impl PartialOrd for TodoCategoryData {
 }
 
 
-#[derive(Serialize, Debug)]
-struct OutputData {
+#[derive(Debug)]
+struct ProcessedTodosOutput {
     categories: Vec<TodoCategoryData>,
 }
 
@@ -371,19 +454,19 @@ struct MarkDonePayload {
 
 // --- todo Category Enum ---
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
-enum TodoCategory {
+enum TodoCategoryEnum {
     Project(String),
     GitRepo(String),
     Other,
 }
 
-impl TodoCategory {
+impl TodoCategoryEnum {
     // Helper to get name and icon for JSON output
     fn get_details(&self) -> (String, String) {
         match self {
-            TodoCategory::Project(name) => (name.clone(), "".to_string()), // Nerd Font icon for project
-            TodoCategory::GitRepo(name) => (name.clone(), "󰊢".to_string()), // Nerd Font icon for git repo
-            TodoCategory::Other => ("Other".to_string(), "".to_string()),  // Nerd Font icon for other files
+            TodoCategoryEnum::Project(name) => (name.clone(), "".to_string()), // Nerd Font icon for project
+            TodoCategoryEnum::GitRepo(name) => (name.clone(), "󰊢".to_string()), // Nerd Font icon for git repo
+            TodoCategoryEnum::Other => ("Other".to_string(), "".to_string()),  // Nerd Font icon for other files
         }
     }
 }
@@ -393,7 +476,7 @@ impl TodoCategory {
 struct TodoSink {
     effective_rg_pattern: String,
     matcher: RegexMatcher,
-    grouped_todos: Arc<ParkingMutex<HashMap<TodoCategory, Vec<TodoItem>>>>,
+    grouped_todos: Arc<ParkingMutex<HashMap<TodoCategoryEnum, Vec<TodoItem>>>>,
     current_path: PathBuf,
     debug: bool,
     start_time: Instant,
@@ -448,7 +531,7 @@ impl Sink for TodoSink {
 
             let location = format!("{}:{}", file_path_str, line_num);
 
-            let mut category = TodoCategory::Other;
+            let mut category = TodoCategoryEnum::Other;
             let mut project_match = false;
             
             // Reinstate project-based categorization using self.projects
@@ -457,7 +540,7 @@ impl Sink for TodoSink {
                     match Pattern::new(pattern_str) {
                         Ok(pattern) => {
                             if pattern.matches(&file_path_str) {
-                                category = TodoCategory::Project(project_name.clone());
+                                category = TodoCategoryEnum::Project(project_name.clone());
                                 project_match = true;
                                 break;
                             }
@@ -474,7 +557,7 @@ impl Sink for TodoSink {
 
             if !project_match {
                 match find_git_repo_name(file_path) {
-                    Ok(Some(repo_name)) => category = TodoCategory::GitRepo(repo_name),
+                    Ok(Some(repo_name)) => category = TodoCategoryEnum::GitRepo(repo_name),
                     Ok(None) => {} // Stays Other
                     Err(e) => {
                         if self.debug {
@@ -502,7 +585,7 @@ impl Sink for TodoSink {
 }
 
 // --- Core todo Finding Logic --- (Accepts &Config)
-fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData> {
+fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedTodosOutput> {
     let start_time = Instant::now();
     if debug {
         println!("[{:.2?}] Starting TODO processing using grep-searcher", start_time.elapsed()); // UNITODO_IGNORE_LINE
@@ -572,7 +655,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
     // 4. Execute the search in parallel
     let search_start = Instant::now();
     // Use ParkingMutex for potentially better contention performance
-    let grouped_todos = Arc::new(ParkingMutex::new(HashMap::<TodoCategory, Vec<TodoItem>>::new())); 
+    let grouped_todos = Arc::new(ParkingMutex::new(HashMap::<TodoCategoryEnum, Vec<TodoItem>>::new())); 
 
     builder.build_parallel().run(|| {
         let current_matcher = matcher.clone();
@@ -627,7 +710,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
             return Err(io::Error::new(io::ErrorKind::Other, "Failed to finalize TODO grouping")); // UNITODO_IGNORE_LINE
         }
     };
-    let mut categories: Vec<TodoCategory> = final_grouped_todos.keys().cloned().collect();
+    let mut categories: Vec<TodoCategoryEnum> = final_grouped_todos.keys().cloned().collect();
 
     // Sort categories: Project(A-Z), GitRepo(A-Z), Other
     categories.sort();
@@ -646,7 +729,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
         }
     }
 
-    let final_data = OutputData {
+    let final_data = ProcessedTodosOutput {
         categories: output_categories,
     };
 
@@ -659,668 +742,365 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<OutputData
 }
 
 // --- Core todo Editing Logic --- (Accepts &Config)
-fn edit_todo_in_file(config: &Config, payload: &EditTodoPayload) -> io::Result<()> {
-    let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
+fn edit_todo_in_file_grpc(config: &Config, location: &str, new_content: &str, original_content: &str, _completed: bool ) -> io::Result<()> {
+    let location_parts: Vec<&str> = location.splitn(2, ':').collect();
     if location_parts.len() != 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format. Expected 'path/to/file:line_number'"));
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format"));
     }
     let file_path_str = location_parts[0];
-    let line_number: usize = match location_parts[1].parse() {
-        Ok(num) if num > 0 => num,
-        _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid line number in location")),
-    };
-    let line_index = line_number - 1; // Convert to 0-based index
+    let line_number: usize = location_parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid line number"))?;
+    if line_number == 0 { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Line number cannot be 0")); }
+    let line_index = line_number - 1;
 
     let file_path = Path::new(file_path_str);
-    if !file_path.exists() || !file_path.is_file() {
-         return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
-    }
+    if !file_path.is_file() { return Err(io::Error::new(io::ErrorKind::NotFound, "File not found")); }
 
-    // 2. Open file with exclusive lock
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
     file.lock_exclusive()?;
-    
     let result = (|| {
-        // Read the file content
-        let mut original_content = String::new();
-        let mut file_reader = io::BufReader::new(&file);
-        file_reader.read_to_string(&mut original_content)?;
-        
-        let lines: Vec<String> = original_content.lines().map(String::from).collect();
-
-        // 3. Find and verify the line
-        if line_index >= lines.len() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, 
-                format!("Line number {} is out of bounds for file {}", line_number, file_path_str)));
-        }
+        let mut file_content_string = String::new();
+        let mut reader = BufReader::new(&file); 
+        reader.read_to_string(&mut file_content_string)?;
+        let mut lines: Vec<String> = file_content_string.lines().map(String::from).collect();
+        if line_index >= lines.len() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Line number out of bounds")); }
 
         let original_line = &lines[line_index];
         let effective_rg_pattern = config.get_effective_rg_pattern();
+        let todo_pattern_re = Regex::new(&effective_rg_pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "bad regex"))?;
 
-        // Re-compile the todo pattern regex from the config to find the start of the todo text
-        let todo_pattern_re = match Regex::new(&effective_rg_pattern) {
-            Ok(re) => re,
-            Err(e) => {
-                // Use eprintln for internal errors, let handler return generic server error
-                eprintln!("Error: Invalid effective regex pattern ('{}'): {}", effective_rg_pattern, e);
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid effective regex pattern in config"));
-            }
-        };
-
-        // Find the match of the todo pattern on the target line
         if let Some(mat) = todo_pattern_re.find(original_line) {
-            let prefix = &original_line[..mat.start()]; // Indentation and any preceding text
-            let pattern_match = mat.as_str(); // The matched pattern (e.g., "TODO", "FIXME") // UNITODO_IGNORE_LINE
-            
-            // Find the index of the first non-whitespace character after the pattern match
-            let content_start_index = original_line[mat.end()..]
-                .find(|c: char| !c.is_whitespace())
-                .map(|i| mat.end() + i)
-                .unwrap_or(original_line.len()); // Use end of line if only whitespace follows pattern
-            
-            // Extract the current todo content to compare with the original content from the payload
-            let current_content = original_line[content_start_index..].trim();
-            
-            // Verify the content hasn't changed since it was loaded in the UI
-            if current_content != payload.original_content.trim() {
-                return Err(io::Error::new(io::ErrorKind::Other, 
-                    "Content has been modified since it was loaded. Edit aborted."));
+            let prefix = &original_line[..mat.start()];
+            let pattern_match_str = mat.as_str();
+            let content_start_idx = original_line[mat.end()..].find(|c: char| !c.is_whitespace()).map_or(original_line.len(), |i| mat.end() + i);
+            let current_on_disk_content = original_line[content_start_idx..].trim();
+
+            if current_on_disk_content != original_content.trim() {
+                return Err(io::Error::new(io::ErrorKind::Other, "Content has been modified"));
             }
+            let spacing = &original_line[mat.end()..content_start_idx];
+            lines[line_index] = format!("{}{}{}{}", prefix, pattern_match_str, spacing, new_content.trim());
             
-            // Capture the original spacing between the pattern and the content/checkbox
-            let original_spacing = &original_line[mat.end()..content_start_index];
-
-            // Create modified lines array
-            let mut modified_lines = lines.clone();
-            
-            // Construct the new line using the captured original spacing and the new content
-            // Format: prefix + pattern + original_spacing + new_content
-            let new_line_content = format!("{}{}{}{}",
-                prefix,
-                pattern_match,
-                original_spacing,
-                payload.new_content.trim() // Directly use the new content
-            );
-
-            modified_lines[line_index] = new_line_content;
-            
-            // 4. Write the modified content back to the file
-            let new_file_content = modified_lines.join("\n");
-            // Add a trailing newline if the original file had one (important for many tools)
-            let final_content = if original_content.ends_with('\n') && !new_file_content.is_empty() {
-                format!("{}\n", new_file_content)
+            let new_full_content = lines.join("\n");
+            let final_write_content = if file_content_string.ends_with('\n') && !new_full_content.is_empty() {
+                format!("{}\n", new_full_content)
             } else {
-                new_file_content
+                new_full_content
             };
-
-            // Truncate the file and write the new content
             file.set_len(0)?;
-            file.seek(io::SeekFrom::Start(0))?;
-            io::Write::write_all(&mut &file, final_content.as_bytes())?;
-            
+            file.seek(SeekFrom::Start(0))?;
+            file.write_all(final_write_content.as_bytes())?;
             Ok(())
         } else {
-            // Pattern not found on the specified line - this shouldn't happen if location came from `find_and_process_todos`
-            Err(io::Error::new(io::ErrorKind::NotFound, 
-                format!("TODO pattern '{}' not found on line {} of file {}", // UNITODO_IGNORE_LINE
-                effective_rg_pattern, line_number, file_path_str))) // UNITODO_IGNORE_LINE
+            Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line"))
         }
     })();
-    
-    // Ensure we unlock the file regardless of the result
-    file.unlock()?;
-    
+    fs2::FileExt::unlock(&file)?;
     result
 }
 
 // --- Core todo Adding Logic ---
-fn add_todo_to_file(config: &Config, payload: &AddTodoPayload) -> io::Result<()> {
-    let target_append_file_path: PathBuf;
-
-    // 1. Determine the target file path based on category type
-    match payload.category_type.as_str() {
+fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &str, content: &str, example_item_location: Option<&str>) -> io::Result<()> {
+    let target_append_file_path: PathBuf = match category_type {
         "git" => {
-            // Need an example location to start the search for .git
-            let example_loc = payload.example_item_location.as_ref()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing 'example_item_location' for git category type"))?;
-
-            let example_path_str = example_loc.split(':').next()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid 'example_item_location' format"))?;
-
-            let example_path = Path::new(example_path_str);
-
-            let repo_root = find_git_repo_root(example_path)?
-                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Could not find git repository root starting from {}", example_path_str)))?;
-
-            target_append_file_path = get_append_file_path_in_dir(&repo_root, &config.default_append_basename);
-            println!("Determined git append path: {}", target_append_file_path.display()); // Debug
+            let ex_loc = example_item_location.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Missing example_item_location for git"))?;
+            let ex_path_str = ex_loc.split(':').next().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid example_item_location format"))?;
+            let repo_root = find_git_repo_root(Path::new(ex_path_str))?.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not find git repo root"))?;
+            get_append_file_path_in_dir(&repo_root, &config.default_append_basename)
         }
         "project" => {
-            let project_config = config.projects.get(&payload.category_name)
-                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Project configuration not found for '{}'", payload.category_name)))?;
-
-            let append_path_str = project_config.append_file_path.as_ref()
-                .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("'append_file_path' not configured for project '{}'", payload.category_name)))?;
-
-            target_append_file_path = PathBuf::from(append_path_str);
-            println!("Determined project append path: {}", target_append_file_path.display()); // Debug
+            let proj_conf = config.projects.get(category_name).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Project config not found"))?;
+            PathBuf::from(proj_conf.append_file_path.as_ref().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "append_file_path not configured"))?)
         }
-        _ => {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid category_type: '{}'. Must be 'git' or 'project'.", payload.category_type)));
-        }
-    }
+        _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid category_type")),
+    };
 
-    // 2. Prepare the base content to append
     let timestamp = generate_short_timestamp();
-    let sanitized_content = payload.content.replace('\n', " ").trim().to_string();
-    if sanitized_content.is_empty() {
-         return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add an empty TODO item")); // UNITODO_IGNORE_LINE
-    }
-    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content); // UNITODO_IGNORE_LINE
-
-    // 3. Open the file, lock it, determine if newline prefix is needed, then write once.
-    if let Some(parent_dir) = target_append_file_path.parent() {
-        fs::create_dir_all(parent_dir)?;
-        println!("Ensured directory exists: {}", parent_dir.display());
-    } else {
-         return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid target append file path (no parent directory): {}", target_append_file_path.display())));
-    }
-
-    let mut file = OpenOptions::new()
-        .read(true)   // Explicitly enable read for checking last char
-        .write(true)  // Explicitly enable write
-        .append(true) // Writes go to the end
-        .create(true) // Create if not exists
-        .open(&target_append_file_path)?;
+    let sanitized_content = content.replace('\n', " ").trim().to_string();
+    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); }
     
-    println!("Opened/Created file for R/W/Append: {}", target_append_file_path.display());
+    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content);
 
+    if let Some(parent_dir) = target_append_file_path.parent() { fs::create_dir_all(parent_dir)?; }
+    else { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid target append path")); }
+
+    let mut file = OpenOptions::new().read(true).write(true).append(true).create(true).open(&target_append_file_path)?;
     file.lock_exclusive()?;
-    println!("Locked file: {}", target_append_file_path.display());
-
-    let final_line_to_append: String;
-    let needs_initial_newline_before_write: bool;
-
-    // Determine if a newline is needed *before* our content
-    let metadata = file.metadata()?;
-    if metadata.len() > 0 {
-        // File has content, check last character
-        println!("DEBUG: File has content (len {}), checking last char.", metadata.len());
-        // Seek to the last byte of the file for reading
-        // Note: append mode affects writes; reads can be from anywhere after seeking.
-        file.seek(SeekFrom::End(-1))?;
-        let mut last_char_buf = [0; 1];
-        file.read_exact(&mut last_char_buf)?;
-        if last_char_buf[0] == b'\n' {
-            println!("DEBUG: Last char is already newline.");
-            needs_initial_newline_before_write = false;
-        } else {
-            println!("DEBUG: Last char is NOT newline. Newline will be prepended.");
-            needs_initial_newline_before_write = true;
+    let final_append_str = {
+        let mut needs_newline = false;
+        if file.metadata()?.len() > 0 {
+            file.seek(SeekFrom::End(-1))?;
+            let mut last_char_buf = [0; 1];
+            file.read_exact(&mut last_char_buf)?;
+            if last_char_buf[0] != b'\n' { needs_newline = true; }
         }
-    } else {
-        // File is empty, no preceding newline needed from our side
-        println!("DEBUG: File is empty.");
-        needs_initial_newline_before_write = false;
-    }
-    
-    // Construct the final line, potentially prefixing with a newline
-    if needs_initial_newline_before_write {
-        final_line_to_append = format!("\n{}", base_line_to_append);
-    } else {
-        final_line_to_append = base_line_to_append;
-    }
-
-    // Perform the single write operation. 
-    // O_APPEND (from .append(true)) should ensure this write goes to the current end of file.
-    // The file offset might have been changed by previous seek/read_exact, but O_APPEND handles this for writes.
-    println!("DEBUG: Attempting to write: [{}]", final_line_to_append);
-    // Using writeln! will add another newline *after* final_line_to_append.
-    // If final_line_to_append already starts with \n, we get \nTODO\n. // UNITODO_IGNORE_LINE
-    // If file was empty, we get TODO\n. // UNITODO_IGNORE_LINE
-    // If file had content ending in no newline, we get \nTODO\n. // UNITODO_IGNORE_LINE
-    // If file had content ending in newline, we get TODO\n. // UNITODO_IGNORE_LINE
-    // This seems correct for ensuring each TODO is on its own line and files end with newline. // UNITODO_IGNORE_LINE
-    if let Err(e) = writeln!(file, "{}", final_line_to_append) {
-        eprintln!("ERROR: Failed to write to file {}: {}", target_append_file_path.display(), e);
-        file.unlock()?; // Attempt to unlock before propagating error
-        return Err(e);
-    }
-    println!("Successfully wrote to file: {}", target_append_file_path.display());
-
-    file.unlock()?;
-    println!("Unlocked file: {}", target_append_file_path.display());
-
+        if needs_newline { format!("\n{}", base_line_to_append) } else { base_line_to_append }
+    };
+    writeln!(file, "{}", final_append_str)?;
+    fs2::FileExt::unlock(&file)?;
     Ok(())
 }
 
 // --- Core Logic for Marking Todo as Done ---
-fn mark_todo_as_done_in_file(config: &Config, payload: &MarkDonePayload) -> Result<(String, bool), io::Error> {
-    let location_parts: Vec<&str> = payload.location.splitn(2, ':').collect();
-    if location_parts.len() != 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format. Expected 'path/to/file:line_number'"));
-    }
+fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_content_payload: &str) -> Result<(String, bool), io::Error> {
+    let location_parts: Vec<&str> = location.splitn(2, ':').collect();
+    if location_parts.len() != 2 { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format")); }
     let file_path_str = location_parts[0];
-    let line_number: usize = match location_parts[1].parse() {
-        Ok(num) if num > 0 => num,
-        _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid line number in location")),
-    };
+    let line_number: usize = location_parts[1].parse().map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "Invalid line num"))?;
+    if line_number == 0 { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Line number cannot be 0")); }
     let line_index = line_number - 1;
 
     let file_path = Path::new(file_path_str);
-    if !file_path.exists() || !file_path.is_file() {
-        return Err(io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", file_path_str)));
-    }
+    if !file_path.is_file() { return Err(io::Error::new(io::ErrorKind::NotFound, "File not found")); }
 
     let mut file = OpenOptions::new().read(true).write(true).open(file_path)?;
     file.lock_exclusive()?;
-
     let result: Result<(String, bool), io::Error> = (|| {
         let mut original_file_content_string = String::new();
         let mut reader = BufReader::new(&file);
         reader.read_to_string(&mut original_file_content_string)?;
         let mut lines: Vec<String> = original_file_content_string.lines().map(String::from).collect();
-
-        if line_index >= lines.len() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, format!("Line {} out of bounds", line_number)));
-        }
-        let original_line = lines[line_index].clone(); // Clone to modify
-
-        // 1. Verification
+        if line_index >= lines.len() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Line out of bounds")); }
+        
+        let original_line_on_disk = lines[line_index].clone();
         let effective_rg_pattern = config.get_effective_rg_pattern();
-        let current_disk_cleaned_content = extract_cleaned_content_from_line(&original_line, &effective_rg_pattern)?;
-        if current_disk_cleaned_content.trim() != payload.original_content.trim() {
-            eprintln!("Content mismatch: Disk='{}', Payload='{}'", current_disk_cleaned_content.trim(), payload.original_content.trim());
-            return Err(io::Error::new(io::ErrorKind::Other, "Content has been modified since it was loaded. Edit aborted."));
+        let current_disk_cleaned_content = extract_cleaned_content_from_line(&original_line_on_disk, &effective_rg_pattern)?;
+        if current_disk_cleaned_content.trim() != original_content_payload.trim() {
+            return Err(io::Error::new(io::ErrorKind::Other, "Content modified since load"));
         }
 
-        // 2. Transformation
-        // Use configurable pairs from config
-        let todo_done_pairs_to_use = if config.todo_done_pairs.is_empty() {
-            // Fallback to a hardcoded default if config is empty, though serde default should prevent this
-            default_todo_done_pairs() 
-        } else {
-            config.todo_done_pairs.clone() // Clone to avoid borrowing issues if config is updated elsewhere
-        };
+        let todo_done_pairs = if config.todo_done_pairs.is_empty() { default_todo_done_pairs() } else { config.todo_done_pairs.clone() };
+        let mut new_line_for_file = original_line_on_disk.clone();
+        let mut marker_transformed = false; 
+        
+        let marker_re = Regex::new(&effective_rg_pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "marker regex error"))?;
+        if let Some(mat) = marker_re.find(&original_line_on_disk) {
+            let prefix_before_marker = &original_line_on_disk[..mat.start()];
+            let matched_todo_marker = mat.as_str();
+            let content_after_marker_with_space = &original_line_on_disk[mat.end()..];
+            let mut transformed_marker_str = matched_todo_marker.to_string(); 
 
-        let mut new_line_for_file = original_line.clone();
-        let mut marker_changed = false;
-        let mut original_marker_len = 0;
-        let mut new_marker_str = String::new(); // Default, will be updated
-        let mut prefix_before_marker_len = 0;
-
-        // Use effective_rg_pattern to find the marker first
-        let effective_pattern_for_transform = config.get_effective_rg_pattern();
-        let marker_re = Regex::new(&effective_pattern_for_transform)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, 
-                format!("Invalid effective regex pattern for transformation ('{}'): {}", effective_pattern_for_transform, e)))?;
-
-        if let Some(mat) = marker_re.find(&original_line) {
-            // A ToDo pattern was found by the regex.
-            prefix_before_marker_len = mat.start();
-            original_marker_len = mat.len();
-            let matched_todo_text = mat.as_str();
-
-            // Default to the matched text itself, in case no specific "done" version is found.
-            // This ensures new_marker_str is set for timestamping logic later.
-            new_marker_str = matched_todo_text.to_string();
-
-            // Attempt to find a corresponding "done" marker to transform.
-            for pair in &todo_done_pairs_to_use {
-                if pair.len() == 2 && pair[0] == matched_todo_text {
-                    let done_marker = &pair[1];
-                    new_marker_str = done_marker.clone(); // Update to the "done" marker
-                    
-                    // Reconstruct the line with the transformed marker
-                    new_line_for_file = format!("{}{}{}",
-                        &original_line[..prefix_before_marker_len],
-                        new_marker_str, // This is the done_marker
-                        &original_line[prefix_before_marker_len + original_marker_len..]
-                    );
-                    marker_changed = true; // A "todo" to "done" transformation occurred.
-                    break; // Found the pair, transformation applied.
+            for pair in &todo_done_pairs {
+                if pair.len() == 2 && pair[0] == matched_todo_marker {
+                    transformed_marker_str = pair[1].clone();
+                    marker_transformed = true;
+                    break;
                 }
             }
-            // If marker_changed is still false here, it means the regex matched a todo pattern (e.g. "FIXME"),
-            // but that pattern didn't have a specific "done" counterpart in todo_done_pairs.
-            // In this case, new_marker_str remains matched_todo_text, 
-            // prefix_before_marker_len and original_marker_len are set from `mat`,
-            // and new_line_for_file remains original_line.clone().
-            // The timestamping logic will proceed with these values.
+            new_line_for_file = format!("{}{}{}", prefix_before_marker, transformed_marker_str, content_after_marker_with_space);
         } else {
-            // No todo pattern (derived from todo_done_pairs) found on the line.
-            // This line cannot be marked as done according to current rules.
-            return Err(io::Error::new(io::ErrorKind::NotFound, 
-                format!("TODO pattern ('{}') not found on line {} of file '{}' for marking done.", // UNITODO_IGNORE_LINE
-                effective_pattern_for_transform, line_number, file_path_str)));
+             return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found for marking done"));
         }
-        
-        // 3. Timestamp and First Word Modification
-        // The content for timestamping starts after the original marker.
-        let content_starts_at = prefix_before_marker_len + original_marker_len;
-        let content_part_from_original_line = original_line.get(content_starts_at..).unwrap_or("").trim_start();
-        
-        let parts: Vec<&str> = content_part_from_original_line.splitn(2, ' ').collect();
-        let mut first_word_segment = parts.get(0).map_or("", |s| *s).to_string();
-        let actual_task_description = parts.get(1).map_or("", |s| *s);
 
-        let done_ts_str = format!("@@{}", generate_short_timestamp());
+        let (marker_part, content_part_for_ts) = if let Some(mat) = marker_re.find(&new_line_for_file) {
+            (new_line_for_file[..mat.end()].to_string(), new_line_for_file[mat.end()..].trim_start().to_string())
+        } else {
+            (String::new(), new_line_for_file.trim_start().to_string())
+        };
+
+        let mut parts: Vec<&str> = content_part_for_ts.splitn(2, ' ').collect();
+        let mut first_word = parts.get_mut(0).map_or(String::new(), |s| s.to_string());
+        let rest_of_content = parts.get(1).map_or("", |s| *s);
+        
+        let done_ts = format!("@@{}", generate_short_timestamp());
         let done_ts_regex = Regex::new(r"@@[A-Za-z0-9\-_]{5}").unwrap();
-
-        if done_ts_regex.is_match(&first_word_segment) {
-            first_word_segment = done_ts_regex.replace(&first_word_segment, &done_ts_str).to_string();
+        if done_ts_regex.is_match(&first_word) {
+            first_word = done_ts_regex.replace(&first_word, &done_ts).to_string();
         } else {
-            if !first_word_segment.is_empty() && !first_word_segment.ends_with(char::is_whitespace) {
-                 // No space if first_word_segment exists and is not just whitespace.
-                 // e.g. "prio@id" becomes "prio@id@@ts"
-            } else if !first_word_segment.is_empty() && first_word_segment.ends_with(char::is_whitespace) {
-                // If it ends with whitespace, just append: "prio@id " becomes "prio@id @@ts"
-            } else {
-                // If first_word_segment is empty, the timestamp becomes the first word.
-                // No leading space needed.
-            }
-            first_word_segment.push_str(&done_ts_str);
-        }
-        
-        let new_cleaned_content_for_frontend = if actual_task_description.is_empty() {
-            first_word_segment.clone()
-        } else {
-            format!("{} {}", first_word_segment, actual_task_description)
-        }.trim().to_string();
-
-        // Reconstruct the line for the file
-        // Prefix + new_marker_str + (space after marker from original) + first_word_segment + (space) + actual_task_description
-        let prefix_str = &original_line[..prefix_before_marker_len];
-        
-        // Determine original spacing after marker
-        let mut spacing_after_original_marker = "";
-        if content_starts_at < original_line.len() { // Ensure content_starts_at is a valid index
-            let potential_spacing_and_content = &original_line[content_starts_at..];
-            if let Some(content_start_char_idx) = potential_spacing_and_content.find(|c: char| !c.is_whitespace()) {
-                 spacing_after_original_marker = &potential_spacing_and_content[..content_start_char_idx];
-            } else if !potential_spacing_and_content.is_empty() { // All whitespace after marker
-                 spacing_after_original_marker = potential_spacing_and_content;
-            }
+            first_word.push_str(&done_ts);
         }
 
-
-        let final_task_part = if actual_task_description.is_empty() {
-            "".to_string()
+        let final_content_part = if rest_of_content.is_empty() {
+            first_word
         } else {
-            // Ensure a space separates first_word from description if description exists
-            format!(" {}", actual_task_description)
+            format!("{} {}", first_word, rest_of_content)
         };
         
-        new_line_for_file = format!("{}{}{}{}{}", 
-            prefix_str, 
-            new_marker_str, // This is the 'DONE' or equivalent marker
-            spacing_after_original_marker,
-            first_word_segment, // This now contains the @@ts
-            final_task_part
-        );
-        
+        let leading_space_len = new_line_for_file[marker_part.len()..].len() - content_part_for_ts.len();
+        let leading_space = &new_line_for_file[marker_part.len()..marker_part.len() + leading_space_len];
+
+        new_line_for_file = format!("{}{}{}", marker_part, leading_space, final_content_part);
         lines[line_index] = new_line_for_file;
-        
-        let new_file_content = lines.join("\n");
-        let final_content_to_write = if original_file_content_string.ends_with('\n') && !new_file_content.is_empty() {
-            format!("{}\n", new_file_content)
+
+        let new_full_content = lines.join("\n");
+        let final_write_content = if original_file_content_string.ends_with('\n') && !new_full_content.is_empty() {
+            format!("{}\n", new_full_content)
         } else {
-            new_file_content
+            new_full_content
         };
-
         file.set_len(0)?;
-        file.seek(io::SeekFrom::Start(0))?;
-        io::Write::write_all(&mut &file, final_content_to_write.as_bytes())?;
+        file.seek(SeekFrom::Start(0))?;
+        file.write_all(final_write_content.as_bytes())?;
         
-        Ok((new_cleaned_content_for_frontend, true))
-    })();
+        let new_cleaned_content_for_frontend = extract_cleaned_content_from_line(
+            &lines[line_index], 
+            &effective_rg_pattern 
+        )?;
 
-    file.unlock()?;
+        Ok((new_cleaned_content_for_frontend, marker_transformed))
+    })();
+    fs2::FileExt::unlock(&file)?;
     result
 }
 
-// --- API Handler - Get Todos --- (Uses Read Lock)
-async fn get_todos_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
-    let debug_mode = false; // Keep debug off for API
+// --- Tonic Service Implementations ---
+#[derive(Debug)]
+pub struct MyTodoService {
+    config_state: Arc<RwLock<Config>>,
+}
 
-    // Clone Arc for the blocking task
-    let config_arc_clone = shared_config.clone();
+#[tonic::async_trait]
+impl TodoService for MyTodoService {
+    async fn get_todos(&self, _request: Request<GetTodosRequest>) -> Result<Response<GetTodosResponse>, Status> {
+        let config_guard = self.config_state.read();
+        match find_and_process_todos(&config_guard, false) {
+            Ok(processed_data) => {
+                let proto_categories = processed_data.categories.iter()
+                    .map(to_proto_todo_category)
+                    .collect();
+                Ok(Response::new(GetTodosResponse { categories: proto_categories }))
+            }
+            Err(e) => Err(Status::internal(format!("Failed to process todos: {}", e))),
+        }
+    }
 
-    let result = web::block(move || {
-        // Acquire read lock inside the blocking task
-        let config_guard = config_arc_clone.read(); 
-        // Pass a reference from the guard to the processing function
-        find_and_process_todos(&config_guard, debug_mode) 
-    }).await;
+    async fn edit_todo(&self, request: Request<EditTodoRequest>) -> Result<Response<EditTodoResponse>, Status> {
+        let payload = request.into_inner();
+        let config_guard = self.config_state.read();
+        match edit_todo_in_file_grpc(&config_guard, &payload.location, &payload.new_content, &payload.original_content, payload.completed) {
+            Ok(()) => Ok(Response::new(EditTodoResponse { status: "success".to_string(), message: "Todo edited successfully".to_string() })),
+            Err(e) => {
+                let (code, msg) = match e.kind() {
+                    io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
+                    io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
+                    io::ErrorKind::PermissionDenied => (tonic::Code::PermissionDenied, e.to_string()),
+                    io::ErrorKind::Other if e.to_string().contains("Content has been modified") => (tonic::Code::Aborted, e.to_string()),
+                    _ => (tonic::Code::Internal, format!("Failed to edit todo: {}", e)),
+                };
+                Err(Status::new(code, msg))
+            }
+        }
+    }
 
-    match result {
-        // Correctly handle nested Result from web::block
-        Ok(Ok(data)) => Ok(web::Json(data)),
-        Ok(Err(e)) => {
-            eprintln!("Error processing TODOs: {}", e); // UNITODO_IGNORE_LINE
-            Err(ErrorInternalServerError(format!("Failed to process TODOs: {}", e)))// UNITODO_IGNORE_LINE
-        },
-        Err(e) => {
-            eprintln!("Error running blocking task for get_todos: {}", e);
-            Err(ErrorInternalServerError(format!("Internal server error: {}", e)))
+    async fn add_todo(&self, request: Request<AddTodoRequest>) -> Result<Response<AddTodoResponse>, Status> {
+        let payload = request.into_inner();
+        let config_guard = self.config_state.read();
+        match add_todo_to_file_grpc(&config_guard, &payload.category_type, &payload.category_name, &payload.content, payload.example_item_location.as_deref()) {
+            Ok(()) => Ok(Response::new(AddTodoResponse { status: "success".to_string(), message: "Todo added successfully".to_string() })),
+            Err(e) => {
+                 let (code, msg) = match e.kind() {
+                    io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
+                    io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
+                    io::ErrorKind::PermissionDenied => (tonic::Code::PermissionDenied, e.to_string()),
+                    _ => (tonic::Code::Internal, format!("Failed to add todo: {}", e)),
+                };
+                Err(Status::new(code, msg))
+            }
+        }
+    }
+
+    async fn mark_done(&self, request: Request<MarkDoneRequest>) -> Result<Response<MarkDoneResponse>, Status> {
+        let payload = request.into_inner();
+        let config_guard = self.config_state.read();
+        match mark_todo_as_done_in_file_grpc(&config_guard, &payload.location, &payload.original_content) {
+            Ok((new_content, completed_status_changed)) => { // Assuming completed_status_changed means the marker itself changed to a "done" one
+                Ok(Response::new(MarkDoneResponse {
+                    status: "success".to_string(),
+                    message: "Todo marked as done successfully".to_string(),
+                    new_content,
+                    completed: completed_status_changed, // Or derive from new_content if more reliable
+                }))
+            }
+            Err(e) => {
+                 let (code, msg) = match e.kind() {
+                    io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
+                    io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
+                    io::ErrorKind::PermissionDenied => (tonic::Code::PermissionDenied, e.to_string()),
+                    io::ErrorKind::Other if e.to_string().contains("Content modified since load") => (tonic::Code::Aborted, e.to_string()),
+                    _ => (tonic::Code::Internal, format!("Failed to mark todo as done: {}", e)),
+                };
+                Err(Status::new(code, msg))
+            }
         }
     }
 }
 
-// --- API Handler - Edit Todo --- (Uses Read Lock)
-async fn edit_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<EditTodoPayload>) -> ActixResult<impl Responder> {
-    // Clone Arc for the blocking task
-    let config_arc_clone = shared_config.clone(); 
-    let payload_inner = payload.into_inner(); // Move payload into the closure
+#[derive(Debug)]
+pub struct MyConfigService {
+    config_state: Arc<RwLock<Config>>,
+}
 
-    let result = web::block(move || {
-        // Acquire read lock inside the blocking task
-        let config_guard = config_arc_clone.read(); 
-        // Pass reference from guard and the payload
-        edit_todo_in_file(&config_guard, &payload_inner) 
-    }).await;
+#[tonic::async_trait]
+impl ConfigService for MyConfigService {
+    async fn get_config(&self, _request: Request<GetConfigRequest>) -> Result<Response<GetConfigResponse>, Status> {
+        let config_guard = self.config_state.read();
+        let proto_config = to_proto_config(&config_guard);
+        Ok(Response::new(GetConfigResponse { config: Some(proto_config) }))
+    }
 
-    match result {
-        // Correctly handle nested Result
-        Ok(Ok(())) => Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))),
-        Ok(Err(e)) => {
-            eprintln!("Error editing TODO in file: {}", e); // UNITODO_IGNORE_LINE
-            let status_code = match e.kind() {
-                 io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
-                 io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
-                 io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
-                 io::ErrorKind::Other if e.to_string().contains("Content has been modified") => actix_web::http::StatusCode::CONFLICT,
-                 _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-            };
-            let error_response = serde_json::json!({
-                 "status": "error",
-                 "error": e.to_string(),
-                 "code": status_code.as_u16()
-            });
-            Ok(HttpResponse::build(status_code).json(error_response))
-        },
-        Err(e) => {
-            eprintln!("Error running blocking task for edit: {}", e);
-            Err(ErrorInternalServerError(format!("Internal server error during edit task: {}", e)))
+    async fn update_config(&self, request: Request<UpdateConfigRequest>) -> Result<Response<UpdateConfigResponse>, Status> {
+        let proto_config_to_save = request.into_inner().config.ok_or_else(|| Status::invalid_argument("Config message is missing"))?;
+        let new_config = from_proto_config(proto_config_to_save);
+
+        let config_arc_clone = Arc::clone(&self.config_state);
+
+        // Blocking file I/O should be offloaded
+        let result = tokio::task::spawn_blocking(move || {
+            let _file_guard = CONFIG_FILE_MUTEX.lock();
+            let target_path = get_primary_config_path()?; // io::Result
+            write_config_to_path_internal(&new_config, &target_path)?; // io::Result
+            
+            // If file write succeeds, update in-memory state
+            let mut config_guard = config_arc_clone.write();
+            *config_guard = new_config;
+            Ok::<(), io::Error>(())
+        }).await;
+
+        match result {
+            Ok(Ok(())) => {
+                println!("Configuration updated successfully (in-memory and file).");
+                Ok(Response::new(UpdateConfigResponse {
+                    status: "success".to_string(),
+                    message: "Configuration saved successfully.".to_string(),
+                }))
+            }
+            Ok(Err(e)) => { // io::Error from the blocking task
+                eprintln!("Error saving config: {}", e);
+                Err(Status::internal(format!("Failed to save configuration: {}", e)))
+            }
+            Err(e) => { // JoinError from spawn_blocking (task panicked)
+                eprintln!("Task panic while saving config: {}", e);
+                Err(Status::internal(format!("Internal server error during config save: {}", e)))
+            }
         }
     }
 }
 
-// --- API Handler - Get Config --- (Uses Read Lock)
-async fn get_config_handler(shared_config: web::Data<Arc<RwLock<Config>>>) -> ActixResult<impl Responder> {
-    // Acquire read lock
-    let config_guard = shared_config.read();
-    // Clone the data from the guard to return
-    let config_data = config_guard.clone(); 
-    Ok(HttpResponse::Ok().json(config_data))
-}
-
-// --- API Handler - Update Config --- (Uses Write Lock)
-async fn update_config_handler(shared_config: web::Data<Arc<RwLock<Config>>>, new_config_payload: web::Json<Config>) -> ActixResult<impl Responder> {
-    let config_to_save = new_config_payload.into_inner();
-    let config_arc_clone = shared_config.clone(); // Clone Arc for blocking task
-
-    // Use web::block as saving involves file I/O
-    let result = web::block(move || -> Result<(), io::Error> { // Explicitly define closure return type
-        // Lock the *file access* mutex first to prevent race conditions during save
-        let _file_guard = CONFIG_FILE_MUTEX.lock();
-        
-        // Now acquire the write lock for the in-memory state
-        let mut config_guard = config_arc_clone.write();
-        
-        // Determine the path to write to (use the primary path)
-        let target_path = get_primary_config_path()?; // Returns io::Error
-        
-        // Write to file using the data we intend to put into memory
-        write_config_to_path(&config_to_save, &target_path)?; // Returns io::Error
-        
-        // If file write succeeds, update the in-memory config state
-        *config_guard = config_to_save; 
-        
-        Ok(()) // Closure returns Ok(()) on success
-    }).await;
-
-    match result {
-        // Handle Result<Result<(), io::Error>, BlockingError<io::Error>>
-        Ok(Ok(())) => { // Blocking task succeeded, and inner operation succeeded
-            println!("Configuration updated successfully (in-memory and file).");
-             Ok(HttpResponse::Ok().json(serde_json::json!({
-                 "status": "success",
-                 "message": "Configuration saved successfully."
-             })))
-        },
-        Ok(Err(e)) => { // Blocking task succeeded, but inner operation failed (io::Error)
-            eprintln!("Error saving config (file I/O or path error): {}", e);
-            Err(ErrorInternalServerError(format!("Failed to save configuration: {}", e)))
-        },
-        Err(e) => { // Blocking task itself failed (BlockingError)
-             eprintln!("Error running blocking task for POST /config: {}", e);
-              // Distinguish between Cancelled and Panic if needed, otherwise treat as internal error
-             Err(ErrorInternalServerError(format!("Internal server error saving config: {}", e)))
-        }
-    }
-}
-
-// --- API Handler - Add Todo ---
-async fn add_todo_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<AddTodoPayload>) -> ActixResult<impl Responder> {
-    let config_arc_clone = shared_config.clone();
-    let payload_inner = payload.into_inner();
-
-    println!("Received add_todo request: {:?}", payload_inner); // Debug
-
-    let result = web::block(move || {
-        let config_guard = config_arc_clone.read();
-        add_todo_to_file(&config_guard, &payload_inner)
-    }).await;
-
-    match result {
-        Ok(Ok(())) => {
-            println!("Successfully added TODO"); // Debug // UNITODO_IGNORE_LINE
-            Ok(HttpResponse::Ok().json(serde_json::json!({ "status": "success", "message": "TODO added successfully." }))) // UNITODO_IGNORE_LINE
-        },
-        Ok(Err(e)) => {
-            eprintln!("Error adding TODO: {}", e); // UNITODO_IGNORE_LINE
-            let status_code = match e.kind() {
-                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
-                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
-                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
-                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-            };
-             let error_response = serde_json::json!({
-                 "status": "error",
-                 "error": e.to_string(),
-                 "code": status_code.as_u16()
-            });
-            Ok(HttpResponse::build(status_code).json(error_response))
-        },
-        Err(e) => { // Blocking task error
-            eprintln!("Error running blocking task for add_todo: {}", e);
-            Err(ErrorInternalServerError(format!("Internal server error during add task: {}", e)))
-        }
-    }
-}
-
-// --- API Handler - Mark Todo as Done ---
-async fn mark_done_handler(shared_config: web::Data<Arc<RwLock<Config>>>, payload: web::Json<MarkDonePayload>) -> ActixResult<impl Responder> {
-    let config_arc_clone = shared_config.clone();
-    let payload_inner = payload.into_inner();
-
-    println!("Received mark_done request: {:?}", payload_inner);
-
-    let result = web::block(move || {
-        let config_guard = config_arc_clone.read();
-        mark_todo_as_done_in_file(&config_guard, &payload_inner)
-    }).await;
-
-    match result {
-        Ok(Ok((new_content, completed))) => {
-            println!("Successfully marked TODO as done. New content: {}", new_content); // UNITODO_IGNORE_LINE
-            Ok(HttpResponse::Ok().json(serde_json::json!({
-                "status": "success",
-                "message": "TODO marked as done successfully.", // UNITODO_IGNORE_LINE
-                "new_content": new_content,
-                "completed": completed
-            })))
-        },
-        Ok(Err(e)) => {
-            eprintln!("Error marking TODO as done: {}", e); // UNITODO_IGNORE_LINE
-            let status_code = match e.kind() {
-                io::ErrorKind::NotFound => actix_web::http::StatusCode::NOT_FOUND,
-                io::ErrorKind::InvalidInput => actix_web::http::StatusCode::BAD_REQUEST,
-                io::ErrorKind::PermissionDenied => actix_web::http::StatusCode::FORBIDDEN,
-                io::ErrorKind::Other if e.to_string().contains("Content has been modified") => actix_web::http::StatusCode::CONFLICT,
-                _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-            };
-            let error_response = serde_json::json!({
-                "status": "error",
-                "error": e.to_string(),
-                "code": status_code.as_u16()
-            });
-            Ok(HttpResponse::build(status_code).json(error_response))
-        },
-        Err(e) => { // Blocking task error
-            eprintln!("Error running blocking task for mark_done: {}", e);
-            Err(ErrorInternalServerError(format!("Internal server error during mark done task: {}", e)))
-        }
-    }
-}
-
-// --- Main Function (Actix Server Setup) ---
-#[actix_web::main]
-async fn main() {
-    // Initialize logging
+// --- Main Function (Tonic Server Setup) ---
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     lazy_static::initialize(&CONFIG_FILE_MUTEX);
 
     println!("Loading initial configuration...");
-    let initial_config = load_config_from_file()
-        .expect("Fatal: Failed to load initial configuration"); 
+    let initial_config = load_config_from_file().expect("Fatal: Failed to load initial configuration"); 
     
     println!("Initial configuration loaded successfully.");
 
-    let shared_config_state: Arc<RwLock<Config>> = Arc::new(RwLock::new(initial_config)); 
+    let shared_config_state = Arc::new(RwLock::new(initial_config));
 
-    let server_address = "127.0.0.1";
-    let server_port = 8080;
+    let addr = "0.0.0.0:50051".parse()?; // Common gRPC port
+    let todo_service = MyTodoService { config_state: Arc::clone(&shared_config_state) };
+    let config_service = MyConfigService { config_state: Arc::clone(&shared_config_state) };
 
-    println!("Starting server at http://{}:{}", server_address, server_port);
+    println!("Unitodo gRPC server listening on {}", addr);
 
-    HttpServer::new(move || {
-        // Explicitly type the app_data being created
-        let app_data: web::Data<Arc<RwLock<Config>>> = web::Data::new(shared_config_state.clone());
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(app_data) // Pass the explicitly typed data
-            .route("/todos", web::get().to(get_todos_handler))
-            .route("/edit-todo", web::post().to(edit_todo_handler))
-            .route("/config", web::get().to(get_config_handler))
-            .route("/config", web::post().to(update_config_handler))
-            .route("/add-todo", web::post().to(add_todo_handler))
-            .route("/mark-done", web::post().to(mark_done_handler))
-    })
-    .bind((server_address, server_port))
-    .expect("Failed to bind server")
-    .run()
-    .await
-    .expect("Server failed to run")
+    Server::builder()
+        .add_service(TodoServiceServer::new(todo_service))
+        .add_service(ConfigServiceServer::new(config_service))
+        .serve(addr)
+        .await?;
+
+    Ok(())
 }
+
+// --- Removed Actix Handlers: get_todos_handler, edit_todo_handler, etc. ---

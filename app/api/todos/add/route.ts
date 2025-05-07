@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+import * as grpc from '@grpc/grpc-js';
+import { TodoServiceClient } from '../../../grpc-generated/unitodo_grpc_pb'; // Adjusted path
+import { AddTodoRequest, AddTodoResponse } from '../../../grpc-generated/unitodo_pb'; // Adjusted path
 
-const RUST_BACKEND_URL = 'http://127.0.0.1:8080';
+const GRPC_BACKEND_ADDRESS = 'localhost:50051';
 
 // Define the expected structure of the request body from the frontend
-interface AddTodoRequestBody {
+interface AddTodoApiRequestBody {
   category_type: string;
   category_name: string;
   content: string;
@@ -12,67 +15,72 @@ interface AddTodoRequestBody {
 
 // Handler for POST requests to add a new todo
 export async function POST(request: Request) {
+  const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {
-    const payload: AddTodoRequestBody = await request.json();
+    const payload: AddTodoApiRequestBody = await request.json();
 
-    // Forward the request to the Rust backend's /add-todo endpoint
-    const rustBackendUrl = `${RUST_BACKEND_URL}/add-todo`;
-    console.log(`Forwarding add request to: ${rustBackendUrl} with payload:`, payload);
+    const grpcRequest = new AddTodoRequest();
+    grpcRequest.setCategoryType(payload.category_type);
+    grpcRequest.setCategoryName(payload.category_name);
+    grpcRequest.setContent(payload.content);
+    if (payload.example_item_location) {
+      grpcRequest.setExampleItemLocation(payload.example_item_location);
+    }
 
-    const response = await fetch(rustBackendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store', // Ensure the request is always sent
+    return new Promise<NextResponse>((resolve) => {
+      client.addTodo(grpcRequest, (error: grpc.ServiceError | null, response: AddTodoResponse | null) => {
+        if (error) {
+          console.error('gRPC Error adding todo:', error);
+          resolve(NextResponse.json(
+            { error: 'Failed to add todo via backend (gRPC)', details: error.message },
+            { status: grpcStatusToHttpStatus(error.code) }
+          ));
+        } else if (response) {
+          console.log("Add todo request successful via gRPC.");
+          resolve(NextResponse.json({ status: response.getStatus(), message: response.getMessage() }));
+        } else {
+          resolve(NextResponse.json(
+            { error: 'Failed to add todo: Empty response from backend', details: 'No status returned' },
+            { status: 500 }
+          ));
+        }
+        client.close();
+      });
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Rust backend add error: ${response.status} ${response.statusText}`, errorText);
-      // Forward the backend error status and message if possible
-      try {
-         // Attempt to parse backend JSON error response
-         const errorJson = JSON.parse(errorText);
-         return NextResponse.json(
-             { error: errorJson.error || 'Failed to add todo via backend service', details: errorJson.details || errorText },
-             { status: response.status }
-         );
-      } catch (parseError) {
-          // If backend response wasn't JSON, return the raw text
-          return NextResponse.json(
-            { error: 'Failed to add todo via backend service', details: errorText },
-            { status: response.status }
-          );
-      }
-    }
-
-    // Parse the success response from the Rust backend
-    const data = await response.json();
-    console.log("Add request forwarded successfully.");
-
-    // Return the success response to the frontend
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('Error processing add request:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error processing add request';
-     if (error instanceof SyntaxError) { // Handle potential JSON parsing errors from request body
-        return NextResponse.json(
-            { error: 'Invalid request body format. Expected valid JSON.', details: errorMessage },
-            { status: 400 } // Bad Request
-        );
-    }
-     if (error instanceof TypeError && errorMessage.includes('fetch failed')) { // Handle network errors
-        return NextResponse.json(
-            { error: 'Failed to connect to the backend service to add todo. Is it running?', details: errorMessage },
-            { status: 503 } // Service Unavailable
-        );
+  } catch (error: any) {
+    console.error('Error processing POST /add-todo request:', error);
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected valid JSON for add.', details: error.message },
+        { status: 400 }
+      );
     }
     return NextResponse.json(
-      { error: 'Internal server error processing add request', details: errorMessage },
+      { error: 'Internal server error processing add todo request', details: error.message },
       { status: 500 }
     );
   }
+}
+
+function grpcStatusToHttpStatus(grpcStatus: grpc.status | undefined): number {
+    switch (grpcStatus) {
+        case grpc.status.OK: return 200;
+        case grpc.status.CANCELLED: return 499;
+        case grpc.status.UNKNOWN: return 500;
+        case grpc.status.INVALID_ARGUMENT: return 400;
+        case grpc.status.DEADLINE_EXCEEDED: return 504;
+        case grpc.status.NOT_FOUND: return 404;
+        case grpc.status.ALREADY_EXISTS: return 409;
+        case grpc.status.PERMISSION_DENIED: return 403;
+        case grpc.status.RESOURCE_EXHAUSTED: return 429;
+        case grpc.status.FAILED_PRECONDITION: return 400;
+        case grpc.status.ABORTED: return 409;
+        case grpc.status.OUT_OF_RANGE: return 400;
+        case grpc.status.UNIMPLEMENTED: return 501;
+        case grpc.status.INTERNAL: return 500;
+        case grpc.status.UNAVAILABLE: return 503;
+        case grpc.status.DATA_LOSS: return 500;
+        case grpc.status.UNAUTHENTICATED: return 401;
+        default: return 500;
+    }
 } 
