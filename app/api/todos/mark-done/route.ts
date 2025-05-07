@@ -1,77 +1,85 @@
 import { NextResponse } from 'next/server';
+import * as grpc from '@grpc/grpc-js';
+import { TodoServiceClient } from '../../../grpc-generated/unitodo_grpc_pb'; // Adjusted path
+import { MarkDoneRequest, MarkDoneResponse } from '../../../grpc-generated/unitodo_pb'; // Adjusted path
 
-const RUST_BACKEND_URL = 'http://127.0.0.1:8080';
+const GRPC_BACKEND_ADDRESS = 'localhost:50051';
 
 // Define the expected structure of the request body from the frontend
-interface MarkDoneRequestBody {
+interface MarkDoneApiRequestBody {
   location: string;
   original_content: string;
 }
 
 // Handler for POST requests to mark a todo as done
 export async function POST(request: Request) {
+  const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {
-    const payload: MarkDoneRequestBody = await request.json();
+    const payload: MarkDoneApiRequestBody = await request.json();
 
-    // Forward the request to the Rust backend's /mark-done endpoint
-    const rustBackendMarkDoneUrl = `${RUST_BACKEND_URL}/mark-done`;
-    console.log(`Forwarding mark-done request to: ${rustBackendMarkDoneUrl} with payload:`, payload);
+    const grpcRequest = new MarkDoneRequest();
+    grpcRequest.setLocation(payload.location);
+    grpcRequest.setOriginalContent(payload.original_content);
 
-    const response = await fetch(rustBackendMarkDoneUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store', // Ensure the request is always sent
+    return new Promise<NextResponse>((resolve) => {
+      client.markDone(grpcRequest, (error: grpc.ServiceError | null, response: MarkDoneResponse | null) => {
+        if (error) {
+          console.error('gRPC Error marking todo as done:', error);
+          resolve(NextResponse.json(
+            { error: 'Failed to mark todo as done via backend (gRPC)', details: error.message },
+            { status: grpcStatusToHttpStatus(error.code) }
+          ));
+        } else if (response) {
+          console.log("Mark done request successful via gRPC.");
+          resolve(NextResponse.json({
+            status: response.getStatus(),
+            message: response.getMessage(),
+            new_content: response.getNewContent(),
+            completed: response.getCompleted(),
+          }));
+        } else {
+          resolve(NextResponse.json(
+            { error: 'Failed to mark todo as done: Empty response from backend', details: 'No status returned' },
+            { status: 500 }
+          ));
+        }
+        client.close();
+      });
     });
-
-    // Read the response body once, as it might be needed for both success and error cases
-    const responseText = await response.text();
-    let responseData;
-    try {
-        responseData = JSON.parse(responseText);
-    } catch (e) {
-        // If responseText is not valid JSON (e.g., plain text error from backend)
-        responseData = { error: "Backend returned non-JSON response", details: responseText };
-    }
-
-    if (!response.ok) {
-      console.error(`Rust backend mark-done error: ${response.status} ${response.statusText}`, responseData);
-      // Forward the backend error status and message using parsed responseData
+  } catch (error: any) {
+    console.error('Error processing POST /mark-done request:', error);
+    if (error instanceof SyntaxError) {
       return NextResponse.json(
-        { 
-          error: responseData.error || 'Failed to mark todo as done via backend service', 
-          details: responseData.details || 'No specific details from backend.'
-        },
-        { status: response.status }
+        { error: 'Invalid request body. Expected valid JSON for mark-done.', details: error.message },
+        { status: 400 }
       );
     }
-    
-    console.log("Mark-done request forwarded successfully, response from backend:", responseData);
-
-    // Return the success response from the Rust backend to the frontend
-    return NextResponse.json(responseData);
-
-  } catch (error) {
-    console.error('Error processing mark-done request in API route:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error processing mark-done request';
-    
-    if (error instanceof SyntaxError) { // Handle potential JSON parsing errors from request body
-        return NextResponse.json(
-            { error: 'Invalid request body format for mark-done. Expected valid JSON.', details: errorMessage },
-            { status: 400 } // Bad Request
-        );
-    }
-     if (error instanceof TypeError && errorMessage.includes('fetch failed')) { // Handle network errors
-        return NextResponse.json(
-            { error: 'Failed to connect to the backend service to mark-done. Is it running?', details: errorMessage },
-            { status: 503 } // Service Unavailable
-        );
-    }
     return NextResponse.json(
-      { error: 'Internal server error processing mark-done request', details: errorMessage },
+      { error: 'Internal server error processing mark-done request', details: error.message },
       { status: 500 }
     );
   }
+}
+
+function grpcStatusToHttpStatus(grpcStatus: grpc.status | undefined): number {
+    switch (grpcStatus) {
+        case grpc.status.OK: return 200;
+        case grpc.status.CANCELLED: return 499;
+        case grpc.status.UNKNOWN: return 500;
+        case grpc.status.INVALID_ARGUMENT: return 400;
+        case grpc.status.DEADLINE_EXCEEDED: return 504;
+        case grpc.status.NOT_FOUND: return 404;
+        case grpc.status.ALREADY_EXISTS: return 409;
+        case grpc.status.PERMISSION_DENIED: return 403;
+        case grpc.status.RESOURCE_EXHAUSTED: return 429;
+        case grpc.status.FAILED_PRECONDITION: return 400;
+        case grpc.status.ABORTED: return 409;
+        case grpc.status.OUT_OF_RANGE: return 400;
+        case grpc.status.UNIMPLEMENTED: return 501;
+        case grpc.status.INTERNAL: return 500;
+        case grpc.status.UNAVAILABLE: return 503;
+        case grpc.status.DATA_LOSS: return 500;
+        case grpc.status.UNAUTHENTICATED: return 401;
+        default: return 500;
+    }
 } 

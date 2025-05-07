@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package unitodo;
+
+// --------------- Todo Service ---------------
+
+message TodoItem {
+    string content = 1;
+    string location = 2;
+    bool completed = 3;
+}
+
+message TodoCategory {
+    string name = 1;
+    string icon = 2;
+    repeated TodoItem todos = 3;
+}
+
+message GetTodosRequest {}
+
+message GetTodosResponse {
+    repeated TodoCategory categories = 1;
+}
+
+message EditTodoRequest {
+    string location = 1;
+    string new_content = 2;
+    string original_content = 3;
+    bool completed = 4;
+}
+
+message EditTodoResponse {
+    string status = 1; // "success" or "error"
+    string message = 2; // Optional error message or success message
+    // We might need to return the updated TodoItem if the frontend needs it directly
+}
+
+message AddTodoRequest {
+    string category_type = 1; // "git" or "project"
+    string category_name = 2;
+    string content = 3;
+    optional string example_item_location = 4;
+}
+
+message AddTodoResponse {
+    string status = 1;
+    string message = 2;
+}
+
+message MarkDoneRequest {
+    string location = 1;
+    string original_content = 2;
+}
+
+message MarkDoneResponse {
+    string status = 1;
+    string message = 2;
+    string new_content = 3;
+    bool completed = 4;
+}
+
+service TodoService {
+    rpc GetTodos (GetTodosRequest) returns (GetTodosResponse);
+    rpc EditTodo (EditTodoRequest) returns (EditTodoResponse);
+    rpc AddTodo (AddTodoRequest) returns (AddTodoResponse);
+    rpc MarkDone (MarkDoneRequest) returns (MarkDoneResponse);
+}
+
+// --------------- Config Service ---------------
+
+message RgConfigMessage {
+    repeated string paths = 1;
+    repeated string ignore = 2; // Using repeated for Option<Vec<String>>
+    repeated string file_types = 3; // Using repeated for Option<Vec<String>>
+}
+
+message ProjectConfigMessage {
+    repeated string patterns = 1;
+    optional string append_file_path = 2;
+}
+
+message ConfigMessage {
+    RgConfigMessage rg = 1;
+    map<string, ProjectConfigMessage> projects = 2;
+    uint32 refresh_interval = 3;
+    string editor_uri_scheme = 4;
+    repeated TodoDonePair todo_done_pairs = 5;
+    string default_append_basename = 6;
+}
+
+message TodoDonePair {
+    string todo_marker = 1;
+    string done_marker = 2;
+}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+    ConfigMessage config = 1;
+}
+
+message UpdateConfigRequest {
+    ConfigMessage config = 1;
+}
+
+message UpdateConfigResponse {
+    string status = 1;
+    string message = 2;
+}
+
+service ConfigService {
+    rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
+    rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
+} 

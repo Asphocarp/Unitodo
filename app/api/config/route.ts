@@ -1,100 +1,171 @@
 import { NextResponse } from 'next/server';
-import { Config } from '@/app/types'; // Use path alias if configured, otherwise adjust path
+import * as grpc from '@grpc/grpc-js';
+import { ConfigServiceClient } from '../../grpc-generated/unitodo_grpc_pb';
+import {
+    GetConfigRequest,
+    GetConfigResponse,
+    UpdateConfigRequest,
+    UpdateConfigResponse,
+    ConfigMessage as PbConfigMessage,
+    RgConfigMessage as PbRgConfigMessage,
+    ProjectConfigMessage as PbProjectConfigMessage,
+    TodoDonePair as PbTodoDonePair
+} from '../../grpc-generated/unitodo_pb';
+import { Config as AppConfig, RgConfig as AppRgConfig, ProjectConfig as AppProjectConfig } from '@/app/types';
 
-const RUST_BACKEND_URL = 'http://127.0.0.1:8080';
+const GRPC_BACKEND_ADDRESS = 'localhost:50051';
+
+// --- Helper: AppConfig (from frontend/app/types.ts) to gRPC ConfigMessage ---
+function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
+    const configMessage = new PbConfigMessage();
+    
+    const rgMessage = new PbRgConfigMessage();
+    rgMessage.setPathsList(appConfig.rg.paths || []);
+    rgMessage.setIgnoreList(appConfig.rg.ignore || []);
+    rgMessage.setFileTypesList(appConfig.rg.file_types || []); // Corrected: app_config to appConfig
+    configMessage.setRg(rgMessage);
+
+    const projectsMap = configMessage.getProjectsMap();
+    for (const [key, value] of Object.entries(appConfig.projects)) {
+        const projectMessage = new PbProjectConfigMessage();
+        projectMessage.setPatternsList(value.patterns || []);
+        if (value.append_file_path) {
+            projectMessage.setAppendFilePath(value.append_file_path);
+        }
+        projectsMap.set(key, projectMessage);
+    }
+
+    configMessage.setRefreshInterval(appConfig.refresh_interval);
+    configMessage.setEditorUriScheme(appConfig.editor_uri_scheme);
+    
+    const todoDonePairs = appConfig.todo_done_pairs.map(pairArray => {
+        const pairMessage = new PbTodoDonePair();
+        pairMessage.setTodoMarker(pairArray[0] || "");
+        pairMessage.setDoneMarker(pairArray[1] || "");
+        return pairMessage;
+    });
+    configMessage.setTodoDonePairsList(todoDonePairs);
+    configMessage.setDefaultAppendBasename(appConfig.default_append_basename);
+    
+    return configMessage;
+}
+
+// --- Helper: gRPC ConfigMessage to AppConfig ---
+function grpcConfigMessageToAppConfig(configMessage: PbConfigMessage): AppConfig {
+    const projects: Record<string, AppProjectConfig> = {};
+    configMessage.getProjectsMap().forEach((value: PbProjectConfigMessage, key: string) => {
+        projects[key] = {
+            patterns: value.getPatternsList(),
+            append_file_path: value.hasAppendFilePath() ? value.getAppendFilePath() : undefined,
+        };
+    });
+
+    return {
+        rg: {
+            paths: configMessage.getRg()?.getPathsList() || [],
+            ignore: configMessage.getRg()?.getIgnoreList(),
+            file_types: configMessage.getRg()?.getFileTypesList(),
+        },
+        projects: projects,
+        refresh_interval: configMessage.getRefreshInterval(),
+        editor_uri_scheme: configMessage.getEditorUriScheme(),
+        todo_done_pairs: configMessage.getTodoDonePairsList().map((pair: PbTodoDonePair) => [pair.getTodoMarker(), pair.getDoneMarker()]),
+        default_append_basename: configMessage.getDefaultAppendBasename(),
+    };
+}
 
 // Handler for GET requests to fetch config
 export async function GET() {
-  try {
-    const backendConfigUrl = `${RUST_BACKEND_URL}/config`;
-    console.log(`Forwarding GET request to: ${backendConfigUrl}`);
+    const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
+    const request = new GetConfigRequest();
 
-    const response = await fetch(backendConfigUrl, {
-      cache: 'no-store', // Ensure fresh data is fetched every time
+    return new Promise<NextResponse>((resolve) => {
+        client.getConfig(request, (error: grpc.ServiceError | null, response: GetConfigResponse | null) => {
+            if (error) {
+                console.error('gRPC Error fetching config:', error);
+                resolve(NextResponse.json(
+                    { error: 'Failed to fetch config from backend (gRPC)', details: error.message }, 
+                    { status: grpcStatusToHttpStatus(error.code) }
+                ));
+            } else if (response && response.hasConfig()) {
+                const appConfig = grpcConfigMessageToAppConfig(response.getConfig()!);
+                console.log("Config fetched successfully from Rust gRPC backend.");
+                resolve(NextResponse.json(appConfig));
+            } else {
+                console.error('gRPC Error: No config in response or empty response');
+                resolve(NextResponse.json(
+                    { error: 'Failed to fetch config: Empty or invalid response from backend', details: 'No config data returned' }, 
+                    { status: 500 }
+                ));
+            }
+            client.close();
+        });
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Rust backend error fetching config: ${response.status} ${response.statusText}`, errorText);
-      // Forward the backend error status and message if possible
-      return NextResponse.json(
-        { error: 'Failed to fetch config from backend service', details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data: Config = await response.json();
-    console.log("Config fetched successfully from Rust backend.");
-
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('Error forwarding GET /config request:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    // Handle network errors specifically
-    if (error instanceof TypeError) {
-        return NextResponse.json(
-            { error: 'Failed to connect to the backend service. Is it running?', details: errorMessage },
-            { status: 503 } // Service Unavailable
-        );
-    }
-    return NextResponse.json(
-      { error: 'Internal server error fetching config', details: errorMessage },
-      { status: 500 }
-    );
-  }
 }
 
 // Handler for POST requests to update config
-export async function POST(request: Request) {
-  try {
-    const payload: Config = await request.json();
+export async function POST(requestRequest: Request) {
+    const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
+    try {
+        const payload: AppConfig = await requestRequest.json();
+        const grpcRequest = new UpdateConfigRequest();
+        grpcRequest.setConfig(appConfigToGrpcConfigMessage(payload));
 
-    const backendConfigUrl = `${RUST_BACKEND_URL}/config`;
-    console.log(`Forwarding POST request to: ${backendConfigUrl}`);
-
-    const response = await fetch(backendConfigUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      cache: 'no-store', // Ensure the request is always sent
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Rust backend error updating config: ${response.status} ${response.statusText}`, errorText);
-      // Forward the backend error status and message if possible
-      return NextResponse.json(
-        { error: 'Failed to update config via backend service', details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    console.log("Config update request forwarded successfully.");
-
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error('Error forwarding POST /config request:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    if (error instanceof SyntaxError) { // Handle potential JSON parsing errors from request body
+        return new Promise<NextResponse>((resolve) => {
+            client.updateConfig(grpcRequest, (error: grpc.ServiceError | null, response: UpdateConfigResponse | null) => {
+                if (error) {
+                    console.error('gRPC Error updating config:', error);
+                    resolve(NextResponse.json(
+                        { error: 'Failed to update config via backend (gRPC)', details: error.message }, 
+                        { status: grpcStatusToHttpStatus(error.code) }
+                    ));
+                } else if (response) {
+                    console.log("Config update request forwarded successfully via gRPC.");
+                    resolve(NextResponse.json({ status: response.getStatus(), message: response.getMessage() }));
+                } else {
+                     resolve(NextResponse.json(
+                        { error: 'Failed to update config: Empty response from backend', details: 'No status returned' }, 
+                        { status: 500 }
+                    ));
+                }
+                client.close();
+            });
+        });
+    } catch (error: any) {
+        console.error('Error processing POST /config request:', error);
+        if (error instanceof SyntaxError) {
+            return NextResponse.json(
+                { error: 'Invalid request body. Expected valid JSON Config.', details: error.message }, 
+                { status: 400 }
+            );
+        }
         return NextResponse.json(
-            { error: 'Invalid request body format. Expected valid JSON.', details: errorMessage },
-            { status: 400 } // Bad Request
+            { error: 'Internal server error processing config update', details: error.message }, 
+            { status: 500 }
         );
     }
-     if (error instanceof TypeError) {
-        return NextResponse.json(
-            { error: 'Failed to connect to the backend service to update config. Is it running?', details: errorMessage },
-            { status: 503 } // Service Unavailable
-        );
+}
+
+// Re-use grpcStatusToHttpStatus or ensure it's available (e.g. from a shared utils file)
+function grpcStatusToHttpStatus(grpcStatus: grpc.status | undefined): number {
+    switch (grpcStatus) {
+        case grpc.status.OK: return 200;
+        case grpc.status.CANCELLED: return 499;
+        case grpc.status.UNKNOWN: return 500;
+        case grpc.status.INVALID_ARGUMENT: return 400;
+        case grpc.status.DEADLINE_EXCEEDED: return 504;
+        case grpc.status.NOT_FOUND: return 404;
+        case grpc.status.ALREADY_EXISTS: return 409;
+        case grpc.status.PERMISSION_DENIED: return 403;
+        case grpc.status.RESOURCE_EXHAUSTED: return 429;
+        case grpc.status.FAILED_PRECONDITION: return 400;
+        case grpc.status.ABORTED: return 409;
+        case grpc.status.OUT_OF_RANGE: return 400;
+        case grpc.status.UNIMPLEMENTED: return 501;
+        case grpc.status.INTERNAL: return 500;
+        case grpc.status.UNAVAILABLE: return 503;
+        case grpc.status.DATA_LOSS: return 500;
+        case grpc.status.UNAUTHENTICATED: return 401;
+        default: return 500;
     }
-    return NextResponse.json(
-      { error: 'Internal server error updating config', details: errorMessage },
-      { status: 500 }
-    );
-  }
 } 

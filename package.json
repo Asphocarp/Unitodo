@@ -44,8 +44,12 @@
     "cross-env": "^7.0.3",
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
+    "google-protobuf": "^3.21.2",
+    "grpc-tools": "^1.12.4",
+    "grpc_tools_node_protoc_ts": "^5.3.3",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
+    "ts-protoc-gen": "^0.15.0",
     "typescript": "^5.3.3"
   },
   "build": {
