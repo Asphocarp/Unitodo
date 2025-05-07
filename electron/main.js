@@ -281,7 +281,9 @@ async function createWindow() {
     console.error(`[Electron Main] Failed to load URL: ${startUrl}`, error);
   }
   
-  mainWindow.webContents.openDevTools(); // Always open DevTools
+  if (isDev) {
+    mainWindow.webContents.openDevTools(); // Only open if isDev is true
+  }
 
     // Handle window control events from renderer
   ipcMain.on('window-control', (event, command) => {
