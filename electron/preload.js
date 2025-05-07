@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 // Mark document as Electron app for CSS targeting
 if (typeof document !== 'undefined') {
@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electron', {
   isElectron: true,
   platform: process.platform,
   appVersion: process.env.npm_package_version || '0.1.0', 
+  
+  openExternal: (url) => {
+    return Promise.resolve(shell.openExternal(url));
+  },
   
   sendMessage: (channel, data) => {
     ipcRenderer.send(channel, data);
@@ -36,4 +40,5 @@ contextBridge.exposeInMainWorld('electronApi', {
   markDone: (payload) => ipcRenderer.invoke('mark-done', payload),
   getConfig: () => ipcRenderer.invoke('get-config'),
   updateConfig: (config) => ipcRenderer.invoke('update-config', config),
+  openVSCodeURI: (uri) => ipcRenderer.invoke('open-vscode-uri', uri),
 });

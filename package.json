@@ -10,7 +10,7 @@
     "build": "next build",
     "build:electron": "electron-builder",
     "start": "next start",
-    "electron:dev": "concurrently \"npm run dev:frontend\" \"cross-env NODE_ENV=development electron .\"",
+    "electron:dev": "concurrently \"npm run dev\" \"cross-env NODE_ENV=development electron .\"",
     "electron:build": "next build && electron-builder build",
     "electron:start": "npm run build && cross-env NODE_ENV=production electron .",
     "electron:package": "npm run build && npm run electron:build",
