@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useConfigStore from '../store/configStore';
 
 interface AddTodoModalProps {
@@ -20,7 +20,19 @@ export default function AddTodoModal({
 }: AddTodoModalProps) {
   const [todoText, setTodoText] = useState('');
   const { config } = useConfigStore();
+  const inputRef = useRef<HTMLInputElement>(null);
   
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      // Focus the input when modal opens
+      inputRef.current.focus();
+    }
+    // Reset content when modal is opened
+    if (isOpen) {
+      setTodoText('');
+    }
+  }, [isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (todoText.trim()) {
@@ -31,7 +43,7 @@ export default function AddTodoModal({
   if (!isOpen) return null;
 
   // Get the appropriate todo pattern from config
-  let todoPattern = '- [ ] ';
+  let todoPattern = '- [ ] '; // UNITODO_IGNORE_LINE
   if (config?.todo_done_pairs && config.todo_done_pairs.length > 0) {
     todoPattern = config.todo_done_pairs[0][0];
     // Add space if pattern doesn't end with one
@@ -64,24 +76,20 @@ export default function AddTodoModal({
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="todoText" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+            {/* <label htmlFor="todoText" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
               Todo text
-            </label>
-            <div className="relative">
-              <div className="absolute left-3 top-2.5 text-gray-500 dark:text-gray-400 text-sm">
-                {todoPattern}
-              </div>
-              <textarea
+            </label> */}
+            <input
                 id="todoText"
+                ref={inputRef}
                 value={todoText}
                 onChange={(e) => setTodoText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter your todo here..."
-                className="w-full px-3 py-2 pl-[calc(1rem+1ch*7)] border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-notion-green focus:border-notion-green dark:bg-gray-800 dark:text-gray-200"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-notion-green focus:border-notion-green dark:bg-gray-800 dark:text-gray-200"
                 autoFocus
-                rows={3}
-              />
-            </div>
+                type="text"
+            />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {categoryType === 'git' 
                 ? 'This todo will be added to your git repository'
@@ -100,7 +108,7 @@ export default function AddTodoModal({
             <button
               type="submit"
               disabled={!todoText.trim()}
-              className="px-4 py-2 text-sm bg-notion-green text-white rounded-md hover:bg-notion-green/90 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm bg-notion-green rounded-md hover:bg-notion-green/90 transition-colors disabled:opacity-50"
             >
               Add Todo
             </button>
