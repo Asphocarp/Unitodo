@@ -154,3 +154,5 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 1 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
 - [ ] 2@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
 - [ ] 2 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
+- [ ] 2@AptAw doc: say that by default config at ~/.config/unitodo/unitodo.toml
+- [ ] 2@AptCd even when nothing changed, the updated time should be updated
