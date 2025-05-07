@@ -17,6 +17,8 @@
     "electron:package:mac": "npm run build && electron-builder build --mac"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.13.3",
+    "@grpc/proto-loader": "^0.7.15",
     "@heroicons/react": "^2.2.0",
     "@lexical/react": "^0.31.0",
     "@types/lodash": "^4.17.16",
