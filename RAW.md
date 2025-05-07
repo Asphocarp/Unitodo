@@ -99,7 +99,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
 - [ ] 2 check command injection safety
 - [ ] 2 (fancy) show dependency of todos?
-- [ ] 2 DB instead of json (200KB though)?
+- [x] 2@@AptmE DB instead of json (200KB though)? X - gRPC now
 - [ ] 3 rg: file types?
 - [ ] 3 curious of battery consumption
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
