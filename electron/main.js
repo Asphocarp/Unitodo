@@ -264,7 +264,9 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       webSecurity: false, // Kept for testing asset loading, review for production
     },
-    titleBarStyle: 'hiddenInset', // For macOS style
+    titleBarStyle: 'hidden', // Completely hide native title bar
+    frame: false, // Remove the frame completely
+    transparent: true, // Allow for rounded corners and custom appearance
     backgroundColor: '#f5f5f5'
   });
 
