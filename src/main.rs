@@ -16,6 +16,7 @@ use std::fs::OpenOptions;
 use fs2::FileExt;
 use parking_lot::{Mutex as ParkingMutex, RwLock};
 use lazy_static::lazy_static;
+use tokio_stream;
 
 // Tonic imports
 use tonic::{transport::Server, Request, Response, Status};
@@ -1088,7 +1089,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let shared_config_state = Arc::new(RwLock::new(initial_config));
 
-    let addr = "0.0.0.0:50051".parse()?; // Common gRPC port
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
+    let addr = listener.local_addr()?;
+    println!("UNITODO_GRPC_PORT={}", addr.port()); // Print the dynamically assigned port
+
     let todo_service = MyTodoService { config_state: Arc::clone(&shared_config_state) };
     let config_service = MyConfigService { config_state: Arc::clone(&shared_config_state) };
 
@@ -1097,7 +1101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(TodoServiceServer::new(todo_service))
         .add_service(ConfigServiceServer::new(config_service))
-        .serve(addr)
+        .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener))
         .await?;
     
     Ok(())

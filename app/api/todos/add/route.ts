@@ -15,6 +15,12 @@ interface AddTodoApiRequestBody {
 
 // Handler for POST requests to add a new todo
 export async function POST(request: Request) {
+  // Prevent gRPC calls during Next.js build phase
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.log('[API Route POST /api/todos/add] Build phase, skipping gRPC call.');
+    return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build' }, { status: 200 });
+  }
+
   const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {
     const payload: AddTodoApiRequestBody = await request.json();

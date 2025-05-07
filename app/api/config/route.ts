@@ -76,6 +76,20 @@ function grpcConfigMessageToAppConfig(configMessage: PbConfigMessage): AppConfig
 
 // Handler for GET requests to fetch config
 export async function GET() {
+    // Prevent gRPC calls during Next.js build phase
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+        console.log('[API Route GET /api/config] Build phase, skipping gRPC call.');
+        // Return a default or empty config structure
+        return NextResponse.json({
+            rg: { paths: [], ignore: [], file_types: [] },
+            projects: {},
+            refresh_interval: 5000,
+            editor_uri_scheme: 'vscode://file/',
+            todo_done_pairs: [],
+            default_append_basename: 'unitodo.append.md'
+        });
+    }
+
     const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
     const request = new GetConfigRequest();
 
@@ -105,6 +119,12 @@ export async function GET() {
 
 // Handler for POST requests to update config
 export async function POST(requestRequest: Request) {
+    // Prevent gRPC calls during Next.js build phase
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+        console.log('[API Route POST /api/config] Build phase, skipping gRPC call.');
+        return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build' }, { status: 200 });
+    }
+
     const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
     try {
         const payload: AppConfig = await requestRequest.json();

@@ -13,6 +13,12 @@ interface MarkDoneApiRequestBody {
 
 // Handler for POST requests to mark a todo as done
 export async function POST(request: Request) {
+  // Prevent gRPC calls during Next.js build phase
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.log('[API Route POST /api/todos/mark-done] Build phase, skipping gRPC call.');
+    return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build', new_content: '', completed: false }, { status: 200 });
+  }
+
   const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {
     const payload: MarkDoneApiRequestBody = await request.json();
