@@ -149,7 +149,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0@Apdzo@@ApqxA fix: when appending via `o`, do not ignore my leading prior 0/1/2/3;
 - [x] 1@@Apqxs X fancy: make it a native app? (rn/swift?) - Electron now
 - [ ] 1 polish UI: more rounded corners for buttons and everything, fancier&elegant, minimalistic Notion style
-- [ ] 1 polish UI: make the 3-macos-buttons in side the header (maybe just remove the header inside the webpage, move the updated time info to the header of buttons); 
+- [ ] 1 polish UI: just remove the header inside the webpage, move the updated time info to the header besides the buttons; 
 - [ ] 1 why is my macos electron .app file so hugo (500MB)? any idea to make the electron app package size smaller?
 - [ ] 1 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
 - [ ] 2@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
