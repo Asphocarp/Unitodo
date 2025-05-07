@@ -148,3 +148,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
 - [ ] 1 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [ ] 1 make the electron app package size smaller
+- [ ] do not fix the gRPC port, so that if some other app is using the same port 50051, it will not conflict.
