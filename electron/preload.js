@@ -1,5 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Mark document as Electron app for CSS targeting
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.documentElement.classList.add('electron-app');
+  });
+}
+
 // Expose basic Electron info and window controls (if still used)
 contextBridge.exposeInMainWorld('electron', {
   isElectron: true,

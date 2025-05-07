@@ -11,6 +11,32 @@
   -webkit-app-region: no-drag;
 }
 
+/* Improve window styling for Electron */
+:root.electron-app {
+  --window-border-radius: 8px;
+}
+
+/* Add rounded corner to top of the window in Electron */
+.electron-app body {
+  border-radius: var(--window-border-radius);
+  overflow: hidden;
+}
+
+/* Ensure title bar corners match window corners */
+.electron-app .hn-title-bar {
+  border-top-left-radius: var(--window-border-radius);
+  border-top-right-radius: var(--window-border-radius);
+}
+
+/* Improve appearance of window controls */
+.electron-app .hn-title-bar button {
+  transition: all 0.2s ease;
+}
+
+.electron-app .hn-title-bar button:active {
+  transform: scale(0.9);
+}
+
 /* TailwindCSS directives will be processed during build */
 
 /* Add scroll-padding to ensure focused items aren't hidden under sticky headers */

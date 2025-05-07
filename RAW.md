@@ -147,3 +147,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 0 change current RESTful API to gRPC, using tonic (sidecar) for rust backend.
 - [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
 - [ ] 1 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
+- [ ] 1 make the electron app package size smaller
