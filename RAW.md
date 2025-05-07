@@ -142,13 +142,13 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 1@ApYun@@ApZG2 no more succeed huge alert, just a simple pop info should be ok
 - [x] 1@ApZNj@@ApdML allow no more cursor inside a Lexical chip/node; render the `@fffff` chip as readable format, but keep the text-content behind it same as before; - but maybe make it a table col is better
 - [x] 1 do not fix the gRPC port, so that if some other app is using the same port 50051, it will not conflict.
+- [x] 0@@App-V fix macos Electron app of `npm run electron:package:mac`
+- [x] 0@@ApqT1 change current RESTful API to gRPC, using tonic (sidecar) for rust backend.
 - [ ] 0-0 fix: toggle-checkbox is goes wrong, fucking again
 - [ ] 0-0 fix: do when pressing `enter` to open the vscode uri, the page should not change. (maybe there is a better native way to do this)
+- [ ] 0 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
 - [ ] 1@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
 - [ ] 0@ApdyT add feat: convert this entire app to a Electron app (e.g. for macos)
-- [x] 0@@App-V fix macos Electron app of `npm run electron:package:mac`
-- [ ] 0 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
-- [ ] 0 change current RESTful API to gRPC, using tonic (sidecar) for rust backend.
 - [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
 - [ ] 1 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [ ] 1 why is my macos electron .app file so hugo (500MB)? any idea to make the electron app package size smaller?

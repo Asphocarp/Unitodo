@@ -817,7 +817,7 @@ fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &s
 
     let timestamp = generate_short_timestamp();
     let sanitized_content = content.replace('\n', " ").trim().to_string();
-    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); }
+    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
     
     let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content);
 
