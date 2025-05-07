@@ -210,7 +210,7 @@ export default function ConfigPage() {
                 <button 
                   type="button"
                   onClick={handleAddProject}
-                  className="px-3 py-1 bg-accent-color hover:bg-accent-color/90 text-white rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm"
+                  className="px-3 py-1 bg-accent-color hover:bg-accent-color/90 rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm"
                   disabled={!newProjectName.trim()}
                 >
                   <span className="mr-1">+</span> Add
@@ -289,7 +289,7 @@ export default function ConfigPage() {
             <button 
               type="button"
               onClick={handleAddTodoDonePair}
-              className="px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-white rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm"
+              className="px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm"
               disabled={!newTodoPattern.trim() || !newDonePattern.trim()}
             >
               <span className="mr-1">+</span> Add Pattern Pair
