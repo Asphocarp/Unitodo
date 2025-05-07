@@ -149,7 +149,8 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0@ApdyT@@Apqkg add feat: convert this entire app to a Electron app (e.g. for macos)
 - [ ] 0 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
 - [ ] 1@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
-- [ ] 1@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3
+- [ ] 0@Apdzo fix: when appending via `o`, do not ignore my leading prior 0/1/2/3;
 - [ ] 1 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [ ] 1 why is my macos electron .app file so hugo (500MB)? any idea to make the electron app package size smaller?
 - [ ] 1 polish UI: make the 3-macos-buttons in side the header (maybe just remove the header inside the webpage, move the updated time info to the header of buttons); more rounded corners for buttons and everything, fancier&elegant.
+- [ ] 1@Apqry 1 asaaa
