@@ -1,10 +1,10 @@
 # Unitodo
+<img src="public/images/icon.png" alt="Unitodo Logo" width="150" />
 
 **Unitying Distributed TODOs**
 
 Centralize all your TODOs from across your codebases and projects into a single, manageable, vim-able, high-performance view.
 
-<!-- ![Unitodo Logo](assets/logo.png) -->
 <!-- > ⚠️ **Warning**: Unitodo is currently a toy project in early development stage. It may contain bugs, lack features, or undergo significant changes. Use at your own risk in production environments. -->
 
 > ⚠️ **Warning**: This doc (and most of the code) was AI-generated because life’s short — polish coming later!
