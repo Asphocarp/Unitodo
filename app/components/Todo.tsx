@@ -572,7 +572,7 @@ export default function Todo() {
     >
       <div className="hn-header dark:border-gray-700 flex-shrink-0 flex justify-between">
         <div className="flex items-center">
-          <h1 className="hn-title"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
+          <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
           {lastUpdated && (
             <span className="ml-3 text-xs text-gray-500 dark:text-gray-400">
               Updated {lastUpdated.toLocaleTimeString()}
