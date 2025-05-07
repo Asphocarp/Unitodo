@@ -828,9 +828,9 @@ fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &s
     let final_append_str = {
         let mut needs_newline = false;
         if file.metadata()?.len() > 0 {
-            file.seek(SeekFrom::End(-1))?;
-            let mut last_char_buf = [0; 1];
-            file.read_exact(&mut last_char_buf)?;
+        file.seek(SeekFrom::End(-1))?;
+        let mut last_char_buf = [0; 1];
+        file.read_exact(&mut last_char_buf)?;
             if last_char_buf[0] != b'\n' { needs_newline = true; }
         }
         if needs_newline { format!("\n{}", base_line_to_append) } else { base_line_to_append }
@@ -920,7 +920,7 @@ fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_cont
 
         new_line_for_file = format!("{}{}{}", marker_part, leading_space, final_content_part);
         lines[line_index] = new_line_for_file;
-
+        
         let new_full_content = lines.join("\n");
         let final_write_content = if original_file_content_string.ends_with('\n') && !new_full_content.is_empty() {
             format!("{}\n", new_full_content)
@@ -968,7 +968,7 @@ impl TodoService for MyTodoService {
         let config_guard = self.config_state.read();
         match edit_todo_in_file_grpc(&config_guard, &payload.location, &payload.new_content, &payload.original_content, payload.completed) {
             Ok(()) => Ok(Response::new(EditTodoResponse { status: "success".to_string(), message: "Todo edited successfully".to_string() })),
-            Err(e) => {
+        Err(e) => {
                 let (code, msg) = match e.kind() {
                     io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
                     io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
@@ -1010,7 +1010,7 @@ impl TodoService for MyTodoService {
                     completed: completed_status_changed, // Or derive from new_content if more reliable
                 }))
             }
-            Err(e) => {
+        Err(e) => {
                  let (code, msg) = match e.kind() {
                     io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
                     io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
@@ -1053,11 +1053,11 @@ impl ConfigService for MyConfigService {
             let mut config_guard = config_arc_clone.write();
             *config_guard = new_config;
             Ok::<(), io::Error>(())
-        }).await;
+    }).await;
 
-        match result {
+    match result {
             Ok(Ok(())) => {
-                println!("Configuration updated successfully (in-memory and file).");
+            println!("Configuration updated successfully (in-memory and file).");
                 Ok(Response::new(UpdateConfigResponse {
                     status: "success".to_string(),
                     message: "Configuration saved successfully.".to_string(),
@@ -1099,7 +1099,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(ConfigServiceServer::new(config_service))
         .serve(addr)
         .await?;
-
+    
     Ok(())
 }
 

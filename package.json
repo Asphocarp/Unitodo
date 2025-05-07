@@ -12,7 +12,7 @@
     "start": "next start",
     "electron:dev": "concurrently \"npm run dev:frontend\" \"cross-env NODE_ENV=development electron .\"",
     "electron:build": "next build && electron-builder build",
-    "electron:start": "cross-env NODE_ENV=production electron .",
+    "electron:start": "npm run build && cross-env NODE_ENV=production electron .",
     "electron:package": "npm run build && npm run electron:build",
     "electron:package:mac": "npm run build && electron-builder build --mac"
   },
@@ -24,6 +24,7 @@
     "@types/lodash": "^4.17.16",
     "axios": "^1.6.5",
     "date-fns": "^4.1.0",
+    "google-protobuf": "^3.21.2",
     "lexical": "^0.31.0",
     "lodash": "^4.17.21",
     "nanoid": "^5.1.5",
@@ -44,7 +45,6 @@
     "cross-env": "^7.0.3",
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3",
-    "google-protobuf": "^3.21.2",
     "grpc-tools": "^1.12.4",
     "grpc_tools_node_protoc_ts": "^5.3.3",
     "postcss": "^8.4.33",
@@ -64,7 +64,8 @@
     },
     "files": [
       "electron/**/*",
-      "out/**/*"
+      "out/**/*",
+      "app/grpc-generated/**/*"
     ],
     "extraResources": [
       {

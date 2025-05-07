@@ -1,15 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const os = require('os');
 
-// Expose APIs to the renderer process
+// Expose basic Electron info and window controls (if still used)
 contextBridge.exposeInMainWorld('electron', {
-  // Basic information
   isElectron: true,
   platform: process.platform,
-  osVersion: os.release(),
-  appVersion: process.env.npm_package_version || '0.1.0',
+  appVersion: process.env.npm_package_version || '0.1.0', 
   
-  // Functions for communicating with main process
   sendMessage: (channel, data) => {
     ipcRenderer.send(channel, data);
   },
@@ -20,8 +16,17 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.removeListener(channel, func);
   },
   
-  // App window control
   minimizeWindow: () => ipcRenderer.send('window-control', 'minimize'),
   maximizeWindow: () => ipcRenderer.send('window-control', 'maximize'),
   closeWindow: () => ipcRenderer.send('window-control', 'close'),
+});
+
+// Expose gRPC IPC API to the renderer process
+contextBridge.exposeInMainWorld('electronApi', {
+  getTodos: () => ipcRenderer.invoke('get-todos'),
+  editTodo: (payload) => ipcRenderer.invoke('edit-todo', payload),
+  addTodo: (payload) => ipcRenderer.invoke('add-todo', payload),
+  markDone: (payload) => ipcRenderer.invoke('mark-done', payload),
+  getConfig: () => ipcRenderer.invoke('get-config'),
+  updateConfig: (config) => ipcRenderer.invoke('update-config', config),
 });
