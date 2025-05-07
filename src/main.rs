@@ -815,11 +815,35 @@ fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &s
         _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid category_type")),
     };
 
-    let timestamp = generate_short_timestamp();
+    let timestamp_str = generate_short_timestamp();
     let sanitized_content = content.replace('\n', " ").trim().to_string();
-    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
+    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); }
+
+    let priority_marker = "- [ ]";
+    let effective_priority_segment: String;
+    let content_segment: String;
+
+    let trimmed_content = sanitized_content.trim();
+    let parts: Vec<&str> = trimmed_content.splitn(2, ' ').collect();
+    let first_word = parts.get(0).map_or("", |s| *s);
+
+    let user_priority_re = Regex::new(r"^[a-zA-Z0-9][a-zA-Z0-9-]*$").unwrap();
+
+    if !first_word.is_empty() && user_priority_re.is_match(first_word) {
+        effective_priority_segment = first_word.to_string();
+        content_segment = parts.get(1).map_or("", |s| *s).trim().to_string();
+    } else {
+        effective_priority_segment = "1".to_string();
+        content_segment = trimmed_content.to_string();
+    }
     
-    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content); // UNITODO_IGNORE_LINE
+    let base_line_to_append = format!("{} {}@{} {}", 
+                                      priority_marker, 
+                                      effective_priority_segment, 
+                                      timestamp_str, 
+                                      content_segment)
+                                      .trim_end()
+                                      .to_string();
 
     if let Some(parent_dir) = target_append_file_path.parent() { fs::create_dir_all(parent_dir)?; }
     else { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid target append path")); }
