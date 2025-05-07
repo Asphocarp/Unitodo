@@ -870,10 +870,14 @@ fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_cont
         }
 
         let todo_done_pairs = if config.todo_done_pairs.is_empty() { default_todo_done_pairs() } else { config.todo_done_pairs.clone() };
-        let mut new_line_for_file = original_line_on_disk.clone();
         let mut marker_transformed = false; 
         
         let marker_re = Regex::new(&effective_rg_pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "marker regex error"))?;
+        
+        // Declare variables to hold the final line and content part for frontend
+        let final_line_to_write: String;
+        let final_content_for_frontend: String;
+
         if let Some(mat) = marker_re.find(&original_line_on_disk) {
             let prefix_before_marker = &original_line_on_disk[..mat.start()];
             let matched_todo_marker = mat.as_str();
@@ -887,40 +891,37 @@ fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_cont
                     break;
                 }
             }
-            new_line_for_file = format!("{}{}{}", prefix_before_marker, transformed_marker_str, content_after_marker_with_space);
+
+            let actual_content_to_timestamp = content_after_marker_with_space.trim_start();
+            let leading_space_after_marker_len = content_after_marker_with_space.len() - actual_content_to_timestamp.len();
+            let leading_space_after_marker = &content_after_marker_with_space[0..leading_space_after_marker_len];
+
+            let parts: Vec<&str> = actual_content_to_timestamp.splitn(2, ' ').collect();
+            let mut first_word_of_content = parts.get(0).map_or(String::new(), |s| (*s).to_string());
+            let rest_of_content = parts.get(1).map_or("", |s| *s);
+            
+            let done_ts_str = format!("@@{}", generate_short_timestamp());
+            let done_ts_regex = Regex::new(r"@@[A-Za-z0-9\\-_]{5}").unwrap();
+
+            if done_ts_regex.is_match(&first_word_of_content) {
+                first_word_of_content = done_ts_regex.replace(&first_word_of_content, &done_ts_str).to_string();
+            } else {
+                first_word_of_content.push_str(&done_ts_str);
+            }
+
+            let final_content_part_with_timestamp = if rest_of_content.is_empty() {
+                first_word_of_content
+            } else {
+                format!("{} {}", first_word_of_content, rest_of_content)
+            };
+            
+            final_line_to_write = format!("{}{}{}{}", prefix_before_marker, transformed_marker_str, leading_space_after_marker, final_content_part_with_timestamp);
+            final_content_for_frontend = final_content_part_with_timestamp;
         } else {
              return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found for marking done"));
         }
 
-        let (marker_part, content_part_for_ts) = if let Some(mat) = marker_re.find(&new_line_for_file) {
-            (new_line_for_file[..mat.end()].to_string(), new_line_for_file[mat.end()..].trim_start().to_string())
-        } else {
-            (String::new(), new_line_for_file.trim_start().to_string())
-        };
-
-        let mut parts: Vec<&str> = content_part_for_ts.splitn(2, ' ').collect();
-        let mut first_word = parts.get_mut(0).map_or(String::new(), |s| s.to_string());
-        let rest_of_content = parts.get(1).map_or("", |s| *s);
-        
-        let done_ts = format!("@@{}", generate_short_timestamp());
-        let done_ts_regex = Regex::new(r"@@[A-Za-z0-9\-_]{5}").unwrap();
-        if done_ts_regex.is_match(&first_word) {
-            first_word = done_ts_regex.replace(&first_word, &done_ts).to_string();
-        } else {
-            first_word.push_str(&done_ts);
-        }
-
-        let final_content_part = if rest_of_content.is_empty() {
-            first_word
-        } else {
-            format!("{} {}", first_word, rest_of_content)
-        };
-        
-        let leading_space_len = new_line_for_file[marker_part.len()..].len() - content_part_for_ts.len();
-        let leading_space = &new_line_for_file[marker_part.len()..marker_part.len() + leading_space_len];
-
-        new_line_for_file = format!("{}{}{}", marker_part, leading_space, final_content_part);
-        lines[line_index] = new_line_for_file;
+        lines[line_index] = final_line_to_write;
         
         let new_full_content = lines.join("\n");
         let final_write_content = if original_file_content_string.ends_with('\n') && !new_full_content.is_empty() {
@@ -932,12 +933,7 @@ fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_cont
         file.seek(SeekFrom::Start(0))?;
         file.write_all(final_write_content.as_bytes())?;
         
-        let new_cleaned_content_for_frontend = extract_cleaned_content_from_line(
-            &lines[line_index], 
-            &effective_rg_pattern 
-        )?;
-
-        Ok((new_cleaned_content_for_frontend, marker_transformed))
+        Ok((final_content_for_frontend, marker_transformed))
     })();
     fs2::FileExt::unlock(&file)?;
     result

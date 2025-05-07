@@ -327,36 +327,41 @@ export default function TodoItem({
           if (todo.location) {
             const url = getVSCodeUrl();
             if (url) {
+              const currentItemRef = itemRef.current; // Capture ref before await
               try {
                 console.log('[TodoItem] Attempting to open:', url);
                 
-                // Blur the currently active element before opening external URI
-                if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === 'function') {
-                  (document.activeElement as HTMLElement).blur();
-                }
-
-                // For VSCode/Cursor URIs, use our special handler that won't popup a window
+                // For VSCode/Cursor URIs, use our special handler
                 if ((url.startsWith('vscode://') || url.startsWith('cursor://')) && typeof window.electronApi?.openVSCodeURI === 'function') {
                   const result = await window.electronApi.openVSCodeURI(url);
                   if (result.success) {
                     console.log('[TodoItem] Successfully opened VS Code URI');
                   } else {
                     console.error('[TodoItem] Failed to open VS Code URI:', result.error);
-                    // Fall back to regular open if it fails
-                    window.open(url, '_blank');
+                    window.open(url, '_blank'); // Fallback
                   }
                 } else {
-                  // Use the regular openExternal for non VS Code URIs
+                  // Use the regular openExternal for other URIs
                   if (window.electron && typeof window.electron.openExternal === 'function') {
                     await window.electron.openExternal(url);
                     console.log('[TodoItem] Successfully opened URL with openExternal');
                   } else {
-                    window.open(url, '_blank');
+                    window.open(url, '_blank'); // Fallback
                   }
+                }
+
+                // Attempt to re-focus the item after the external action
+                if (currentItemRef && isFocused && document.body.contains(currentItemRef)) {
+                  setTimeout(() => {
+                    // Check itemRef again inside setTimeout as component might have updated
+                    if (itemRef.current && document.body.contains(itemRef.current)) {
+                      itemRef.current.focus({ preventScroll: true });
+                      console.log('[TodoItem] Attempted to re-focus item after openExternal:', todo.location);
+                    }
+                  }, 100); // 100ms delay for OS context switch
                 }
               } catch (error) {
                 console.error('[TodoItem] Error opening URL:', error);
-                // Last resort fallback
                 try {
                   window.open(url, '_blank');
                 } catch (secondError) {
