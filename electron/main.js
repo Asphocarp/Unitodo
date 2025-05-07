@@ -185,7 +185,7 @@ function startRustBackend() {
       
       // General stdout logging, but port detection is primarily handled in the startup promise logic
       // This is more for ongoing logs after startup.
-      if (!output.startsWith("UNITODO_GRPC_PORT=") && !output.includes("Unitodo gRPC server listening")) {
+      if (!output.startsWith("UNITODO_GRPC_PORT=") && !output.includes("Unitodo gRPC server listening")) { // UNITODO_IGNORE_LINE
           console.log(`Rust backend stdout: ${output.trim()}`);
       }
     });
@@ -242,7 +242,7 @@ function startRustBackend() {
         const logOnce = (msg) => { if(!loggedThisChunk) { console.log(msg); loggedThisChunk = true; }};
 
         if (!portParsed) {
-            const portMatch = output.match(/UNITODO_GRPC_PORT=(\d+)/);
+            const portMatch = output.match(/UNITODO_GRPC_PORT=(\d+)/); // UNITODO_IGNORE_LINE
             if (portMatch && portMatch[1]) {
                 const parsedPort = parseInt(portMatch[1], 10);
                 if (parsedPort > 0) {

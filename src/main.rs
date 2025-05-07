@@ -792,7 +792,7 @@ fn edit_todo_in_file_grpc(config: &Config, location: &str, new_content: &str, or
             file.write_all(final_write_content.as_bytes())?;
             Ok(())
         } else {
-            Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line"))
+            Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line")) // UNITODO_IGNORE_LINE
         }
     })();
     fs2::FileExt::unlock(&file)?;
@@ -819,7 +819,7 @@ fn add_todo_to_file_grpc(config: &Config, category_type: &str, category_name: &s
     let sanitized_content = content.replace('\n', " ").trim().to_string();
     if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
     
-    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content);
+    let base_line_to_append = format!("- [ ] 1@{} {}", timestamp, sanitized_content); // UNITODO_IGNORE_LINE
 
     if let Some(parent_dir) = target_append_file_path.parent() { fs::create_dir_all(parent_dir)?; }
     else { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid target append path")); }
@@ -918,7 +918,7 @@ fn mark_todo_as_done_in_file_grpc(config: &Config, location: &str, original_cont
             final_line_to_write = format!("{}{}{}{}", prefix_before_marker, transformed_marker_str, leading_space_after_marker, final_content_part_with_timestamp);
             final_content_for_frontend = final_content_part_with_timestamp;
         } else {
-             return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found for marking done"));
+             return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found for marking done")); // UNITODO_IGNORE_LINE
         }
 
         lines[line_index] = final_line_to_write;
@@ -1087,7 +1087,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
     let addr = listener.local_addr()?;
-    println!("UNITODO_GRPC_PORT={}", addr.port()); // Print the dynamically assigned port
+    println!("UNITODO_GRPC_PORT={}", addr.port()); // Print the dynamically assigned port // UNITODO_IGNORE_LINE
 
     let todo_service = MyTodoService { config_state: Arc::clone(&shared_config_state) };
     let config_service = MyConfigService { config_state: Arc::clone(&shared_config_state) };
