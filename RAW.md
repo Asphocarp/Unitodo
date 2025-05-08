@@ -105,7 +105,7 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 3@AoVsd see from cease plugin, how to inline-render a string
 - [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
-- [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency.
+- [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
 
 ---
 
@@ -156,3 +156,12 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 2 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [ ] 2@AptAw doc: say that by default config at ~/.config/unitodo/unitodo.toml
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
+- [ ] 0@Aptsh fix: make click on a lexcial editor starts editing
+- [ ] 1@Aptww fix: click on filename should behave the same as pressing enter (no new windows popup)
+- [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
+- [ ] 2@Apt3d fancy: fetch from notion, slack, etc
+- [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
+- [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
+- [ ] 0@Apt81 let the priority part include "-" (not just alphanumeric)
+- [ ] 0-1 maybe my timestamp should follow alphabetically sorting
+- [ ] 2@ApuFL rust offer exact char pos instead of just line, so that following checking can be easier
