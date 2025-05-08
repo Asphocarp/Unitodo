@@ -162,6 +162,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 2@Apt3d fancy: fetch from notion, slack, etc
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
 - [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
-- [ ] 0@Apt81 let the priority part include "-" (not just alphanumeric)
-- [ ] 0-1 maybe my timestamp should follow alphabetically sorting
-- [ ] 2@ApuFL rust offer exact char pos instead of just line, so that following checking can be easier
+- [ ] 0@Apt81 let the priority part include "-" (not just alphanumeric)- maybe no more concept of fisrt word, simply append timestamp and stuff at the end
+- [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
+- [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
