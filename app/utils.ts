@@ -112,6 +112,7 @@ export function categorizeTodos(todos: TodoItem[]) {
 
 // Constants for timestamp encoding/decoding
 const URL_SAFE_BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+// TODO: 0 maybe use -0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz to follow the alphabetically sorting
 const CUSTOM_EPOCH_SECONDS = Math.floor(new Date('2025-01-01T00:00:00Z').getTime() / 1000);
 
 /**
