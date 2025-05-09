@@ -27,7 +27,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <Providers>
           <WinTitleBar />
-          <div className="electron-content pt-8">
+          <div className="electron-content">
             {children}
           </div>
         </Providers>
