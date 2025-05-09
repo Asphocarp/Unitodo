@@ -164,4 +164,5 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
 - [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
 - [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
-- [ ] 0@AqTDq tarui instead of electron!
+- [x] 0@AqTDq@@AqWoV tarui instead of electron!
+- [ ] 0@AqWoP fix: enter to open
