@@ -87,8 +87,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 
 ## Todos
 
-- [ ] 0-1 prove it to be useful by doing a project
-
 - [ ] 2 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
 - [ ] 1 submit to homebrew, aur; make doc and everything more user-friendly
@@ -156,12 +154,14 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 2 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [ ] 2@AptAw doc: say that by default config at ~/.config/unitodo/unitodo.toml
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
-- [ ] 0@Aptsh fix: make click on a lexcial editor starts editing
+- [ ] 1@Aptsh fix: make click on a lexcial editor starts editing
 - [ ] 1@Aptww fix: click on filename should behave the same as pressing enter (no new windows popup)
 - [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
 - [ ] 2@Apt3d fancy: fetch from notion, slack, etc
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
 - [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
-- [ ] 0@Apt81 let the priority part include "-" (not just alphanumeric)- maybe no more concept of fisrt word, simply append timestamp and stuff at the end
+- [ ] 2@Apt81 let the priority part include "-" (not just alphanumeric)- maybe no more concept of fisrt word, simply append timestamp and stuff at the end
 - [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
 - [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
+- [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
+- [ ] 0@AqTDq tarui instead of electron!
