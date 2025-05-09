@@ -428,31 +428,6 @@ struct ProcessedTodosOutput {
     categories: Vec<TodoCategoryData>,
 }
 
-// --- Request Payload for Editing ---
-#[derive(Deserialize, Debug)]
-struct EditTodoPayload {
-    location: String, // "path/to/file.rs:123"
-    new_content: String, // The new text content for the todo item
-    original_content: String, // The original content to verify it hasn't changed
-    completed: bool, // The new completion status
-}
-
-// --- Request Payload for Adding ---
-#[derive(Deserialize, Debug)]
-struct AddTodoPayload {
-    category_type: String, // "git" or "project"
-    category_name: String, // Name of the repo or project
-    content: String, // The raw content for the new todo item
-    // Used to find git repo root if category_type is "git"
-    example_item_location: Option<String>,
-}
-
-// --- Request Payload for Marking Done ---
-#[derive(Deserialize, Debug)]
-struct MarkDonePayload {
-    location: String, // "path/to/file.rs:123"
-    original_content: String, // The 'content' field from the frontend's TodoItemType, used for verification
-}
 
 // --- todo Category Enum ---
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
@@ -477,7 +452,6 @@ impl TodoCategoryEnum {
 #[derive(Debug)]
 struct TodoSink {
     effective_rg_pattern: String,
-    matcher: RegexMatcher,
     grouped_todos: Arc<ParkingMutex<HashMap<TodoCategoryEnum, Vec<TodoItem>>>>,
     current_path: PathBuf,
     debug: bool,
@@ -677,7 +651,6 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
                 let mut searcher = Searcher::new();
                 let mut sink = TodoSink {
                     effective_rg_pattern: sink_effective_pattern.clone(), // Clone if used multiple times or further nested
-                    matcher: current_matcher.clone(),
                     grouped_todos: Arc::clone(&current_todos),
                     current_path: path.to_path_buf(),
                     debug: is_debug,
