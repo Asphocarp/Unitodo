@@ -4,8 +4,8 @@ import './styles/fonts.css';
 import { Providers } from './providers';
 import dynamic from 'next/dynamic';
 
-// Dynamically import ElectronTitleBar to prevent SSR issues
-const ElectronTitleBar = dynamic(() => import('./components/ElectronTitleBar'), {
+// Dynamically import WinTitleBar to prevent SSR issues
+const WinTitleBar = dynamic(() => import('./components/WinTitleBar'), {
   ssr: false,
 });
 
@@ -26,7 +26,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen">
         <Providers>
-          <ElectronTitleBar />
+          <WinTitleBar />
           <div className="electron-content pt-8">
             {children}
           </div>

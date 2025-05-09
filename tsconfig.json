@@ -24,6 +24,7 @@
         "./*"
       ]
     },
+    "types": ["@tauri-apps/api/window"],
     "plugins": [
       {
         "name": "next"
