@@ -34,6 +34,7 @@ tauri = { version = "2.0.0-beta", features = [] }
 tonic = "0.11"
 prost = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tauri-plugin-opener = "2.2.6"
 
 [build-dependencies]
 tonic-build = "0.11"

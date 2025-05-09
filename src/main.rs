@@ -1192,7 +1192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // _app.manage(config_state_clone_for_setup); // Example if needed in setup
             Ok(())
         })
-        .run(tauri::generate_context!("./tauri.conf.json")) 
+        .run(tauri::generate_context!()) 
         .expect("error while running tauri application");
 
     Ok(())

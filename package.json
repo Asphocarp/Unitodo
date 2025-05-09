@@ -15,6 +15,7 @@
     "@heroicons/react": "^2.2.0",
     "@lexical/react": "^0.31.0",
     "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-opener": "^2.2.6",
     "@types/lodash": "^4.17.16",
     "axios": "^1.6.5",
     "date-fns": "^4.1.0",
@@ -30,7 +31,6 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.5.0",
-    "@tauri-apps/plugin-opener": "^2.2.6",
     "@types/node": "^20.10.6",
     "@types/react": "^18.2.46",
     "@types/react-virtualized-auto-sizer": "^1.0.8",
