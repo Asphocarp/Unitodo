@@ -1,123 +1,97 @@
-import { TodoCategory as AppTodoCategory, TodoItem as AppTodoItem } from '../types'; // Renamed for clarity
-// Remove fetchApi, postApi from apiUtils if they are no longer needed by other functions in this file, or keep if used elsewhere.
-// For now, we assume other functions will also be refactored, so remove it from here.
-// import { fetchApi, postApi } from '../utils/apiUtils';
+import { invoke } from '@tauri-apps/api/core';
+import { TodoCategory as AppTodoCategory, TodoItem as AppTodoItem } from '../types';
+import {
+    GetTodosResponse as ProtoGetTodosResponse,
+    EditTodoRequest as ProtoEditTodoRequest, // Assuming frontend EditTodoPayload matches this structure
+    EditTodoResponse as ProtoEditTodoResponse,
+    AddTodoRequest as ProtoAddTodoRequest,   // Assuming frontend AddTodoPayload matches this structure
+    AddTodoResponse as ProtoAddTodoResponse,
+    MarkDoneRequest as ProtoMarkDoneRequest, // Assuming frontend MarkDonePayload matches this structure
+    MarkDoneResponse as ProtoMarkDoneResponse,
+    TodoCategory as ProtoTodoCategory, // For mapping
+    TodoItem as ProtoTodoItem      // For mapping
+} from '../grpc-generated/unitodo_pb';
 
-// @ts-ignore: electronApi is exposed on window via preload.js
-const electronApi = typeof window !== 'undefined' ? window.electronApi : undefined;
+// Type guard or helper to check if an object is a ProtoTodoCategory (if needed, often not for plain objects)
+// function isProtoTodoCategory(obj: any): obj is ProtoTodoCategory { ... }
 
 export async function fetchTodoData(): Promise<AppTodoCategory[]> {
-  if (!electronApi) {
-    console.warn('[todoService] Electron API not available during fetchTodoData. Build-time or preload issue?');
-    // Return empty or default to allow build to pass; actual data will be fetched client-side in Electron.
-    return Promise.resolve([]); 
-  }
   try {
-    // The main process handler for 'get-todos' should return { categoriesList: [...] }
-    // where categoriesList contains items that are already plain objects.
-    const response = await electronApi.getTodos();
-    // Assuming the main process returns data structured like GetTodosResponse.toObject(),
-    // which includes categoriesList. Or it directly returns the AppTodoCategory[] array.
-    // Let's assume it returns an object { categoriesList: AppTodoCategory[] } 
-    // or the main process maps it to AppTodoCategory[] directly.
-    // Based on the main process handler, it resolves with { categoriesList: transformedCategories }
-    // where transformedCategories items are like cat.toObject() and item.toObject().
-    // We need to ensure this structure matches AppTodoCategory[]
+    // The Rust command get_todos_command returns GetTodosResponse structure
+    const response = await invoke<ProtoGetTodosResponse>('get_todos_command');
     
-    // If main returns { categoriesList: [{ name, icon, todosList: [{...}] }] }
-    // We need to map todosList to todos
-    return response.categoriesList.map((cat: { name: string; icon: string; todosList: AppTodoItem[] }) => ({
+    // If response.getCategoriesList is not available because 'response' is a plain object:
+    // const categoriesList = response.categories || []; (assuming field name from Rust struct is 'categories')
+    // For protobuf.js generated types, if it's an instance, getCategoriesList() would be correct.
+    // Given Tauri returns plain JSON objects, direct property access is more likely.
+    const categoriesList = (response as any).categories || [];
+
+    return categoriesList.map((cat: any /* ProtoTodoCategory as plain object */) => ({
         name: cat.name,
         icon: cat.icon,
-        todos: cat.todosList || [] // Map field name and ensure it's an array
+        // todosList from proto, map to todos for AppTodoCategory
+        // Again, if cat.todos is a list of plain objects:
+        todos: (cat.todos || []).map((item: any /* ProtoTodoItem as plain object */) => ({
+            content: item.content,
+            location: item.location,
+            completed: item.completed,
+        })),
     }));
   } catch (error) {
-    console.error('Error invoking getTodos via IPC:', error);
-    throw error;
+    console.error('Error invoking get_todos_command:', error);
+    return Promise.resolve([]); // Return empty or default
   }
 } 
 
-// Define the payload structure for editing a todo item
+// Define the payload structure for editing a todo item (matches ProtoEditTodoRequest)
 interface EditTodoPayload {
   location: string;
   new_content: string;
-  original_content: string; // Add original content for verification
+  original_content: string; 
   completed: boolean;
 }
 
-export async function editTodoItem(payload: EditTodoPayload): Promise<{ status: string; message: string }> {
-  if (!electronApi) {
-    console.warn('[todoService] Electron API not available during editTodoItem.');
-    return Promise.reject(new Error('Electron API not available'));
-  }
+export async function editTodoItem(payload: EditTodoPayload): Promise<ProtoEditTodoResponse> {
   try {
-    // Main process editTodo handler returns response.toObject()
-    return await electronApi.editTodo(payload);
+    // Payload structure matches ProtoEditTodoRequest, pass it directly as named argument
+    return await invoke<ProtoEditTodoResponse>('edit_todo_command', { payload });
   } catch (error) {
-    console.error('Error invoking editTodo via IPC:', error);
-    throw error;
+    console.error('Error invoking edit_todo_command:', error);
+    throw error; // Or return a custom error object: Promise.reject({ status: 'error', message: ...});
   }
 } 
 
-// Define the payload structure for adding a todo item
 interface AddTodoPayload {
-  category_type: string; // "git" or "project"
-  category_name: string; // Name of the repo or project
-  content: string; // The raw content for the new todo item
-  example_item_location?: string; // Required for "git" type
+  category_type: string; 
+  category_name: string; 
+  content: string; 
+  example_item_location?: string; 
 }
 
-// Function to add a new todo item via the backend
-export async function addTodoItem(payload: AddTodoPayload): Promise<{ status: string; message: string }> {
-  if (!electronApi) {
-    console.warn('[todoService] Electron API not available during addTodoItem.');
-    return Promise.reject(new Error('Electron API not available'));
-  }
+export async function addTodoItem(payload: AddTodoPayload): Promise<ProtoAddTodoResponse> {
   try {
-    // Main process addTodo handler returns response.toObject()
-    return await electronApi.addTodo(payload);
+    // Payload structure matches ProtoAddTodoRequest
+    return await invoke<ProtoAddTodoResponse>('add_todo_command', { payload });
   } catch (error) {
-    console.error('Error invoking addTodo via IPC:', error);
+    console.error('Error invoking add_todo_command:', error);
     throw error;
   }
 } 
 
-// Define the payload structure for marking a todo item as done
 export interface MarkDonePayload {
   location: string;
   original_content: string;
 }
 
-// Define the expected response structure from the mark-done endpoint
-// This local interface should match the fields from PbMarkDoneResponse
-export interface MarkDoneResponse {
-  status: string;
-  message: string;
-  new_content: string;
-  completed: boolean;
-  error?: string; 
-  details?: string; 
-  code?: number; 
-}
-
-// Function to mark a todo item as done via the backend
-export async function markTodoAsDone(payload: MarkDonePayload): Promise<MarkDoneResponse> { // Return type matches local interface
-  if (!electronApi) {
-    console.warn('[todoService] Electron API not available during markTodoAsDone.');
-    return Promise.reject(new Error('Electron API not available'));
-  }
+// Using ProtoMarkDoneResponse directly as the return type from invoke
+export async function markTodoAsDone(payload: MarkDonePayload): Promise<ProtoMarkDoneResponse> { 
   try {
-    // Main process markDone handler returns response.toObject()
-    // which matches {status, message, newContent, completed}
-    const result = await electronApi.markDone(payload);
-    return {
-        status: result.status,
-        message: result.message,
-        new_content: result.newContent, // Ensure field name matches if different from PbMarkDoneResponse
-        completed: result.completed,
-    };
+    // Payload structure matches ProtoMarkDoneRequest
+    // The Rust command returns ProtoMarkDoneResponse structure.
+    // Field names from Rust (e.g., new_content) will be preserved in the JSON.
+    return await invoke<ProtoMarkDoneResponse>('mark_done_command', { payload });
   } catch (error) {
-    console.error('Error invoking markDone via IPC:', error);
+    console.error('Error invoking mark_done_command:', error);
     throw error;
   }
 } 

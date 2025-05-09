@@ -34,3 +34,7 @@ node_modules
 
 /out
 /dist
+
+# Tauri
+src-tauri/target/
+*.log
