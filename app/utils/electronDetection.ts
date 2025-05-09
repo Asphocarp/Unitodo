@@ -2,20 +2,30 @@
  * Utilities for Electron environment detection and integration
  */
 
-// Check if we're running in Electron
-export const isElectronEnvironment = (): boolean => {
-  // @ts-ignore - window.electron is injected by Electron preload script
-  return typeof window !== 'undefined' && !!window.electron;
+import { getVersion } from '@tauri-apps/api/app';
+
+/**
+ * Checks if the current environment is Tauri.
+ */
+export const isTauri = (): boolean => {
+  // @ts-ignore // Accessing __TAURI__ which might not be in global Window type by default
+  return typeof window !== 'undefined' && !!window.__TAURI__;
 };
 
-// Helper to get the version of the app when running in Electron
-export const getAppVersion = (): string | null => {
-  if (!isElectronEnvironment()) {
-    return null;
+/**
+ * Gets the application version from Tauri.
+ * Returns 'Unknown' if not in a Tauri environment or if an error occurs.
+ */
+export const getAppVersion = async (): Promise<string> => {
+  if (isTauri()) {
+    try {
+      return await getVersion();
+    } catch (error) {
+      console.error("Error getting Tauri app version:", error);
+      return 'Unknown';
+    }
   }
-  
-  // @ts-ignore - accessing electron properties
-  return window.electron.appVersion || 'Unknown';
+  return 'Unknown'; // Not in a Tauri environment
 };
 
 // Helper function to determine if we're running on macOS
@@ -26,7 +36,7 @@ export const isMacOS = (): boolean => {
 
 // Export an object with Electron-related information
 export const electronInfo = {
-  isElectron: isElectronEnvironment(),
+  isElectron: false,
   isMacOS: isMacOS(),
   getAppVersion: getAppVersion
 };

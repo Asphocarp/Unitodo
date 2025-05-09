@@ -29,7 +29,7 @@ Thumbs.db
 unitodo.sync.*
 *.temp.md
 node_modules
-.next
+/.next
 *.ignore.*
 
 /out

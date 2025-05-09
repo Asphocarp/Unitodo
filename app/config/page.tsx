@@ -115,7 +115,7 @@ export default function ConfigPage() {
     <div className={`max-w-4xl mx-auto p-4 ${isDarkMode ? 'dark' : ''}`}>
       {/* Header with back button */}
       <div className="hn-header dark:border-gray-700 flex items-center mb-4 rounded-md shadow-sm">
-        <Link href="./index.html" className="hn-meta text-gray-200 hover:text-white transition-colors mr-2" prefetch={false}>
+        <Link href="/" className="hn-meta text-gray-200 hover:text-white transition-colors mr-2" prefetch={false}>
           &larr;
         </Link>
         <h1 className="hn-title">Unitodo Configuration</h1>

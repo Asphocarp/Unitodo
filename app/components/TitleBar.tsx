@@ -2,27 +2,22 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isElectron = typeof window !== 'undefined' && window.electron;
+  const currentWindow = getCurrentWindow();
 
   const handleClose = () => {
-    if (isElectron) {
-      window.electron.closeWindow();
-    }
+    currentWindow.close();
   };
 
   const handleMinimize = () => {
-    if (isElectron) {
-      window.electron.minimizeWindow();
-    }
+    currentWindow.minimize();
   };
 
   const handleMaximize = () => {
-    if (isElectron) {
-      window.electron.maximizeWindow();
-    }
+    currentWindow.toggleMaximize();
   };
 
   return (
@@ -32,7 +27,7 @@ const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* macOS window controls - only shown in Electron */}
-      {isElectron && (
+      {/* {isElectron && (
         <div className={`flex space-x-2 mr-4 ${isHovered ? 'opacity-100' : 'opacity-30'}`}>
           <button 
             onClick={handleClose}
@@ -68,7 +63,7 @@ const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
             )}
           </button>
         </div>
-      )}
+      )} */}
 
       {/* App title */}
       <div className="flex-1 text-center text-sm font-medium dark:text-gray-200">
@@ -77,7 +72,7 @@ const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
 
       {/* Navigation links */}
       <div className="flex space-x-4">
-        <Link href="./index.html" className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+        <Link href="./" className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
           Home
         </Link>
         <Link href="./config" className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">

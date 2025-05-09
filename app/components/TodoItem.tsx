@@ -9,7 +9,7 @@ import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
 import { useTodoStore } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
-import { open as shellOpen } from '@tauri-apps/api/shell';
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -331,22 +331,30 @@ export default function TodoItem({
                 console.log('[TodoItem] Attempting to open:', url);
                 
                 // For VSCode/Cursor URIs, use our special handler
-                if ((url.startsWith('vscode://') || url.startsWith('cursor://')) && typeof window.electronApi?.openVSCodeURI === 'function') {
-                  const result = await window.electronApi.openVSCodeURI(url);
-                  if (result.success) {
-                    console.log('[TodoItem] Successfully opened VS Code URI');
-                  } else {
-                    console.error('[TodoItem] Failed to open VS Code URI:', result.error);
-                    window.open(url, '_blank'); // Fallback
-                  }
+                // if ((url.startsWith('vscode://') || url.startsWith('cursor://')) && typeof window.electronApi?.openVSCodeURI === 'function') {
+                //   const result = await window.electronApi.openVSCodeURI(url);
+                //   if (result.success) {
+                //     console.log('[TodoItem] Successfully opened VS Code URI');
+                //   } else {
+                //     console.error('[TodoItem] Failed to open VS Code URI:', result.error);
+                //     window.open(url, '_blank'); // Fallback
+                //   }
+                // } else {
+                //   // Use the regular openExternal for other URIs
+                //   if (window.electron && typeof window.electron.openExternal === 'function') {
+                //     await window.electron.openExternal(url);
+                //     console.log('[TodoItem] Successfully opened URL with openExternal');
+                //   } else {
+                //     window.open(url, '_blank'); // Fallback
+                //   }
+                // }
+                // Use Tauri's openUrl for all relevant URI schemes
+                if (url.startsWith('vscode://') || url.startsWith('cursor://') || url.startsWith('http://') || url.startsWith('https://')) {
+                  await openUrl(url);
+                  console.log('[TodoItem] Successfully attempted to open URL with openUrl:', url);
                 } else {
-                  // Use the regular openExternal for other URIs
-                  if (window.electron && typeof window.electron.openExternal === 'function') {
-                    await window.electron.openExternal(url);
-                    console.log('[TodoItem] Successfully opened URL with openExternal');
-                  } else {
-                    window.open(url, '_blank'); // Fallback
-                  }
+                  console.warn(`[TodoItem] Unsupported URL scheme for openUrl: ${url}. Falling back to window.open.`);
+                  window.open(url, '_blank'); // Fallback for other schemes if necessary
                 }
 
                 // Attempt to re-focus the item after the external action
@@ -426,7 +434,7 @@ export default function TodoItem({
       try {
         if (url.startsWith('vscode://') || url.startsWith('cursor://') || url.startsWith('http://') || url.startsWith('https://')) {
           console.log(`Attempting to open URL with Tauri shell: ${url}`);
-          await shellOpen(url);
+        //   await shellOpen(url);
         } else {
           console.warn(`Unsupported URL scheme for shellOpen: ${url}`);
         }
