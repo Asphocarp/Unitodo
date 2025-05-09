@@ -9,6 +9,7 @@ import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
 import { useTodoStore } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
+import { open as shellOpen } from '@tauri-apps/api/shell';
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -206,17 +207,15 @@ export default function TodoItem({
     setError(null);
     setIsSaving(true);
     try {
-      // Call the new markTodoAsDone service
       const response = await markTodoAsDone({
         location: todo.location,
-        original_content: todo.content, // Send current content for verification
+        original_content: todo.content, 
       });
 
-      // Update store with the new content and completed status from backend
       updateTodo({
         ...todo,
-        content: response.new_content,
-        completed: response.completed,
+        content: response.getNewContent(),
+        completed: response.getCompleted(),
       });
 
     } catch (err: any) {
@@ -420,6 +419,24 @@ export default function TodoItem({
     }
   };
 
+  const handleLocationClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault(); 
+    const url = getVSCodeUrl();
+    if (url) {
+      try {
+        if (url.startsWith('vscode://') || url.startsWith('cursor://') || url.startsWith('http://') || url.startsWith('https://')) {
+          console.log(`Attempting to open URL with Tauri shell: ${url}`);
+          await shellOpen(url);
+        } else {
+          console.warn(`Unsupported URL scheme for shellOpen: ${url}`);
+        }
+      } catch (err) {
+        console.error('Failed to open URL with Tauri shell:', err);
+        setError('Failed to open link. Ensure the editor or application is configured correctly.');
+      }
+    }
+  };
+
   return (
     <div
       className={`hn-todo-item flex items-center h-6 ${
@@ -503,149 +520,18 @@ export default function TodoItem({
             title={todo.location}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => {
-              if (!getVSCodeUrl()) {
-                e.preventDefault();
-              }
-              // Don't stop propagation, let parent handle focus
-            }}
+            onClick={handleLocationClick}
             tabIndex={isFocused ? 0 : -1}
           >
             {formattedLocation}
           </a>
         )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="text-xs text-red-600 flex-shrink-0 flex items-center">Error: {error}</div>
-        )}
       </div>
 
-      {/* Action Buttons */}
-      <div 
-        className={`hn-todo-actions flex items-center h-full transition-all duration-200 ease-in-out ${
-          (hovered || isFocused || isEditing) ? 'visible' : 'hidden absolute right-1'
-        }`}
-      >
-        {isEditing ? (
-          <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // We do need to stop propagation here
-                handleSave();
-                // Refocus the todo item after the action
-                if (itemRef.current) {
-                  setTimeout(() => {
-                    itemRef.current?.focus();
-                  }, 0);
-                }
-              }}
-              disabled={isSaving}
-              className="hn-action-button text-xs px-0.5 py-0"
-              title="Save changes (Enter)"
-              tabIndex={-1} // Change from 0 to -1 to prevent focus
-            >
-              save
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // We do need to stop propagation here
-                handleCancel();
-                // Refocus the todo item after the action
-                if (itemRef.current) {
-                  setTimeout(() => {
-                    itemRef.current?.focus();
-                  }, 0);
-                }
-              }}
-              disabled={isSaving}
-              className="hn-action-button text-xs px-0.5 py-0"
-              title="Cancel edit (Escape)"
-              tabIndex={-1} // Change from 0 to -1 to prevent focus
-            >
-              cancel
-            </button>
-          </>
-        ) : (
-          <>
-            {isReadOnly && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // We do need to stop propagation here
-                    addUniqueId();
-                    // Refocus the todo item after the action
-                    if (itemRef.current) {
-                      setTimeout(() => {
-                        itemRef.current?.focus();
-                      }, 0);
-                    }
-                  }}
-                  disabled={isSaving}
-                  className="hn-action-button text-xs px-0.5 py-0"
-                  title="Add unique ID (#) to make editable"
-                  tabIndex={-1} // Change from 0 to -1 to prevent focus
-                >
-                  id
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // We do need to stop propagation here
-                    addTimestamp();
-                    // Refocus the todo item after the action
-                    if (itemRef.current) {
-                      setTimeout(() => {
-                        itemRef.current?.focus();
-                      }, 0);
-                    }
-                  }}
-                  disabled={isSaving}
-                  className="hn-action-button text-xs px-0.5 py-0"
-                  title="Add timestamp (@) to make editable"
-                  tabIndex={-1} // Change from 0 to -1 to prevent focus
-                >
-                  time
-                </button>
-              </>
-            )}
-            {!isReadOnly && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // We do need to stop propagation here
-                    handleEditStart();
-                    // Note: No need to refocus here as entering edit mode
-                  }}
-                  className="hn-action-button text-xs px-0.5 py-0"
-                  title="Edit todo (a/i)"
-                  tabIndex={-1} // Change from 0 to -1 to prevent focus
-                >
-                  edit
-                </button>
-            )}
-            {
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddIgnoreComment();
-                    // Refocus the todo item after the action
-                    if (itemRef.current) {
-                      setTimeout(() => {
-                        itemRef.current?.focus();
-                      }, 0);
-                    }
-                  }}
-                  disabled={isSaving}
-                  className="hn-action-button text-xs px-0.5 py-0"
-                  title="Add ignore comment (x)"
-                  tabIndex={-1}
-                >
-                  ignore
-                </button>
-            }
-          </>
-        )}
-        {isSaving && <div className="animate-spin h-2 w-2 border-t-1 border-b-1 border-accent-color ml-1"></div>}
-      </div>
+      {/* Error Message */}
+      {error && (
+        <div className="text-xs text-red-600 flex-shrink-0 flex items-center">Error: {error}</div>
+      )}
     </div>
   );
-} 
+}

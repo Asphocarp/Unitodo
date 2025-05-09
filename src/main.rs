@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::sync::Arc;
 use std::str;
 use std::fs::{self, File};
@@ -16,7 +18,6 @@ use std::fs::OpenOptions;
 use fs2::FileExt;
 use parking_lot::{Mutex as ParkingMutex, RwLock};
 use lazy_static::lazy_static;
-use tokio_stream;
 
 // Tonic imports
 use tonic::{transport::Server, Request, Response, Status};
@@ -516,7 +517,7 @@ impl Sink for TodoSink {
         let todo_pattern_re = match Regex::new(&self.effective_rg_pattern) {
             Ok(re) => re,
             Err(_) => {
-                 eprintln!("Error: Invalid regex pattern in sink ('{}')", self.effective_rg_pattern);
+                 eprintln!("Error: Invalid regex pattern in sink (\'{}\')", self.effective_rg_pattern);
                  return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid regex pattern in sink"));
              }
         };
@@ -548,7 +549,7 @@ impl Sink for TodoSink {
                         }
                         Err(e) => {
                             if self.debug {
-                                eprintln!("[Sink] Warning: Invalid glob pattern for project '{}' ('{}'): {}", project_name, pattern_str, e);
+                                eprintln!("[Sink] Warning: Invalid glob pattern for project '{}' (\'{}\'): {}", project_name, pattern_str, e);
                             }
                         }
                     }
@@ -601,7 +602,7 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
     let matcher = match RegexMatcher::new(&effective_pattern) {
         Ok(m) => m,
         Err(e) => {
-            eprintln!("Error: Invalid effective regex pattern derived from config ('{}'): {}", effective_pattern, e);
+            eprintln!("Error: Invalid effective regex pattern derived from config (\'{}\'): {}", effective_pattern, e);
             return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid effective regex pattern: {}", e)));
         }
     };
@@ -1096,34 +1097,104 @@ impl ConfigService for MyConfigService {
     }
 }
 
-// --- Main Function (Tonic Server Setup) ---
+// --- Tauri Commands ---
+#[tauri::command]
+async fn get_config_command(config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<ProtoConfigMessage, String> {
+    let service = MyConfigService { config_state: config_state.inner().clone() };
+    let request = tonic::Request::new(GetConfigRequest {});
+    match service.get_config(request).await {
+        Ok(response) => response.into_inner().config.ok_or_else(|| "Config data missing in response".to_string()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn update_config_command(new_config_payload: ProtoConfigMessage, config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<UpdateConfigResponse, String> {
+    let service = MyConfigService { config_state: config_state.inner().clone() };
+    let request = tonic::Request::new(UpdateConfigRequest { config: Some(new_config_payload) });
+    match service.update_config(request).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn get_todos_command(config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<GetTodosResponse, String> {
+    let service = MyTodoService { config_state: config_state.inner().clone() };
+    match service.get_todos(Request::new(GetTodosRequest {})).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn edit_todo_command(payload: EditTodoRequest, config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<EditTodoResponse, String> {
+    let service = MyTodoService { config_state: config_state.inner().clone() };
+    match service.edit_todo(Request::new(payload)).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn add_todo_command(payload: AddTodoRequest, config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<AddTodoResponse, String> {
+    let service = MyTodoService { config_state: config_state.inner().clone() };
+    match service.add_todo(Request::new(payload)).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn mark_done_command(payload: MarkDoneRequest, config_state: tauri::State<'_, Arc<RwLock<Config>>>) -> Result<MarkDoneResponse, String> {
+    let service = MyTodoService { config_state: config_state.inner().clone() };
+    match service.mark_done(Request::new(payload)).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+// --- Main Function (Tonic Server Setup & Tauri App) ---
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    lazy_static::initialize(&CONFIG_FILE_MUTEX);
+    // Initialize logging
+    env_logger::init();
 
-    println!("Loading initial configuration...");
-    let initial_config = load_config_from_file().expect("Fatal: Failed to load initial configuration"); 
-    
-    println!("Initial configuration loaded successfully.");
+    // Load configuration
+    let initial_config = load_config_from_file().unwrap_or_else(|e| {
+        eprintln!("Failed to load config: {}, using default config.", e);
+        Config::default()
+    });
+    let config_state = Arc::new(RwLock::new(initial_config));
+    let grpc_config_state_grpc_server = Arc::clone(&config_state); // Clone for gRPC server
+    let tauri_config_state = Arc::clone(&config_state); // Clone for Tauri app state/commands
 
-    let shared_config_state = Arc::new(RwLock::new(initial_config));
+    tokio::spawn(async move {
+        let addr = "[::1]:50051".parse().expect("Failed to parse gRPC server address");
+        let todo_service = MyTodoService { config_state: grpc_config_state_grpc_server.clone() };
+        let config_service = MyConfigService { config_state: grpc_config_state_grpc_server }; // Use the clone
+        println!("gRPC Server listening on {}", addr);
+        Server::builder()
+            .add_service(TodoServiceServer::new(todo_service))
+            .add_service(ConfigServiceServer::new(config_service))
+            .serve(addr)
+            .await
+            .expect("Failed to start gRPC server");
+    });
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:0").await?;
-    let addr = listener.local_addr()?;
-    println!("UNITODO_GRPC_PORT={}", addr.port()); // Print the dynamically assigned port // UNITODO_IGNORE_LINE
+    tauri::Builder::default()
+        .manage(tauri_config_state) // Make config_state available to Tauri commands
+        .invoke_handler(tauri::generate_handler![
+            get_config_command, update_config_command,
+            get_todos_command, edit_todo_command, add_todo_command, mark_done_command
+        ]) 
+        .setup(move |_app| {
+            // _app.manage(config_state_clone_for_setup); // Example if needed in setup
+            Ok(())
+        })
+        .run(tauri::generate_context!("./tauri.conf.json")) 
+        .expect("error while running tauri application");
 
-    let todo_service = MyTodoService { config_state: Arc::clone(&shared_config_state) };
-    let config_service = MyConfigService { config_state: Arc::clone(&shared_config_state) };
-
-    println!("Unitodo gRPC server listening on {}", addr);
-
-    Server::builder()
-        .add_service(TodoServiceServer::new(todo_service))
-        .add_service(ConfigServiceServer::new(config_service))
-        .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener))
-        .await?;
-    
     Ok(())
 }
 

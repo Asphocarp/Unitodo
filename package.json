@@ -2,19 +2,12 @@
   "name": "unitodo",
   "version": "0.1.0",
   "private": true,
-  "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "tauri dev",
     "dev:frontend": "next dev",
-    "dev:backend": "cargo run --release",
-    "build": "next build",
-    "build:electron": "electron-builder",
-    "start": "next start",
-    "electron:dev": "concurrently \"npm run dev\" \"cross-env NODE_ENV=development electron .\"",
-    "electron:build": "next build && electron-builder build",
-    "electron:start": "npm run build && cross-env NODE_ENV=production electron .",
-    "electron:package": "npm run build && npm run electron:build",
-    "electron:package:mac": "npm run build && electron-builder build --mac"
+    "build": "tauri build",
+    "build:frontend": "next build",
+    "start": "next start"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.3",
@@ -35,6 +28,8 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.0.0-beta.14",
+    "@tauri-apps/cli": "^2.0.0-beta.20",
     "@types/node": "^20.10.6",
     "@types/react": "^18.2.46",
     "@types/react-virtualized-auto-sizer": "^1.0.8",
@@ -42,8 +37,6 @@
     "autoprefixer": "^10.4.16",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3",
     "grpc-tools": "^1.12.4",
     "grpc_tools_node_protoc_ts": "^5.3.3",
     "next": "^14.1.0",

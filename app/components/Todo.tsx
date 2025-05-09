@@ -615,7 +615,7 @@ export default function Todo() {
             ⌨️
           </button>
           
-          <Link href="config.html" passHref legacyBehavior prefetch={false}>
+          <Link href="config" passHref legacyBehavior prefetch={false}>
             <a 
               className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
               title="Configure Unitodo"
