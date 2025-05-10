@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "tauri dev --config src-tauri/tauri.conf.json",
     "dev:frontend": "next dev",
-    "build": "tauri build",
+    "build": "tauri build --config src-tauri/tauri.conf.json",
     "build:frontend": "next build",
     "start": "next start"
   },
