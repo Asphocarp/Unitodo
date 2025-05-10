@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-latest]
+        platform: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -36,14 +36,14 @@ jobs:
       # Install Linux-specific dependencies for Tauri
       # (libs for webview, system tray, etc.)
       - name: Install Linux dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev protobuf-compiler
 
       - name: Install protobuf (Windows)
         if: matrix.platform == 'windows-latest'
-        run: choco install protobuf --confirm
+        run: choco install protoc --confirm --no-progress
 
       # Cache dependencies (optional, but recommended for faster builds)
       # Cache Node.js modules
