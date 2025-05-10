@@ -168,3 +168,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 
+- [ ] 0@AqoNf add updater https://v2.tauri.app/plugin/updater/
