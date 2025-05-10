@@ -693,7 +693,44 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
     for category_key in categories {
         if let Some(todos) = final_grouped_todos.get(&category_key) {
             let mut sorted_todos = todos.clone();
-            sorted_todos.sort_by(|a, b| natord::compare(&a.content, &b.content));
+
+            // sort by lexicographical order, but with spaces > digits
+            sorted_todos.sort_by(|a, b| {
+                use std::cmp::Ordering;
+                let mut a_iter = a.content.chars();
+                let mut b_iter = b.content.chars();
+                loop {
+                    match (a_iter.next(), b_iter.next()) {
+                        (Some(ca), Some(cb)) => {
+                            if ca == cb {
+                                continue;
+                            }
+
+                            let ca_is_space = ca == ' ';
+                            let cb_is_space = cb == ' ';
+                            let ca_is_digit = ca.is_ascii_digit();
+                            let cb_is_digit = cb.is_ascii_digit();
+
+                            if ca_is_space && cb_is_digit {
+                                return Ordering::Greater; // ' ' > digit
+                            }
+                            if cb_is_space && ca_is_digit {
+                                return Ordering::Less;    // digit < ' '
+                            }
+                            
+                            // Standard lexicographical comparison for other cases
+                            match ca.cmp(&cb) {
+                                Ordering::Equal => continue, // Should not happen due to first ca == cb check
+                                other => return other,
+                            }
+                        }
+                        (Some(_), None) => return Ordering::Greater, // a is longer
+                        (None, Some(_)) => return Ordering::Less,    // b is longer
+                        (None, None) => return Ordering::Equal,     // both ended, equal
+                    }
+                }
+            });
+
             let (name, icon) = category_key.get_details();
             let category_data = TodoCategoryData {
                 name,

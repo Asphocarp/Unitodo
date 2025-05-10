@@ -33,30 +33,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
       ]
-  },
-  "plugins": {
-    "allowlist": {
-      "shell": {
-        "open": true,
-        "scope": [
-          {
-            "name": "cursor-open",
-            "cmd": "cursor",
-            "args": [
-              "open",
-              { "validator": "^.*$" }
-            ]
-          },
-          {
-            "name": "vscode-open",
-            "cmd": "vscode",
-            "args": [
-              "open",
-              { "validator": "^.*$" }
-            ]
-          }
-        ]
-      }
-    }
   }
 }
