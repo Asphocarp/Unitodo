@@ -165,6 +165,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
 - [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
-- [ ] 0@AqWoP fix: enter to open
+- [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 

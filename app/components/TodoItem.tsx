@@ -211,13 +211,12 @@ export default function TodoItem({
         location: todo.location,
         original_content: todo.content, 
       });
-
-      updateTodo({
-        ...todo,
-        content: response.getNewContent(),
-        completed: response.getCompleted(),
-      });
-
+      // // disable this for now, since the todo item is actually removed
+      //   updateTodo({
+      //     ...todo,
+      //     content: response.getNewContent(),
+      //     completed: response.getCompleted(),
+      //   });
     } catch (err: any) {
       console.error('Error toggling completion status via API:', err);
       if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
