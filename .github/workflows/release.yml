@@ -84,6 +84,11 @@ jobs:
         # If your frontend is in a subfolder like 'frontend/':
         # run: npm run build
         # working-directory: ./frontend
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: npm run build
 
       - name: Build Tauri application and create release
