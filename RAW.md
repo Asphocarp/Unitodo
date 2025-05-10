@@ -55,34 +55,15 @@ where:
 - to bi-directional sync, for now, we assume that the input todos are edited 
 - we assume all created timestamps are unique. (you do not create more than 1 todo within 1 second)
 
-## Frontend
+## Installation
 
-A React frontend has been added to display the todo items in a web interface:
+Download the latest release from the [releases page](https://github.com/Asphocarp/unitodo/releases).
 
-- Display todos grouped by categories (Project, Git Repo, Other)
-- Filter todos by status (All/Active/Completed)
-- Responsive design with modern UI
+MacOS users may need to run the following command to remove the quarantine attribute:
 
-See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
-
-### Running the Frontend
-
-1. First run the Rust backend to generate the todo data:
-   ```bash
-   cargo run
-   ```
-
-2. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the frontend development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+```bash
+xattr -cr /Applications/Unitodo.app
+```
 
 
 ## Todos

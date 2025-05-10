@@ -17,6 +17,16 @@ Unitodo is a powerful solution that helps developers and teams track all their T
 ![Unitodo Hotkeys light](assets/hotkey.png)
 ![Unitodo Config light](assets/demo2-config-light.png)
 
+## Installation
+
+Download the latest release from the [releases page](https://github.com/Asphocarp/unitodo/releases).
+
+MacOS users may need to run the following command to remove the quarantine attribute:
+
+```bash
+xattr -cr /Applications/Unitodo.app
+```
+
 ### Architecture
 
 Unitodo consists of two main components:
@@ -34,44 +44,6 @@ Unitodo consists of two main components:
 - **Modern Web Interface**: Filter, sort, and manage your TODOs with an intuitive UI
 - **Markdown Support**: Basic markdown rendering for rich TODO descriptions
 
-### Prerequisites
-
-- Rust (for the backend)
-- Node.js and npm (for the frontend)
-
-### Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/unitodo.git
-   cd unitodo
-   ```
-
-2. Build the backend:
-   ```bash
-   cargo build --release
-   ```
-
-3. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
-
-## Usage
-
-### Running Unitodo
-
-1. Start the backend to aggregate TODOs:
-   ```bash
-   cargo run
-   ```
-
-2. Run the frontend development server:
-   ```bash
-   npm run dev
-   ```
-
-3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Adding TODOs
 
