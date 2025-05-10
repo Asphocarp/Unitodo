@@ -27,14 +27,11 @@ parking_lot = "0.12"
 dirs = "5.0"
 tauri = { version = "2.0.0-beta", features = [] }
 
-# Actix dependencies (to be removed or replaced if fully migrating)
-# actix-web = "4" # Example, adjust if you have this or similar
-
 # gRPC dependencies
 tonic = "0.11"
 prost = "0.12"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-tauri-plugin-opener = "2.2.6"
+tauri-plugin-opener = "2"
 
 [build-dependencies]
 tonic-build = "0.11"
