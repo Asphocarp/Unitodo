@@ -1,76 +1,106 @@
-name: Build and Release
+name: Release Unitodo Tauri App
 
 on:
-  release:
-    types: [ created ]
+  push:
+    tags:
+      - 'v*.*.*' # Trigger on tags like v1.0.0, v0.1.2, etc.
+
+permissions:
+  contents: write # Required to create releases and upload assets
 
 jobs:
-  build:
-    runs-on: macos-latest # Or macos-latest if your build requires it
+  publish-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20' # Specify your Node.js version
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Adjust this to your project's Node.js version
+          node-version: 20
 
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-    # Cache dependencies for faster builds (optional, but recommended)
-    # Adjust paths and keys based on your project structure and package managers
-    - name: Cache Node.js modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm # or node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      # Install Linux-specific dependencies for Tauri
+      # (libs for webview, system tray, etc.)
+      - name: Install Linux dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
-    - name: Cache Rust dependencies (target directory)
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+      # Cache dependencies (optional, but recommended for faster builds)
+      # Cache Node.js modules
+      - name: Cache Node.js modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm # Path to npm cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-    - name: Install Node.js dependencies
-      run: npm install # Or yarn install, or pnpm install
+      # Cache Rust dependencies (Cargo)
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cachekey based on current OS, Rust toolchain, and Cargo.lock files
+          # Adjust if your src-tauri directory is elsewhere
+          workspaces: "./src-tauri -> target"
 
-    # If your build.rs or other parts of the Rust build need system dependencies, install them here
-    # For example:
-    # - name: Install system dependencies (Linux)
-    #   if: runner.os == 'Linux'
-    #   run: |
-    #     sudo apt-get update
-    #     sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Install frontend dependencies
+        # Adjust if you use yarn, pnpm, or if your package.json is not in the root
+        # e.g., run: yarn install --frozen-lockfile
+        # e.g., run: pnpm install --frozen-lockfile
+        # If your frontend is in a subfolder like 'frontend/':
+        # run: npm install
+        # working-directory: ./frontend
+        run: npm install
 
-    - name: Make build script executable
-      run: chmod +x build-electron.sh
+      - name: Build frontend
+        # Adjust this command if your build script is different (e.g., 'npm run build:ui')
+        # e.g., run: yarn build
+        # e.g., run: pnpm build
+        # If your frontend is in a subfolder like 'frontend/':
+        # run: npm run build
+        # working-directory: ./frontend
+        run: npm run build
 
-    - name: Run build script
-      run: ./build-electron.sh
+      - name: Build Tauri application and create release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment and set these secrets in your repository settings if you use Tauri's updater
+          # TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          # tagName: Defaults to the Git tag that triggered the workflow e.g., v1.0.0
+          # releaseName: Name of the release. '__VERSION__' will be replaced by the tag.
+          releaseName: 'Unitodo v__VERSION__' # Example: Unitodo v1.0.0
+          # releaseBody: Optional body for the release notes.
+          releaseBody: 'See the assets to download this version of Unitodo.'
+          # releaseDraft: Create the release as a draft. Set to false to publish immediately.
+          releaseDraft: true
+          # prerelease: Mark as a prerelease if the tag contains a hyphen (e.g. v1.0.0-beta.1)
+          prerelease: contains(github.ref_name, '-')
+          # projectPath: Path to the Tauri project. Default is the root directory.
+          # Adjust if your tauri.conf.json is not in './src-tauri/' relative to projectPath
+          # configPath: ./src-tauri/tauri.conf.json
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./dist/*.dmg
-          # Assuming your build script outputs a .dmg file in 'dist' for macOS.
-          # You might need to specify the exact file name or a different glob pattern (e.g., ./dist/*.zip).
-        asset_name: ${{ github.event.repository.name }}-${{ github.ref_name }}-macOS.dmg # Example: MyRepo-v1.0.0-macOS.dmg
-        asset_content_type: application/x-apple-diskimage # Use application/zip if it's a zip file 
+          # tauriScript: If you use a script from package.json to run tauri, e.g. "npm run tauri"
+          # Default is "cargo tauri". If your script is "dev:tauri": "tauri dev", "build:tauri": "tauri build"
+          # and you normally run "npm run build:tauri", then set tauriScript to "npm run build:tauri"
+          # No, the tauri-action appends 'build' or 'sign'.
+          # So if you run "npm run tauri build", set tauriScript: "npm run tauri"
+          # tauriScript: "npm run tauri" # Uncomment and adjust if needed
+
+          # args: Additional arguments to pass to the tauri build command
+          # For example, to build with a specific target: args: '--target universal-apple-darwin'
+          # args: '' 
