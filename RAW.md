@@ -169,3 +169,4 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 
 - [ ] 0@AqoNf add updater https://v2.tauri.app/plugin/updater/
+- [ ] 0@AqoSu log or track: log when done/create, est time, time elapsed
