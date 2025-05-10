@@ -167,6 +167,6 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
-
-- [ ] 0@AqoNf add updater https://v2.tauri.app/plugin/updater/
+- [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
 - [ ] 0@AqoSu log or track: log when done/create, est time, time elapsed
+- [ ] 00@AqpXr in a row; tree mode
