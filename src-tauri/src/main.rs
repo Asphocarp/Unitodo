@@ -703,6 +703,25 @@ impl Sink for TodoSink {
     }
 }
 
+// Helper function for custom character sorting order
+fn get_char_rank(c: char) -> u8 {
+    if c >= 'A' && c <= 'Z' {
+        (c as u8) - b'A' // 0-25
+    } else if c >= 'a' && c <= 'z' {
+        (c as u8 - b'a') + 26 // 26-51
+    } else if c >= '0' && c <= '9' {
+        (c as u8 - b'0') + 52 // 52-61
+    } else if c == '-' {
+        62
+    } else if c == '_' {
+        63
+    } else if c == ' ' {
+        64
+    } else {
+        65 // Rank for all other characters, sorts them after specified ones
+    }
+}
+
 // --- Core todo Finding Logic --- (Accepts &Config)
 fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedTodosOutput> {
     let start_time = Instant::now();
@@ -887,7 +906,9 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
         if let Some(todos) = final_grouped_todos.get(&category_key) {
             let mut sorted_todos = todos.clone();
 
-            // sort by lexicographical order, but with spaces > digits
+            // sort by URL-safe base64 order (and blank at the end)
+            // 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_ ',
+            // fallback to lexicographical order
             sorted_todos.sort_by(|a, b| {
                 use std::cmp::Ordering;
                 let mut a_iter = a.content.chars();
@@ -899,22 +920,19 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
                                 continue;
                             }
 
-                            let ca_is_space = ca == ' ';
-                            let cb_is_space = cb == ' ';
-                            let ca_is_digit = ca.is_ascii_digit();
-                            let cb_is_digit = cb.is_ascii_digit();
+                            let rank_a = get_char_rank(ca);
+                            let rank_b = get_char_rank(cb);
 
-                            if ca_is_space && cb_is_digit {
-                                return Ordering::Greater; // ' ' > digit
-                            }
-                            if cb_is_space && ca_is_digit {
-                                return Ordering::Less; // digit < ' '
-                            }
-
-                            // Standard lexicographical comparison for other cases
-                            match ca.cmp(&cb) {
-                                Ordering::Equal => continue, // Should not happen due to first ca == cb check
-                                other => return other,
+                            if rank_a == rank_b {
+                                // If ranks are equal (e.g., both are "other" characters with rank 65,
+                                // or ca and cb were identical but that's handled by `continue` above),
+                                // sort them using standard lexical comparison.
+                                return ca.cmp(&cb);
+                            } else {
+                                // Ranks are different, compare by rank.
+                                // This correctly orders specified characters among themselves according to their ranks,
+                                // and correctly orders specified characters before "other" characters.
+                                return rank_a.cmp(&rank_b);
                             }
                         }
                         (Some(_), None) => return Ordering::Greater, // a is longer
