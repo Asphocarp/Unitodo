@@ -1,5 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
+        .protoc_arg("--experimental_allow_proto3_optional")
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .build_server(true)
         .build_client(false) // We are building the server in this crate
