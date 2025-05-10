@@ -288,8 +288,8 @@ fn extract_cleaned_content_from_line(
         // For verification, if the pattern isn't found, it's a mismatch.
         Err(io::Error::new(
             io::ErrorKind::NotFound,
-            "TODO pattern not found in line for content extraction",
-        )) // UNITODO_IGNORE_LINE
+            "TODO pattern not found in line for content extraction", // UNITODO_IGNORE_LINE
+        ))
     }
 }
 
@@ -706,9 +706,9 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
     let start_time = Instant::now();
     if debug {
         println!(
-            "[{:.2?}] Starting TODO processing using grep-searcher",
+            "[{:.2?}] Starting TODO processing using grep-searcher", // UNITODO_IGNORE_LINE
             start_time.elapsed()
-        ); // UNITODO_IGNORE_LINE
+        );
     }
 
     let effective_pattern = config.get_effective_rg_pattern();
@@ -872,8 +872,8 @@ fn find_and_process_todos(config: &Config, debug: bool) -> io::Result<ProcessedT
             );
             return Err(io::Error::new(
                 io::ErrorKind::Other,
-                "Failed to finalize TODO grouping",
-            )); // UNITODO_IGNORE_LINE
+                "Failed to finalize TODO grouping", // UNITODO_IGNORE_LINE
+            ));
         }
     };
     let mut categories: Vec<TodoCategoryEnum> = final_grouped_todos.keys().cloned().collect();
@@ -1040,8 +1040,8 @@ fn edit_todo_in_file_grpc(
         } else {
             Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "TODO pattern not found on line",
-            )) // UNITODO_IGNORE_LINE
+                "TODO pattern not found on line", // UNITODO_IGNORE_LINE
+            ))
         }
     })();
     fs2::FileExt::unlock(&file)?;
@@ -1287,8 +1287,8 @@ fn mark_todo_as_done_in_file_grpc(
         } else {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "TODO pattern not found for marking done",
-            )); // UNITODO_IGNORE_LINE
+                "TODO pattern not found for marking done", // UNITODO_IGNORE_LINE
+            ));
         }
 
         lines[line_index] = final_line_to_write;
