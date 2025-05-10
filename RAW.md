@@ -166,5 +166,5 @@ See [FRONTEND.md](FRONTEND.md) for more details on the frontend implementation.
 - [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
 - [ ] 0@AqWoP fix: enter to open
-- [ ] 01@AqnH7 fix sorting (blank > number)
-- [ ] 100@AqnVa asdad
+- [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
+
