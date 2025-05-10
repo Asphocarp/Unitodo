@@ -70,7 +70,7 @@ xattr -cr /Applications/Unitodo.app
 
 - [ ] 2 unique-id can be fucking doomed! (with checking before applying)
     - [ ] 2 render timestamp (even when not leading) / remove it?
-- [ ] 1 submit to homebrew, aur; make doc and everything more user-friendly
+- [ ] 1 ci: submit to homebrew cask; make doc and everything more user-friendly
 
 - [ ] 2 move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 1 feat: show est time, like @1h; record time?
