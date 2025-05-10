@@ -86,8 +86,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Uncomment and set these secrets in your repository settings if you use Tauri's updater
-          # TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           # tagName: Defaults to the Git tag that triggered the workflow e.g., v1.0.0
           # releaseName: Name of the release. '__VERSION__' will be replaced by the tag.
@@ -97,7 +97,7 @@ jobs:
           # releaseDraft: Create the release as a draft. Set to false to publish immediately.
           releaseDraft: true
           # prerelease: Mark as a prerelease if the tag contains a hyphen (e.g. v1.0.0-beta.1)
-          prerelease: contains(github.ref_name, '-')
+          prerelease: ${{ contains(github.ref_name, '-') }}
           # projectPath: Path to the Tauri project. Default is the root directory.
           # Adjust if your tauri.conf.json is not in './src-tauri/' relative to projectPath
           # configPath: ./src-tauri/tauri.conf.json

@@ -20,6 +20,8 @@ use std::str;
 use std::sync::Arc;
 use std::time::Instant;
 
+use tauri_plugin_updater::UpdaterExt;
+
 // Tonic imports
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -1607,6 +1609,66 @@ async fn mark_done_command(
     }
 }
 
+#[cfg(desktop)]
+mod app_updates {
+    use super::*; // Make types from parent module available
+    use parking_lot::Mutex; // Re-import Mutex if it's used here specifically for PendingUpdate
+    use tauri_plugin_updater::Update;
+
+    #[derive(Default)]
+    pub struct PendingUpdate(Mutex<Option<Update>>);
+
+    #[derive(Clone, serde::Serialize)]
+    pub struct UpdateManifestDetails {
+        pub version: String,
+        pub date: String, 
+        pub body: Option<String>,
+    }
+
+    #[tauri::command]
+    pub async fn fetch_update(
+        app: tauri::AppHandle,
+        pending_update: tauri::State<'_, PendingUpdate>,
+    ) -> Result<Option<UpdateManifestDetails>, String> {
+        let updater = app.updater().map_err(|e| e.to_string())?; 
+        match updater.check().await {
+            Ok(Some(update_found)) => {
+                let manifest_details = UpdateManifestDetails {
+                    version: update_found.version.clone(),
+                    date: update_found.date.map_or_else(|| "N/A".to_string(), |d| d.to_string()),
+                    body: update_found.body.clone(),
+                };
+                *pending_update.0.lock() = Some(update_found);
+                Ok(Some(manifest_details))
+            }
+            Ok(None) => Ok(None),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    #[tauri::command]
+    pub async fn install_update(
+        _app_handle: tauri::AppHandle,
+        pending_update: tauri::State<'_, PendingUpdate>,
+    ) -> Result<(), String> {
+        let update_to_install = pending_update.0.lock().take();
+        if let Some(update_val) = update_to_install {
+            println!(
+                "Attempting to install update: version {} from {}",
+                update_val.version,
+                update_val.date.map_or_else(|| "N/A".to_string(), |d| d.to_string())
+            );
+            update_val.download_and_install(
+                |_chunk_length, _content_length| { /* progress tracking if needed */ },
+                || { /* download finished if needed */ }
+            ).await.map_err(|e| e.to_string())?;
+            Ok(())
+        } else {
+            Err("No pending update to install.".to_string())
+        }
+    }
+}
+
 // --- Main Function (Tonic Server Setup & Tauri App) ---
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -1641,7 +1703,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("Failed to start gRPC server");
     });
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build())
+                         .manage(app_updates::PendingUpdate::default());
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .manage(tauri_config_state) // Make config_state available to Tauri commands
         .invoke_handler(tauri::generate_handler![
@@ -1650,10 +1720,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get_todos_command,
             edit_todo_command,
             add_todo_command,
-            mark_done_command
+            mark_done_command,
+            #[cfg(desktop)]
+            app_updates::fetch_update,
+            #[cfg(desktop)]
+            app_updates::install_update
         ])
         .setup(move |_app| {
-            // _app.manage(config_state_clone_for_setup); // Example if needed in setup
             Ok(())
         })
         .run(tauri::generate_context!())
