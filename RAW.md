@@ -150,4 +150,4 @@ xattr -cr /Applications/Unitodo.app
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 - [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
 - [ ] 0@AqoSu log or track: log when done/create, est time, time elapsed
-- [ ] 00@AqpXr in a row; tree mode
+- [ ] 00@AqpXr in a row -> profiles; tree mode
