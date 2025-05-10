@@ -328,12 +328,7 @@ export default function TodoItem({
             if (url) {
               const currentItemRef = itemRef.current; // Capture ref before await
               try {
-                console.log('[TodoItem] Attempting to open:', url);
-                // Use Tauri's openUrl for all relevant URI schemes
-                  console.warn(`[TodoItem] Unsupported URL scheme for openUrl: ${url}. Falling back to window.open.`);
-                  window.open(url, '_blank'); // Fallback for other schemes if necessary
-                // }
-
+                await openUrl(url);
                 // Attempt to re-focus the item after the external action
                 if (currentItemRef && isFocused && document.body.contains(currentItemRef)) {
                   setTimeout(() => {
