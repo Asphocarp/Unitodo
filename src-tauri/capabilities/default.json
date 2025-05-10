@@ -6,7 +6,6 @@
     "main"
   ],
   "permissions": [
-    "opener:default",
     {
       "identifier": "opener:allow-open-url",
       "allow": [
@@ -14,10 +13,10 @@
           "url": "https://tauri.app"
         },
         {
-          "url": "cursor://file/**"
+          "url": "cursor:*"
         },
         {
-          "url": "vscode://file/**"
+          "url": "vscode:*"
         }
       ]
     }
