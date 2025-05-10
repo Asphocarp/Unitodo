@@ -409,12 +409,12 @@ export default function TodoItem({
     const url = getVSCodeUrl();
     if (url) {
       try {
-        if (url.startsWith('vscode://') || url.startsWith('cursor://') || url.startsWith('http://') || url.startsWith('https://')) {
-          console.log(`Attempting to open URL with Tauri shell: ${url}`);
-        //   await shellOpen(url);
-        } else {
-          console.warn(`Unsupported URL scheme for shellOpen: ${url}`);
-        }
+        // if (url.startsWith('vscode://') || url.startsWith('cursor://') || url.startsWith('http://') || url.startsWith('https://')) {
+        //   console.log(`Attempting to open URL with Tauri shell: ${url}`);
+        await openUrl(url);
+        // } else {
+        //   console.warn(`Unsupported URL scheme for shellOpen: ${url}`);
+        // }
       } catch (err) {
         console.error('Failed to open URL with Tauri shell:', err);
         setError('Failed to open link. Ensure the editor or application is configured correctly.');
