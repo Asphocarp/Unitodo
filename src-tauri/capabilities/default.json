@@ -19,6 +19,7 @@
           "url": "vscode:*"
         }
       ]
-    }
+    },
+    "updater:default"
   ]
 }

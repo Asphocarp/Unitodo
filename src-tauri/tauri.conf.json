@@ -32,6 +32,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-      ]
+      ],
+      "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNDQTM2OUM3MzMwQjY3Q0QKUldUTlp3c3p4Mm1qUERDbWx2a0V6VnVDWXJZSjhCdkk3aU9EQ21oYUdlRTJNUnN4S1g0V3ByNlkK",
+      "endpoints": ["https://github.com/Asphocarp/Unitodo/releases/latest/download/latest.json"]
+    }
   }
 }
