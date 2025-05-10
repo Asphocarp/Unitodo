@@ -1095,9 +1095,9 @@ fn add_todo_to_file_grpc(
     if sanitized_content.is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Cannot add empty TODO",
+            "Cannot add empty TODO", // UNITODO_IGNORE_LINE
         ));
-    } // UNITODO_IGNORE_LINE
+    } 
 
     let priority_marker = "- [ ]";
     let effective_priority_segment: String;
