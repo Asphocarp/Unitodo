@@ -213,12 +213,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.hn-style {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.75rem;
-}
-
 .hn-header {
   background-color: var(--notion-bg);
   color: var(--notion-text);

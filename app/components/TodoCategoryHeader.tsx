@@ -15,7 +15,7 @@ export default function TodoCategoryHeader({ category }: TodoCategoryHeaderProps
 
   return (
     <div 
-      className="hn-category-header dark:border-gray-700 dark:text-gray-200 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b border-border-color dark:border-gray-700 px-1 py-1 flex items-center" // Simplified styling, removed interactive parts
+      className="hn-category-header dark:border-gray-700 dark:text-gray-200 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b border-border-color px-1 py-1 flex items-center" // Simplified styling, removed interactive parts
       style={{ height: `${CATEGORY_HEADER_HEIGHT}px` }} // Ensure height matches constant
     >
       <NerdFontIcon 
