@@ -140,19 +140,51 @@ export async function fetchConfig(): Promise<AppConfig> {
 
 export async function updateConfig(newConfig: AppConfig): Promise<{ status: string; message: string }> {
   try {
-    const payload = appConfigToProtoConfigMessage(newConfig);
-    // The invoke payload should be an object where keys match the Rust command's argument names.
-    const result = await invoke<ProtoUpdateConfigResponse>('update_config_command', { newConfigPayload: payload });
-    // Assuming ProtoUpdateConfigResponse from unitodo_pb.js has getStatus and getMessage methods
-    // If result is a plain object, access properties directly: result.status, result.message
-    // For now, assume it's a plain object as that's common with Tauri's JSON layer.
+    const payloadProtoInstance = appConfigToProtoConfigMessage(newConfig);
+
+    // Manually construct the plain payload object to ensure correct JSON structure for Rust/serde
+    const plainPayload: any = {
+      // Ensure snake_case keys match protobuf field names
+      refresh_interval: payloadProtoInstance.getRefreshInterval(),
+      editor_uri_scheme: payloadProtoInstance.getEditorUriScheme(),
+      todo_done_pairs: payloadProtoInstance.getTodoDonePairsList().map(p => ({
+        todo_marker: p.getTodoMarker(), // snake_case
+        done_marker: p.getDoneMarker(), // snake_case
+      })),
+      default_append_basename: payloadProtoInstance.getDefaultAppendBasename(),
+      projects: {}, // Initialize projects as an empty object
+    };
+
+    if (payloadProtoInstance.hasRg()) {
+      const rgInstance = payloadProtoInstance.getRg()!;
+      plainPayload.rg = {
+        paths: rgInstance.getPathsList(),
+        ignore: rgInstance.getIgnoreList(),
+        file_types: rgInstance.getFileTypesList(), // snake_case
+      };
+    }
+    // If rg is not present in payloadProtoInstance, plainPayload.rg will be undefined,
+    // which is correct for an Option<RgConfigMessage> in Rust.
+
+    // Populate the projects map
+    payloadProtoInstance.getProjectsMap().forEach((projectInstance: ProtoProjectConfigMessage, key: string) => {
+      const projectObj: any = {
+        patterns: projectInstance.getPatternsList(),
+      };
+      if (projectInstance.hasAppendFilePath()) {
+        projectObj.append_file_path = projectInstance.getAppendFilePath(); // snake_case
+      }
+      plainPayload.projects[key] = projectObj;
+    });
+
+    const result = await invoke<ProtoUpdateConfigResponse>('update_config_command', { newConfigPayload: plainPayload });
+    
     return {
         status: (result as any).status || 'error',
         message: (result as any).message || 'Unknown error'
     };
   } catch (error) {
     console.error('Error invoking update_config_command:', error);
-    // Return an error status object or rethrow
     return Promise.reject({ status: 'error', message: (error as Error).message || 'Failed to update config' });
   }
 } 
