@@ -10,6 +10,11 @@
     - webview? notion? terminal?
 - (impact) so that every Todo is in one place, and all you need to do today is DO things after ranking them.
 
+## story
+
+pain point:
+- notion: not hign-performance; bi-sync; vim; (intelligent adding)
+
 ## related work:
 https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
 
@@ -156,8 +161,10 @@ xattr -cr /Applications/Unitodo.app
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
 - [ ] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); profiles (filter append algo)
-  - add a table view of this todo page items (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration)
-    - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around)
+  - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration).
+    - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
   - find a way to quick debug the frontend ui without re-run the entire app
+  - contain nerd icon in the source col; show only basename in file col
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
+- [ ] 1@Aq7DJ separate dev and release config? or let the frontend connect the same one
