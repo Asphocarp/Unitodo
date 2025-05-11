@@ -170,3 +170,4 @@ xattr -cr /Applications/Unitodo.app
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@Aq7DJ separate dev and release config? or let the frontend connect the same one
+- [ ] 1@ArB_8 tofix: align cells in a col when resizing window
