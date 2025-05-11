@@ -154,3 +154,4 @@ xattr -cr /Applications/Unitodo.app
 - [x] 000@Aq2kC@@Aq24r update config
 - [ ] 1@Aq2qH fix dark mode titlebar color
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized
+- [ ] 1@Aq6Ux ci: fix windows linux error caused by drag-feat
