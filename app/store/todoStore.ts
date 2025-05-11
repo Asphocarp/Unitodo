@@ -113,17 +113,149 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   
-  toggleDisplayMode: () => set((state) => ({ 
-    displayMode: state.displayMode === 'section' 
-      ? 'tab' 
-      : state.displayMode === 'tab' 
-        ? 'table' 
-        : 'section',
-    // Optionally reset focus when switching to table or from table
-    // focusedItem: state.displayMode === 'tab' || state.displayMode === 'table' 
-    //   ? { categoryIndex: -1, itemIndex: -1 } 
-    //   : state.focusedItem 
-  })),
+  toggleDisplayMode: () => set((state) => {
+    const newDisplayMode = state.displayMode === 'section'
+      ? 'tab'
+      : state.displayMode === 'tab'
+        ? 'table'
+        : 'section';
+
+    let newFocusedItem = { ...state.focusedItem }; // Start with current focus
+    let newActiveTabIndex = state.activeTabIndex;
+
+    if (newDisplayMode === 'table') {
+      newActiveTabIndex = -1; 
+      const globallySortedTodos = getGloballySortedAndFilteredTodos(state);
+      if (globallySortedTodos.length > 0) {
+        const currentItemInSortedList = globallySortedTodos.find(
+          item => item.categoryIndex === state.focusedItem.categoryIndex && item.itemIndex === state.focusedItem.itemIndex
+        );
+        if (currentItemInSortedList) {
+          newFocusedItem = { categoryIndex: currentItemInSortedList.categoryIndex, itemIndex: currentItemInSortedList.itemIndex };
+        } else {
+          newFocusedItem = { categoryIndex: globallySortedTodos[0].categoryIndex, itemIndex: globallySortedTodos[0].itemIndex };
+        }
+      } else {
+        newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
+      }
+    } else if (state.displayMode === 'table') { // Switching FROM table mode
+      const filteredCategoryInfo = getFilteredCategoryInfo(state);
+      const currentOriginalFocusedItem = state.focusedItem; // This holds original indices
+
+      if (newDisplayMode === 'tab') {
+        if (currentOriginalFocusedItem.categoryIndex !== -1 && currentOriginalFocusedItem.categoryIndex < state.categories.length) {
+          const originalFocusedCategoryName = state.categories[currentOriginalFocusedItem.categoryIndex].name;
+          const targetTabIndexInFiltered = filteredCategoryInfo.findIndex(info => info.name === originalFocusedCategoryName);
+          if (targetTabIndexInFiltered !== -1) {
+            newActiveTabIndex = targetTabIndexInFiltered;
+            const hasItems = filteredCategoryInfo[newActiveTabIndex]?.filteredTodoCount > 0;
+            newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 }; 
+          } else {
+            newActiveTabIndex = 0;
+            const hasItems = filteredCategoryInfo[newActiveTabIndex]?.filteredTodoCount > 0;
+            newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 };
+          }
+        } else {
+          newActiveTabIndex = 0;
+          const hasItems = filteredCategoryInfo[newActiveTabIndex]?.filteredTodoCount > 0;
+          newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 };
+        }
+      } else { // Switching from table to section mode
+        // focusedItem already holds original indices, check if it's visible in the filtered section view
+        const itemToKeepFocus = state.categories[currentOriginalFocusedItem.categoryIndex]?.todos[currentOriginalFocusedItem.itemIndex];
+        let isVisibleInFiltered = false;
+        if (itemToKeepFocus) {
+            const filteredCats = getFilteredCategories(state);
+            for (const fCat of filteredCats) {
+                if (fCat.name === state.categories[currentOriginalFocusedItem.categoryIndex].name) {
+                    if (fCat.todos.some(t => t.location === itemToKeepFocus.location && t.content === itemToKeepFocus.content)) {
+                        isVisibleInFiltered = true;
+                        // newFocusedItem remains state.focusedItem (original indices)
+                        break;
+                    }
+                }
+            }
+        }
+        if (!isVisibleInFiltered) {
+            // Reset focus to first item of first filtered category in section view (using original indices)
+            const firstFilteredCat = getFilteredCategories(state)[0];
+            if (firstFilteredCat && firstFilteredCat.todos.length > 0) {
+                const originalCatIdx = state.categories.findIndex(c => c.name === firstFilteredCat.name);
+                const originalItemIdx = originalCatIdx !== -1 ? state.categories[originalCatIdx].todos.findIndex(t => t.location === firstFilteredCat.todos[0].location && t.content === firstFilteredCat.todos[0].content) : -1;
+                newFocusedItem = { categoryIndex: originalCatIdx, itemIndex: originalItemIdx !== -1 ? originalItemIdx : -1 };
+            } else {
+                newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
+            }
+        }
+        // For section mode, activeTabIndex is not directly used for focus like in tab mode.
+        // We can set it to the category of the focused item if one exists.
+        if (newFocusedItem.categoryIndex !== -1) {
+            const focusedCatName = state.categories[newFocusedItem.categoryIndex].name;
+            newActiveTabIndex = getFilteredCategoryInfo(state).findIndex(info => info.name === focusedCatName);
+            if (newActiveTabIndex === -1) newActiveTabIndex = 0; // Fallback
+        } else {
+            newActiveTabIndex = 0;
+        }
+      }
+    } else if (newDisplayMode === 'tab' || newDisplayMode === 'section') {
+        // If switching between tab and section, or section to tab, ensure focus is logical.
+        // setActiveTabIndex handles focusing for tab mode. For section mode, if an item is focused, keep it.
+        // If not, focus first item of first category.
+        // This part primarily ensures focusedItem indices are correct for the target mode if not coming from 'table'
+        if (newDisplayMode === 'section') {
+            // If currently in tab mode and switching to section
+            if (state.displayMode === 'tab' && state.activeTabIndex !== -1 && state.focusedItem.itemIndex !== -1) {
+                const activeFilteredCategory = getFilteredCategories(state)[state.activeTabIndex];
+                if (activeFilteredCategory && activeFilteredCategory.todos.length > state.focusedItem.itemIndex) {
+                    const focusedTodo = activeFilteredCategory.todos[state.focusedItem.itemIndex];
+                    const originalCatIdx = state.categories.findIndex(c => c.name === activeFilteredCategory.name);
+                    const originalItemIdx = originalCatIdx !== -1 ? state.categories[originalCatIdx].todos.findIndex(t => t.location === focusedTodo.location && t.content === focusedTodo.content) : -1;
+                    if (originalCatIdx !== -1 && originalItemIdx !== -1) {
+                        newFocusedItem = { categoryIndex: originalCatIdx, itemIndex: originalItemIdx };
+                    } else { // Fallback
+                        const firstFilteredCat = getFilteredCategories(state)[0];
+                        if (firstFilteredCat && firstFilteredCat.todos.length > 0) {
+                            const ogCatIdx = state.categories.findIndex(c => c.name === firstFilteredCat.name);
+                            const ogItmIdx = ogCatIdx !== -1 ? state.categories[ogCatIdx].todos.findIndex(t => t.location === firstFilteredCat.todos[0].location && t.content === firstFilteredCat.todos[0].content) : -1;
+                            newFocusedItem = { categoryIndex: ogCatIdx, itemIndex: ogItmIdx !== -1 ? ogItmIdx : -1 };
+                        } else {
+                            newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
+                        }
+                    }
+                }
+            } else if (state.focusedItem.categoryIndex === -1 || state.focusedItem.itemIndex === -1) {
+                 const firstFilteredCat = getFilteredCategories(state)[0];
+                 if (firstFilteredCat && firstFilteredCat.todos.length > 0) {
+                    const originalCatIdx = state.categories.findIndex(c => c.name === firstFilteredCat.name);
+                    const originalItemIdx = originalCatIdx !== -1 ? state.categories[originalCatIdx].todos.findIndex(t => t.location === firstFilteredCat.todos[0].location && t.content === firstFilteredCat.todos[0].content) : -1;
+                    newFocusedItem = { categoryIndex: originalCatIdx, itemIndex: originalItemIdx !== -1 ? originalItemIdx : -1 };
+                 } else {
+                    newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
+                 }
+            }
+            // newActiveTabIndex for section mode would be the index of the focused category in filteredCategoryInfo
+            if (newFocusedItem.categoryIndex !== -1) {
+                const focusedCatName = state.categories[newFocusedItem.categoryIndex].name;
+                newActiveTabIndex = getFilteredCategoryInfo(state).findIndex(info => info.name === focusedCatName);
+                if (newActiveTabIndex === -1) newActiveTabIndex = 0; 
+            } else {
+                newActiveTabIndex = 0;
+            }
+        } else if (newDisplayMode === 'tab') {
+            // If switching from section to tab, setActiveTabIndex will handle it
+            // The current newActiveTabIndex (derived from section or default) will be used by setActiveTabIndex
+            // And setActiveTabIndex will reset focus appropriately for that tab.
+            const hasItems = getFilteredCategoryInfo(state)[newActiveTabIndex]?.filteredTodoCount > 0;
+            newFocusedItem = {categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 };
+        }
+    }
+
+    return {
+      displayMode: newDisplayMode,
+      focusedItem: newFocusedItem, // This is now complex, ensure it holds original indices for table/section, filtered for tab
+      activeTabIndex: newActiveTabIndex,
+    };
+  }),
   
   setActiveTabIndex: (activeTabIndex) => set((state) => {
     const filteredCategoryInfo = getFilteredCategoryInfo(state);
@@ -172,130 +304,119 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   navigateTodos: (direction, jumpSize = 1) => {
     const state = get();
     const { categoryIndex, itemIndex } = state.focusedItem;
-    const { displayMode, activeTabIndex } = state;
-    const filteredCategoryInfo = getFilteredCategoryInfo(state);
+    const { displayMode, activeTabIndex, categories: originalCategories } = state;
     
-    if (displayMode === 'tab') {
-      // In tab mode, navigation is within the active tab
-      const totalItems = filteredCategoryInfo[activeTabIndex]?.filteredTodoCount || 0;
-      
-      // Nothing focused yet
-      if (itemIndex === -1) {
-        if (totalItems > 0) {
-          set({
-            focusedItem: {
-              categoryIndex: activeTabIndex,
-              itemIndex: direction === 'up' ? totalItems - 1 : 0
-            }
-          });
-        }
+    if (displayMode === 'table') {
+      const globallySortedTodos = getGloballySortedAndFilteredTodos(state);
+      if (globallySortedTodos.length === 0) {
+        set({ focusedItem: { categoryIndex: -1, itemIndex: -1 } });
         return;
       }
-      
-      // Moving up
-      if (direction === 'up' && itemIndex > 0) {
-        // Calculate new index with boundary check
-        const newIndex = Math.max(0, itemIndex - jumpSize);
-        set({
-          focusedItem: {
-            categoryIndex: activeTabIndex,
-            itemIndex: newIndex
-          }
-        });
+
+      let currentIndexInSortedList = -1;
+      // focusedItem contains original categoryIndex and itemIndex
+      if (categoryIndex !== -1 && itemIndex !== -1) { 
+        currentIndexInSortedList = globallySortedTodos.findIndex(
+          item => item.categoryIndex === categoryIndex && item.itemIndex === itemIndex
+        );
       }
-      // Moving down
-      else if (direction === 'down' && itemIndex < totalItems - 1) {
-        // Calculate new index with boundary check
-        const newIndex = Math.min(totalItems - 1, itemIndex + jumpSize);
-        set({
-          focusedItem: {
-            categoryIndex: activeTabIndex,
-            itemIndex: newIndex
-          }
-        });
-      }
-    } else {
-      // In section mode, navigation is across all categories
-      
-      // Nothing focused yet
-      if (categoryIndex === -1 || itemIndex === -1) {
-        if (filteredCategoryInfo.length > 0) {
-          if (direction === 'up') {
-            // Focus last item of last category
-            const lastCatIndex = filteredCategoryInfo.length - 1;
-            const lastItemIndex = filteredCategoryInfo[lastCatIndex].filteredTodoCount - 1;
-            set({
-              focusedItem: {
-                categoryIndex: lastCatIndex,
-                itemIndex: lastItemIndex
-              }
-            });
-          } else {
-            // Focus first item of first category
-            set({
-              focusedItem: {
-                categoryIndex: 0,
-                itemIndex: 0
-              }
-            });
-          }
-        }
+
+      if (currentIndexInSortedList === -1) { 
+        const newIndex = direction === 'up' ? globallySortedTodos.length - 1 : 0;
+        const newItem = globallySortedTodos[newIndex];
+        // Set focusedItem with original indices from the sorted list item
+        set({ focusedItem: { categoryIndex: newItem.categoryIndex, itemIndex: newItem.itemIndex } });
         return;
       }
-      
-      // Handle multi-line jumps across categories
-      // This is more complex as we need to potentially move across category boundaries
+
+      let newSortedIndex: number;
       if (direction === 'up') {
-        // Moving up
-        let newCatIndex = categoryIndex;
-        let newItemIndex = itemIndex - jumpSize;
-        
-        // If we need to move to previous categories
-        while (newItemIndex < 0 && newCatIndex > 0) {
-          newCatIndex--;
-          newItemIndex += filteredCategoryInfo[newCatIndex].filteredTodoCount;
+        newSortedIndex = Math.max(0, currentIndexInSortedList - jumpSize);
+      } else { // down
+        newSortedIndex = Math.min(globallySortedTodos.length - 1, currentIndexInSortedList + jumpSize);
+      }
+
+      if (newSortedIndex !== currentIndexInSortedList) {
+        const newItem = globallySortedTodos[newSortedIndex];
+        set({ focusedItem: { categoryIndex: newItem.categoryIndex, itemIndex: newItem.itemIndex } });
+      }
+      return;
+    }
+    
+    const filteredCategoryInfo = getFilteredCategoryInfo(state);
+    const filteredCategories = getFilteredCategories(state);
+
+    if (displayMode === 'tab') {
+      // In tab mode, focusedItem.categoryIndex is activeTabIndex (index in filteredCategoryInfo)
+      // focusedItem.itemIndex is index within filteredCategoryInfo[activeTabIndex].filteredTodos
+      const currentFilteredCategory = filteredCategories[activeTabIndex];
+      if (!currentFilteredCategory || currentFilteredCategory.todos.length === 0) return;
+
+      const totalItems = currentFilteredCategory.todos.length;
+      let currentLocalItemIndex = itemIndex; // This is already the local index for the tab
+
+      if (itemIndex === -1) { // Nothing focused yet in this tab
+        if (totalItems > 0) {
+          currentLocalItemIndex = direction === 'up' ? totalItems - 1 : 0;
+          const focusedTodoInFiltered = currentFilteredCategory.todos[currentLocalItemIndex];
+          const originalCatIdx = originalCategories.findIndex(c => c.name === currentFilteredCategory.name);
+          const originalItmIdx = originalCatIdx !== -1 ? originalCategories[originalCatIdx].todos.findIndex(t => t.location === focusedTodoInFiltered.location && t.content === focusedTodoInFiltered.content) : -1;
+          set({ focusedItem: { categoryIndex: activeTabIndex, itemIndex: currentLocalItemIndex }}); // Store filtered indices for tab
         }
-        
-        // Ensure we don't go beyond the first item
-        if (newItemIndex < 0) {
-          newItemIndex = 0;
-        }
-        
-        set({
-          focusedItem: {
-            categoryIndex: newCatIndex,
-            itemIndex: newItemIndex
+        return;
+      }
+
+      let newLocalItemIndex = currentLocalItemIndex;
+      if (direction === 'up') {
+        newLocalItemIndex = Math.max(0, currentLocalItemIndex - jumpSize);
+      } else if (direction === 'down') {
+        newLocalItemIndex = Math.min(totalItems - 1, currentLocalItemIndex + jumpSize);
+      }
+      
+      if (newLocalItemIndex !== currentLocalItemIndex) {
+        const focusedTodoInFiltered = currentFilteredCategory.todos[newLocalItemIndex];
+        const originalCatIdx = originalCategories.findIndex(c => c.name === currentFilteredCategory.name);
+        const originalItmIdx = originalCatIdx !== -1 ? originalCategories[originalCatIdx].todos.findIndex(t => t.location === focusedTodoInFiltered.location && t.content === focusedTodoInFiltered.content) : -1;
+        set({ focusedItem: { categoryIndex: activeTabIndex, itemIndex: newLocalItemIndex }}); // Store filtered indices for tab
+      }
+
+    } else if (displayMode === 'section') {
+      // In section mode, focusedItem.categoryIndex is index in filteredCategories
+      // focusedItem.itemIndex is index within filteredCategories[categoryIndex].todos
+      if (filteredCategories.length === 0) return;
+
+      let currentGlobalFlatIndex = -1;
+      let flatFilteredItems: { todo: TodoItem, catIdxFiltered: number, itemIdxFiltered: number }[] = [];
+      let flatIdxCounter = 0;
+      filteredCategories.forEach((cat, cIdx) => {
+        cat.todos.forEach((td, iIdx) => {
+          flatFilteredItems.push({ todo: td, catIdxFiltered: cIdx, itemIdxFiltered: iIdx });
+          if (cIdx === categoryIndex && iIdx === itemIndex) {
+            currentGlobalFlatIndex = flatIdxCounter;
           }
+          flatIdxCounter++;
         });
-      } else {
-        // Moving down
-        let newCatIndex = categoryIndex;
-        let newItemIndex = itemIndex + jumpSize;
-        const currentCategorySize = filteredCategoryInfo[newCatIndex].filteredTodoCount;
-        
-        // If we need to move to next categories
-        while (newItemIndex >= currentCategorySize && newCatIndex < filteredCategoryInfo.length - 1) {
-          newItemIndex -= currentCategorySize;
-          newCatIndex++;
-          const nextCategorySize = filteredCategoryInfo[newCatIndex].filteredTodoCount;
-          
-          // If we're at the last category, make sure we don't exceed its bounds
-          if (newCatIndex === filteredCategoryInfo.length - 1) {
-            newItemIndex = Math.min(newItemIndex, nextCategorySize - 1);
-          }
-        }
-        
-        // Ensure we don't go beyond the last item
-        if (newItemIndex >= filteredCategoryInfo[newCatIndex].filteredTodoCount) {
-          newItemIndex = filteredCategoryInfo[newCatIndex].filteredTodoCount - 1;
-        }
-        
-        set({
-          focusedItem: {
-            categoryIndex: newCatIndex,
-            itemIndex: newItemIndex
-          }
-        });
+      });
+
+      if (flatFilteredItems.length === 0) return;
+
+      if (currentGlobalFlatIndex === -1) { // Nothing focused or focused item not in list
+        const newFlatIdx = direction === 'up' ? flatFilteredItems.length - 1 : 0;
+        const newItemInfo = flatFilteredItems[newFlatIdx];
+        set({ focusedItem: { categoryIndex: newItemInfo.catIdxFiltered, itemIndex: newItemInfo.itemIdxFiltered } }); // Store filtered indices
+        return;
+      }
+
+      let newFlatIndex: number;
+      if (direction === 'up') {
+        newFlatIndex = Math.max(0, currentGlobalFlatIndex - jumpSize);
+      } else { // down
+        newFlatIndex = Math.min(flatFilteredItems.length - 1, currentGlobalFlatIndex + jumpSize);
+      }
+
+      if (newFlatIndex !== currentGlobalFlatIndex) {
+        const newItemInfo = flatFilteredItems[newFlatIndex];
+        set({ focusedItem: { categoryIndex: newItemInfo.catIdxFiltered, itemIndex: newItemInfo.itemIdxFiltered } }); // Store filtered indices
       }
     }
   },
@@ -482,6 +603,53 @@ const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
   const endTime = performance.now();
 //   console.log(`getFilteredCategoryInfo took ${endTime - startTime}ms`);
   return result;
+};
+
+// Selector for globally sorted and filtered todos for table view
+// Returns items with their *original* categoryIndex and itemIndex
+export const getGloballySortedAndFilteredTodos = (state: TodoState): { originalTodo: TodoItem, categoryIndex: number, itemIndex: number, displayContent: string }[] => {
+  const allItems: { originalTodo: TodoItem, categoryIndex: number, itemIndex: number, displayContent: string }[] = [];
+  const lowerCaseSearchQuery = state.searchQuery.toLowerCase();
+
+  state.categories.forEach((category, catIdx) => {
+    category.todos.forEach((todo, itemIdx) => {
+      // Apply filter
+      let matchesFilter = true;
+      if (state.filter === 'completed') matchesFilter = todo.completed;
+      if (state.filter === 'active') matchesFilter = !todo.completed;
+
+      // Apply search
+      const parsed = parseTodoContent(todo.content);
+      const displayContent = parsed.mainContent || todo.content;
+      const matchesSearch = !state.searchQuery ||
+        displayContent.toLowerCase().includes(lowerCaseSearchQuery) ||
+        (todo.location && todo.location.toLowerCase().includes(lowerCaseSearchQuery));
+
+      if (matchesFilter && matchesSearch) {
+        allItems.push({
+          originalTodo: todo,
+          categoryIndex: catIdx, // Index in original state.categories
+          itemIndex: itemIdx,    // Index in original category.todos
+          displayContent: displayContent,
+        });
+      }
+    });
+  });
+
+  // Sort
+  allItems.sort((a, b) => {
+    const contentA = a.displayContent.toLowerCase();
+    const contentB = b.displayContent.toLowerCase();
+    if (contentA < contentB) return -1;
+    if (contentA > contentB) return 1;
+    // As a secondary sort criterion, use original category name then original item index for stability
+    const catNameA = state.categories[a.categoryIndex]?.name.toLowerCase() || '';
+    const catNameB = state.categories[b.categoryIndex]?.name.toLowerCase() || '';
+    if (catNameA < catNameB) return -1;
+    if (catNameA > catNameB) return 1;
+    return a.itemIndex - b.itemIndex;
+  });
+  return allItems;
 };
 
 // Utility selectors

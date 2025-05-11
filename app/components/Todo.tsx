@@ -3,16 +3,16 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { useTodoStore, getFilteredCategories, useTodoSelectors } from '../store/todoStore';
+import { useTodoStore, getFilteredCategories, useTodoSelectors, getGloballySortedAndFilteredTodos } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
 import TodoCategory from './TodoCategory';
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
-import TodoTable from './TodoTable';
+import TodoTable, { TodoTableRow } from './TodoTable';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
 import { useDarkMode } from '../utils/darkMode';
-import { parseTodoContent } from '../utils';
+import { parseTodoContent, decodeTimestampId } from '../utils';
 import Link from 'next/link';
 import AddTodoModal from './AddTodoModal';
 
@@ -65,9 +65,10 @@ export default function Todo() {
   const closeAddTodoModal = useTodoStore(state => state.closeAddTodoModal);
   const submitAddTodo = useTodoStore(state => state.submitAddTodo);
   
-  const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(useTodoStore.getState());
+  const todoStoreState = useTodoStore.getState();
+  const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(todoStoreState);
   
-  const filteredCategories = getFilteredCategories(useTodoStore.getState());
+  const filteredCategories = getFilteredCategories(todoStoreState);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,6 +105,53 @@ export default function Todo() {
     });
     return flatList;
   }, [filteredCategories, displayMode]);
+
+  const tableDisplayData = useMemo((): TodoTableRow[] => {
+    if (displayMode !== 'table') return [];
+    const sortedItems = getGloballySortedAndFilteredTodos(todoStoreState);
+    const originalStoreCategories = todoStoreState.categories;
+
+    return sortedItems.map(item => {
+      const { originalTodo, categoryIndex, itemIndex } = item; 
+      const parsed = parseTodoContent(originalTodo.content);
+      
+      let fullPath = originalTodo.location || '';
+      let lineNumberStr = '';
+      const lineMatch = originalTodo.location?.match(/\:(\d+)$/);
+      if (lineMatch) {
+        lineNumberStr = lineMatch[1];
+        fullPath = originalTodo.location.replace(/\:\d+$/, '');
+      }
+      const basename = fullPath.split(/[\/\\]/).pop() || fullPath || 'N/A';
+      
+      let createdTimestamp: string | null = null;
+      if (parsed.idPart && parsed.idPart.startsWith('@')) {
+        const dateObj = decodeTimestampId(parsed.idPart.substring(1));
+        createdTimestamp = dateObj ? dateObj.toISOString() : null;
+      }
+      
+      let completedTimestamp: string | null = null;
+      if (parsed.donePart && parsed.donePart.startsWith('@@')) {
+        const dateObj = decodeTimestampId(parsed.donePart.substring(2));
+        completedTimestamp = dateObj ? dateObj.toISOString() : null;
+      }
+
+      return {
+        id: (originalTodo.location || 'loc') + (parsed.idPart || 'id') + categoryIndex + '-' + itemIndex,
+        content: originalTodo.content, 
+        parsedContent: parsed,
+        zone: originalStoreCategories[categoryIndex]?.name || 'Unknown',
+        filePath: basename,
+        lineNumber: lineNumberStr,
+        created: createdTimestamp,
+        finished: completedTimestamp,
+        estDuration: null,
+        originalTodo: originalTodo,
+        categoryIndex: categoryIndex, 
+        itemIndex: itemIndex,       
+      };
+    });
+  }, [displayMode, todoStoreState.categories, todoStoreState.filter, todoStoreState.searchQuery]);
 
   const getItemSize = (index: number): number => {
     const item = flattenedList[index];
@@ -672,12 +720,12 @@ export default function Todo() {
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
             <strong>Error:</strong> {error}
           </div>
-        ) : displayMode === 'table' && filteredCategories.length > 0 ? (
+        ) : displayMode === 'table' ? (
            <AutoSizer>
             {({ height, width }) => (
               <TodoTable 
-                  categories={filteredCategories} 
-                  onRowClick={(categoryIndex, itemIndex) => setFocusedItem({ categoryIndex, itemIndex })}
+                  tableRows={tableDisplayData}
+                  onRowClick={(catIndex, itmIndex) => setFocusedItem({ categoryIndex: catIndex, itemIndex: itmIndex })}
                   focusedItem={focusedItem}
                   height={height}
                   width={width}

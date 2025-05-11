@@ -18,7 +18,7 @@ import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../t
 import { parseTodoContent, decodeTimestampId } from '../utils'; // Added decodeTimestampId here
 import TodoItem from './TodoItem'; // We might reuse parts or styling
 import { markTodoAsDone } from '../services/todoService'; // Import for checkbox functionality
-import { useTodoStore } from '../store/todoStore'; // To call updateTodo or loadData
+import { useTodoStore, getGloballySortedAndFilteredTodos } from '../store/todoStore'; // To call updateTodo or loadData
 import NerdFontIcon from './NerdFontIcon'; // Import NerdFontIcon
 import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -100,17 +100,17 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = React.memo(({ header, ch
 
 
 interface TodoTableProps {
-  categories: TodoCategoryType[];
-  // Add other necessary props like focus handlers, etc.
+  // categories: TodoCategoryType[]; // No longer needed, data comes via tableRows
+  tableRows: TodoTableRow[];
   onRowClick: (categoryIndex: number, itemIndex: number) => void;
   focusedItem: { categoryIndex: number; itemIndex: number; };
   height: number;
   width: number;
 }
 
-export default function TodoTable({ categories, onRowClick, focusedItem, height, width }: TodoTableProps) {
+export default function TodoTable({ tableRows, onRowClick, focusedItem, height, width }: TodoTableProps) {
   const { config: appConfig } = useConfigStore();
-  // const focusedRowRef = useRef<HTMLTableRowElement>(null); // No longer needed
+  const todoStoreCategories = useTodoStore(state => state.categories); // For icons
 
   // Ref for the scrolling container
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -154,7 +154,8 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
       header: 'Zone',
       size: 100, // Adjusted size slightly for icon
       cell: ({ row }) => {
-        const categoryIcon = categories[row.original.categoryIndex]?.icon || ''; // Default icon
+        // Use original categoryIndex to get icon from the main store categories
+        const categoryIcon = todoStoreCategories[row.original.categoryIndex]?.icon || ''; 
         return (
           <div className="flex items-center">
             <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-0.5 text-sm" />
@@ -244,57 +245,11 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [categories]); // Added categories to dependency array
+  ], [todoStoreCategories]); // Depend on todoStoreCategories for icons
 
   const data = useMemo((): TodoTableRow[] => {
-    const flatList: TodoTableRow[] = [];
-    categories.forEach((category, catIndex) => {
-      category.todos.forEach((todo, itemIndex) => {
-        const parsed = parseTodoContent(todo.content);
-        
-        let fullPath = todo.location || '';
-        let lineNumber = '';
-        const lineMatch = todo.location?.match(/\:(\d+)$/);
-        if (lineMatch) {
-          lineNumber = lineMatch[1];
-          fullPath = todo.location.replace(/\:\d+$/, '');
-        }
-        
-        // Extract basename from the fullPath
-        const basename = fullPath.split(/[/\\]/).pop() || fullPath || 'N/A';
-
-        let createdTimestamp: string | null = null;
-        if (parsed.idPart && parsed.idPart.startsWith('@')) {
-          // Assuming decodeTimestampId exists and can convert this to a Date string or object
-          // For now, let's store the raw part, conversion to Date can happen in cell render
-          const dateObj = decodeTimestampId(parsed.idPart.substring(1));
-          createdTimestamp = dateObj ? dateObj.toISOString() : null;
-        }
-
-        let completedTimestamp: string | null = null;
-        if (parsed.donePart && parsed.donePart.startsWith('@@')) {
-          const dateObj = decodeTimestampId(parsed.donePart.substring(2));
-          completedTimestamp = dateObj ? dateObj.toISOString() : null;
-        }
-
-        flatList.push({
-          id: (todo.location || 'loc') + (parsed.idPart || 'id') + catIndex + '-' + itemIndex, // More robust unique ID
-          content: todo.content,
-          parsedContent: parsed,
-          zone: category.name,
-          filePath: basename, // Use basename here
-          lineNumber: lineNumber,
-          created: createdTimestamp,
-          finished: completedTimestamp,
-          estDuration: null, // Placeholder
-          originalTodo: todo,
-          categoryIndex: catIndex,
-          itemIndex: itemIndex,
-        });
-      });
-    });
-    return flatList;
-  }, [categories]);
+    return tableRows;
+  }, [tableRows]);
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columns.map(column => column.id || (column as any).accessorKey) // Use dynamic columns for initial order

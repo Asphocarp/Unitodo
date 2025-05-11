@@ -1821,7 +1821,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Unitodo")
-                .inner_size(820.0, 980.0)
+                .inner_size(1700.0, 1080.0)
                 .resizable(true)
                 .fullscreen(false)
                 .devtools(true)
