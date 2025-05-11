@@ -18,6 +18,7 @@ import { parseTodoContent, decodeTimestampId } from '../utils'; // Added decodeT
 import TodoItem from './TodoItem'; // We might reuse parts or styling
 import { markTodoAsDone } from '../services/todoService'; // Import for checkbox functionality
 import { useTodoStore } from '../store/todoStore'; // To call updateTodo or loadData
+import NerdFontIcon from './NerdFontIcon'; // Import NerdFontIcon
 
 // Define a type for our table row data
 export interface TodoTableRow {
@@ -60,16 +61,27 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = ({ header, children }) =
       ref={setNodeRef}
       style={style}
       colSpan={header.colSpan}
-      className="p-2 border-b border-r dark:border-neutral-700"
+      className="px-2 py-1 border-b border-r dark:border-neutral-700 relative group"
     >
       <div className="flex items-center justify-between">
         {children}
-        <button {...attributes} {...listeners} className="cursor-grab p-1">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
-          </svg>
-        </button>
+        {header.id !== 'select' && (
+          <button {...attributes} {...listeners} className="cursor-grab p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+            </svg>
+          </button>
+        )}
       </div>
+      {header.column.getCanResize() && (
+        <div
+          onMouseDown={header.getResizeHandler()}
+          onTouchStart={header.getResizeHandler()}
+          className={`absolute top-0 right-0 h-full w-1 bg-neutral-300 dark:bg-neutral-600 opacity-0 group-hover:opacity-100 cursor-col-resize select-none touch-none ${
+            header.column.getIsResizing() ? 'opacity-100' : ''
+          }`}
+        />
+      )}
     </th>
   );
 };
@@ -82,117 +94,122 @@ interface TodoTableProps {
   focusedItem: { categoryIndex: number; itemIndex: number; };
 }
 
-const defaultColumns: ColumnDef<TodoTableRow>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <input
-        type="checkbox"
-        className="hn-checkbox"
-        {...{
-          checked: table.getIsAllRowsSelected(),
-          indeterminate: table.getIsSomeRowsSelected(),
-          onChange: table.getToggleAllRowsSelectedHandler(),
-        }}
-      />
-    ),
-    cell: ({ row }) => (
-      <input
-        type="checkbox"
-        className="hn-checkbox"
-        {...{
-          checked: row.original.originalTodo.completed, // Reflect actual completion
-          disabled: !row.original.parsedContent.isUnique, // Or other conditions for read-only
-          // onChange: row.getToggleSelectedHandler(), // This is for row selection, not completion
-          onChange: async () => {
-            const todo = row.original.originalTodo;
-            const store = useTodoStore.getState();
-            try {
-              await markTodoAsDone({
-                location: todo.location,
-                original_content: todo.content,
-              });
-              // Optimistically update or simply reload data
-              // store.updateTodo({ ...todo, completed: !todo.completed, content: newContentFromMark }); // if new content is returned
-              store.loadData(); // Simplest way to reflect change
-            } catch (error) {
-              console.error("Failed to mark todo as done from table:", error);
-              // Handle error display if needed
-            }
-          },
-        }}
-      />
-    ),
-    size: 40,
-  },
-  {
-    accessorKey: 'content',
-    header: 'Content',
-    size: 450, // Constrained size for content
-    cell: ({ row }) => (
-      // For now, just display raw content. Later, we can use a simplified TodoItem or Lexical display
-      <div className="truncate" title={row.original.content}>
-        {row.original.parsedContent.mainContent || row.original.content}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'zone',
-    header: 'Zone',
-    size: 120,
-  },
-  {
-    accessorKey: 'filePath',
-    header: 'File',
-    size: 200,
-    cell: ({ row }) => (
-      <span title={row.original.originalTodo.location}>
-        {row.original.filePath}{row.original.lineNumber ? `:${row.original.lineNumber}` : ''}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'created',
-    header: 'Created',
-    size: 170,
-    cell: info => {
-      const createdVal = info.getValue() as string | null;
-      return createdVal ? new Date(createdVal).toLocaleString() : 'N/A';
-    },
-  },
-  {
-    accessorKey: 'finished',
-    header: 'Finished',
-    size: 170,
-    cell: info => {
-      const finishedVal = info.getValue() as string | null;
-      return finishedVal ? new Date(finishedVal).toLocaleString() : 'N/A';
-    },
-  },
-  {
-    accessorKey: 'estDuration',
-    header: 'Est. Duration',
-    size: 100,
-    cell: info => info.getValue() || 'N/A',
-  },
-];
-
 export default function TodoTable({ categories, onRowClick, focusedItem }: TodoTableProps) {
+  const columns = useMemo((): ColumnDef<TodoTableRow>[] => [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          className="hn-checkbox"
+          {...{
+            checked: table.getIsAllRowsSelected(),
+            indeterminate: table.getIsSomeRowsSelected(),
+            onChange: table.getToggleAllRowsSelectedHandler(),
+          }}
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          className="hn-checkbox h-3.5 w-3.5"
+          {...{
+            checked: row.original.originalTodo.completed, // Reflect actual completion
+            disabled: !row.original.parsedContent.isUnique, // Or other conditions for read-only
+            onChange: async () => {
+              const todo = row.original.originalTodo;
+              const store = useTodoStore.getState();
+              try {
+                await markTodoAsDone({
+                  location: todo.location,
+                  original_content: todo.content,
+                });
+                store.loadData(); 
+              } catch (error) {
+                console.error("Failed to mark todo as done from table:", error);
+              }
+            },
+          }}
+        />
+      ),
+      size: 40,
+    },
+    {
+      accessorKey: 'content',
+      header: 'Content',
+      size: 450, 
+      cell: ({ row }) => (
+        <div className="truncate" title={row.original.content}>
+          {row.original.parsedContent.mainContent || row.original.content}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'zone',
+      header: 'Zone',
+      size: 150, // Adjusted size slightly for icon
+      cell: ({ row }) => {
+        const categoryIcon = categories[row.original.categoryIndex]?.icon || ''; // Default icon
+        return (
+          <div className="flex items-center">
+            <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-1.5 text-sm" />
+            <span className="truncate" title={row.original.zone}>{row.original.zone}</span>
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: 'filePath',
+      header: 'File',
+      size: 180, // Adjusted size
+      cell: ({ row }) => (
+        <span title={row.original.originalTodo.location}>
+          {row.original.filePath}{row.original.lineNumber ? `:${row.original.lineNumber}` : ''}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'created',
+      header: 'Created',
+      size: 150, // Adjusted size
+      cell: info => {
+        const createdVal = info.getValue() as string | null;
+        return createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+      },
+    },
+    {
+      accessorKey: 'finished',
+      header: 'Finished',
+      size: 150, // Adjusted size
+      cell: info => {
+        const finishedVal = info.getValue() as string | null;
+        return finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+      },
+    },
+    {
+      accessorKey: 'estDuration',
+      header: 'Est. Dur', // Shortened header
+      size: 80, // Adjusted size
+      cell: info => info.getValue() || 'N/A',
+    },
+  ], [categories]); // Added categories to dependency array
+
   const data = useMemo((): TodoTableRow[] => {
     const flatList: TodoTableRow[] = [];
     categories.forEach((category, catIndex) => {
       category.todos.forEach((todo, itemIndex) => {
         const parsed = parseTodoContent(todo.content);
-        let filePath = todo.location || '';
+        
+        let fullPath = todo.location || '';
         let lineNumber = '';
-        const lineMatch = todo.location?.match(/\:(\d+)$/); // Corrected regex for line number
+        const lineMatch = todo.location?.match(/\:(\d+)$/);
         if (lineMatch) {
           lineNumber = lineMatch[1];
-          filePath = todo.location.replace(/\:\d+$/, ''); // Corrected regex for file path
-        } else {
-          const fileMatch = todo.location?.match(/([^/\\]+)$/);
-          filePath = fileMatch ? fileMatch[0] : todo.location || 'N/A';
+          fullPath = todo.location.replace(/\:\d+$/, '');
         }
+        
+        // Extract basename from the fullPath
+        const basename = fullPath.split(/[/\\]/).pop() || fullPath || 'N/A';
 
         let createdTimestamp: string | null = null;
         if (parsed.idPart && parsed.idPart.startsWith('@')) {
@@ -213,7 +230,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
           content: todo.content,
           parsedContent: parsed,
           zone: category.name,
-          filePath: filePath,
+          filePath: basename, // Use basename here
           lineNumber: lineNumber,
           created: createdTimestamp,
           finished: completedTimestamp,
@@ -228,19 +245,19 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
   }, [categories]);
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
-    defaultColumns.map(column => column.id || (column as any).accessorKey)
+    columns.map(column => column.id || (column as any).accessorKey) // Use dynamic columns for initial order
   );
 
   const table = useReactTable({
     data,
-    columns: defaultColumns,
+    columns, // Use dynamic columns
     state: {
       columnOrder,
     },
     onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
-    // enableColumnResizing: true, // We'll add resizing later if needed
-    // columnResizeMode: 'onChange',
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
   });
 
   const sensors = useSensors(
@@ -270,8 +287,8 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
       onDragEnd={handleDragEnd}
       modifiers={[restrictToHorizontalAxis]}
     >
-      <div className="h-full overflow-auto">
-        <table className="text-xs border-collapse dark:text-neutral-300 table-fixed w-full">
+      <div className="h-full overflow-auto rounded-lg border dark:border-neutral-700"> {/* Added rounded-lg and border */}
+        <table className="text-sm border-collapse dark:text-neutral-300 table-fixed w-full"> {/* Changed text-xs to text-sm */}
           <thead className="bg-neutral-50 dark:bg-neutral-800 sticky top-0 z-10">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -300,7 +317,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
                 onClick={() => onRowClick(row.original.categoryIndex, row.original.itemIndex)}
               >
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} className="p-2 border-b dark:border-neutral-700" style={{ width: cell.column.getSize() }}>
+                  <td key={cell.id} className="px-2 py-0.5 border-b dark:border-neutral-700" style={{ width: cell.column.getSize() }}> {/* Changed py-1 to py-0.5 */}
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
