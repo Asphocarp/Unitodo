@@ -1711,14 +1711,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // --- Port Finding Logic ---
     let mut found_port: Option<u16> = None;
-    for port_candidate in 50051..=50060 { // Renamed port to port_candidate
+    for port_candidate in 50051..=50100 { // Renamed port to port_candidate
         if try_bind_port(port_candidate) {
             found_port = Some(port_candidate);
             break;
         }
     }
 
-    let chosen_port = found_port.expect("Failed to find an available port for gRPC server in the range 50051-50060.");
+    let chosen_port = found_port.expect("Failed to find an available port for gRPC server in the range 50051-50100.");
     println!("[Rust Backend] gRPC server will attempt to start on port: {}", chosen_port);
 
     // Write chosen port to .env.local for dev convenience
