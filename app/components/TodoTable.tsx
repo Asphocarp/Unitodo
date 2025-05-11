@@ -43,7 +43,7 @@ interface DraggableHeaderProps {
   children: React.ReactNode;
 }
 
-const DraggableHeader: React.FC<DraggableHeaderProps> = ({ header, children }) => {
+const DraggableHeader: React.FC<DraggableHeaderProps> = React.memo(({ header, children }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: header.id,
   });
@@ -92,7 +92,7 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = ({ header, children }) =
       )}
     </th>
   );
-};
+});
 
 
 interface TodoTableProps {
@@ -208,7 +208,8 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
       size: 150, // Adjusted size
       cell: info => {
         const createdVal = info.getValue() as string | null;
-        return createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        const displayDate = createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
@@ -217,14 +218,18 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
       size: 150, // Adjusted size
       cell: info => {
         const finishedVal = info.getValue() as string | null;
-        return finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        const displayDate = finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
       accessorKey: 'estDuration',
       header: 'Est. Dur', // Shortened header
       size: 80, // Adjusted size
-      cell: info => info.getValue() || 'N/A',
+      cell: info => {
+        const estDurVal = info.getValue() as string | null || 'N/A';
+        return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
+      }
     },
   ], [categories]); // Added categories to dependency array
 
