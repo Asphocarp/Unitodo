@@ -8,7 +8,8 @@ use grep_regex::RegexMatcher;
 use grep_searcher::{Searcher, Sink, SinkMatch};
 use ignore::WalkBuilder;
 use lazy_static::lazy_static;
-use parking_lot::{Mutex as ParkingMutex, RwLock};
+use parking_lot::Mutex as ParkingMutex;
+use tokio::sync::RwLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,7 +20,10 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 use std::time::Instant;
+use std::net::TcpListener;
 
+use tauri::Emitter;
+use tauri::Manager;
 use tauri_plugin_updater::UpdaterExt;
 
 // Tonic imports
@@ -1342,7 +1346,7 @@ impl TodoService for MyTodoService {
         &self,
         _request: Request<GetTodosRequest>,
     ) -> Result<Response<GetTodosResponse>, Status> {
-        let config_guard = self.config_state.read();
+        let config_guard = self.config_state.read().await;
         match find_and_process_todos(&config_guard, false) {
             Ok(processed_data) => {
                 let proto_categories = processed_data
@@ -1363,7 +1367,7 @@ impl TodoService for MyTodoService {
         request: Request<EditTodoRequest>,
     ) -> Result<Response<EditTodoResponse>, Status> {
         let payload = request.into_inner();
-        let config_guard = self.config_state.read();
+        let config_guard = self.config_state.read().await;
         match edit_todo_in_file_grpc(
             &config_guard,
             &payload.location,
@@ -1397,7 +1401,7 @@ impl TodoService for MyTodoService {
         request: Request<AddTodoRequest>,
     ) -> Result<Response<AddTodoResponse>, Status> {
         let payload = request.into_inner();
-        let config_guard = self.config_state.read();
+        let config_guard = self.config_state.read().await;
         match add_todo_to_file_grpc(
             &config_guard,
             &payload.category_type,
@@ -1428,19 +1432,18 @@ impl TodoService for MyTodoService {
         request: Request<MarkDoneRequest>,
     ) -> Result<Response<MarkDoneResponse>, Status> {
         let payload = request.into_inner();
-        let config_guard = self.config_state.read();
+        let config_guard = self.config_state.read().await;
         match mark_todo_as_done_in_file_grpc(
             &config_guard,
             &payload.location,
             &payload.original_content,
         ) {
             Ok((new_content, completed_status_changed)) => {
-                // Assuming completed_status_changed means the marker itself changed to a "done" one
                 Ok(Response::new(MarkDoneResponse {
                     status: "success".to_string(),
                     message: "Todo marked as done successfully".to_string(),
                     new_content,
-                    completed: completed_status_changed, // Or derive from new_content if more reliable
+                    completed: completed_status_changed,
                 }))
             }
             Err(e) => {
@@ -1477,7 +1480,7 @@ impl ConfigService for MyConfigService {
         &self,
         _request: Request<GetConfigRequest>,
     ) -> Result<Response<GetConfigResponse>, Status> {
-        let config_guard = self.config_state.read();
+        let config_guard = self.config_state.read().await;
         let proto_config = to_proto_config(&config_guard);
         Ok(Response::new(GetConfigResponse {
             config: Some(proto_config),
@@ -1492,44 +1495,35 @@ impl ConfigService for MyConfigService {
             .into_inner()
             .config
             .ok_or_else(|| Status::invalid_argument("Config message is missing"))?;
-        let new_config = from_proto_config(proto_config_to_save);
+        
+        let new_config_for_file = from_proto_config(proto_config_to_save.clone()); // Clone for file write
 
-        let config_arc_clone = Arc::clone(&self.config_state);
-
-        // Blocking file I/O should be offloaded
-        let result = tokio::task::spawn_blocking(move || {
+        // Blocking file I/O
+        let file_write_result: Result<Config, io::Error> = tokio::task::spawn_blocking(move || {
             let _file_guard = CONFIG_FILE_MUTEX.lock();
-            let target_path = get_primary_config_path()?; // io::Result
-            write_config_to_path_internal(&new_config, &target_path)?; // io::Result
+            let target_path = get_primary_config_path()?; 
+            write_config_to_path_internal(&new_config_for_file, &target_path)?;
+            Ok(new_config_for_file) // Return the config that was written
+        }).await.map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Task join error: {}", e)))?;
+        // The outer map_err converts JoinError to io::Error to consolidate error types before matching below.
 
-            // If file write succeeds, update in-memory state
-            let mut config_guard = config_arc_clone.write();
-            *config_guard = new_config;
-            Ok::<(), io::Error>(())
-        })
-        .await;
-
-        match result {
-            Ok(Ok(())) => {
+        match file_write_result {
+            Ok(written_config) => {
+                // If file write succeeds, update in-memory state
+                let mut config_guard = self.config_state.write().await; // tokio::sync::RwLock write lock
+                *config_guard = written_config; // Update with the config that was successfully written
+                
                 println!("Configuration updated successfully (in-memory and file).");
                 Ok(Response::new(UpdateConfigResponse {
                     status: "success".to_string(),
                     message: "Configuration saved successfully.".to_string(),
                 }))
             }
-            Ok(Err(e)) => {
-                // io::Error from the blocking task
+            Err(e) => {
+                // io::Error from the blocking task (either IO or JoinError)
                 eprintln!("Error saving config: {}", e);
                 Err(Status::internal(format!(
                     "Failed to save configuration: {}",
-                    e
-                )))
-            }
-            Err(e) => {
-                // JoinError from spawn_blocking (task panicked)
-                eprintln!("Task panic while saving config: {}", e);
-                Err(Status::internal(format!(
-                    "Internal server error during config save: {}",
                     e
                 )))
             }
@@ -1627,14 +1621,24 @@ async fn mark_done_command(
     }
 }
 
+#[tauri::command]
+async fn get_grpc_port_command(app_state: tauri::State<'_, AppState>) -> Result<Option<u16>, String> {
+    let port_option_guard = app_state.grpc_port.read().await;
+    if let Some(port_value) = *port_option_guard {
+        Ok(Some(port_value))
+    } else {
+        Err("gRPC port not yet initialized or available.".to_string())
+    }
+}
+
 #[cfg(desktop)]
 mod app_updates {
     use super::*; // Make types from parent module available
-    use parking_lot::Mutex; // Re-import Mutex if it's used here specifically for PendingUpdate
+    use tokio::sync::RwLock; // Add tokio::sync::RwLock
     use tauri_plugin_updater::Update;
 
     #[derive(Default)]
-    pub struct PendingUpdate(Mutex<Option<Update>>);
+    pub struct PendingUpdate(RwLock<Option<Update>>);
 
     #[derive(Clone, serde::Serialize)]
     pub struct UpdateManifestDetails {
@@ -1656,7 +1660,8 @@ mod app_updates {
                     date: update_found.date.map_or_else(|| "N/A".to_string(), |d| d.to_string()),
                     body: update_found.body.clone(),
                 };
-                *pending_update.0.lock() = Some(update_found);
+                let mut pending_update_guard = pending_update.0.write().await;
+                *pending_update_guard = Some(update_found);
                 Ok(Some(manifest_details))
             }
             Ok(None) => Ok(None),
@@ -1669,7 +1674,7 @@ mod app_updates {
         _app_handle: tauri::AppHandle,
         pending_update: tauri::State<'_, PendingUpdate>,
     ) -> Result<(), String> {
-        let update_to_install = pending_update.0.lock().take();
+        let update_to_install = pending_update.0.write().await.take();
         if let Some(update_val) = update_to_install {
             println!(
                 "Attempting to install update: version {} from {}",
@@ -1687,11 +1692,55 @@ mod app_updates {
     }
 }
 
+// --- AppState for managed state ---
+#[derive(Debug)]
+struct AppState {
+    grpc_port: Arc<RwLock<Option<u16>>>,
+}
+
+// --- Helper function for port checking ---
+fn try_bind_port(port: u16) -> bool {
+    TcpListener::bind(("::1", port)).is_ok()
+}
+
 // --- Main Function (Tonic Server Setup & Tauri App) ---
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     env_logger::init();
+
+    // --- Port Finding Logic ---
+    let mut found_port: Option<u16> = None;
+    for port_candidate in 50051..=50060 { // Renamed port to port_candidate
+        if try_bind_port(port_candidate) {
+            found_port = Some(port_candidate);
+            break;
+        }
+    }
+
+    let chosen_port = found_port.expect("Failed to find an available port for gRPC server in the range 50051-50060.");
+    println!("[Rust Backend] gRPC server will attempt to start on port: {}", chosen_port);
+
+    // Write chosen port to .env.local for dev convenience
+    let env_file_path = PathBuf::from(".env.local");
+    match File::create(&env_file_path) {
+        Ok(mut file) => {
+            if let Err(e) = writeln!(file, "GRPC_PORT={}", chosen_port) {
+                eprintln!("[Rust Backend] Failed to write to .env.local: {}", e);
+            } else {
+                println!("[Rust Backend] Successfully wrote GRPC_PORT={} to {}", chosen_port, env_file_path.display());
+            }
+        }
+        Err(e) => {
+            eprintln!("[Rust Backend] Failed to create/overwrite .env.local: {}", e);
+        }
+    }
+    // --- End Port Finding Logic ---
+
+    // Initialize AppState
+    let app_state = AppState {
+        grpc_port: Arc::new(RwLock::new(Some(chosen_port))),
+    };
 
     // Load configuration
     let initial_config = load_config_from_file().unwrap_or_else(|e| {
@@ -1699,19 +1748,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Config::default()
     });
     let config_state = Arc::new(RwLock::new(initial_config));
-    let grpc_config_state_grpc_server = Arc::clone(&config_state); // Clone for gRPC server
-    let tauri_config_state = Arc::clone(&config_state); // Clone for Tauri app state/commands
+    let config_state_for_grpc = Arc::clone(&config_state); // Clone for the gRPC task
+    let app_state_for_grpc_task = Arc::clone(&app_state.grpc_port); // Clone grpc_port for gRPC task
 
     tokio::spawn(async move {
-        let addr = "[::1]:50051"
+        // Explicitly type the steps for clarity with tokio::sync::RwLock
+        let guard_future = app_state_for_grpc_task.read();
+        let port_option_guard: tokio::sync::RwLockReadGuard<'_, Option<u16>> = guard_future.await;
+        let port_option: &Option<u16> = &*port_option_guard; // Dereference guard to get &Option<u16>
+        let port_to_use: u16 = port_option.expect("gRPC port should be set in AppState for gRPC server");
+        
+        let addr = format!("[::1]:{}", port_to_use)
             .parse()
             .expect("Failed to parse gRPC server address");
         let todo_service = MyTodoService {
-            config_state: grpc_config_state_grpc_server.clone(),
+            config_state: Arc::clone(&config_state_for_grpc), // Use the cloned Arc for the service
         };
         let config_service = MyConfigService {
-            config_state: grpc_config_state_grpc_server,
-        }; // Use the clone
+            config_state: Arc::clone(&config_state_for_grpc), // Use the cloned Arc for the service
+        }; 
         println!("gRPC Server listening on {}", addr);
         Server::builder()
             .add_service(TodoServiceServer::new(todo_service))
@@ -1731,7 +1786,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     builder
         .plugin(tauri_plugin_opener::init())
-        .manage(tauri_config_state) // Make config_state available to Tauri commands
+        .manage(config_state) // Make config_state available to Tauri commands
+        .manage(app_state) // Manage the new AppState
         .invoke_handler(tauri::generate_handler![
             get_config_command,
             update_config_command,
@@ -1739,12 +1795,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             edit_todo_command,
             add_todo_command,
             mark_done_command,
+            get_grpc_port_command, // Register new command
             #[cfg(desktop)]
             app_updates::fetch_update,
             #[cfg(desktop)]
             app_updates::install_update
         ])
-        .setup(move |_app| {
+        .setup(move |app| {
+            let handle = app.handle();
+            let app_state_in_setup = handle.state::<AppState>();
+            // Use try_read for tokio::sync::RwLock in a synchronous context
+            if let Ok(port_guard) = app_state_in_setup.grpc_port.try_read() {
+                if let Some(port_val) = *port_guard { // Dereference guard to get Option, then Some(u16)
+                    println!("[Rust Backend] Emitting grpc_port_discovered event with port: {}", port_val);
+                    let emit_result = handle.emit("grpc_port_discovered", port_val);
+                    if let Err(e) = emit_result {
+                        eprintln!("[Rust Backend] Failed to emit grpc_port_discovered event: {}", e);
+                    }
+                } else {
+                    eprintln!("[Rust Backend] gRPC port (inside lock) is None during setup.");
+                }
+            } else {
+                 eprintln!("[Rust Backend] Failed to acquire read lock on grpc_port immediately during setup.");
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

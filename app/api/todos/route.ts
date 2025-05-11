@@ -1,29 +1,36 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import * as grpc from '@grpc/grpc-js';
 import { TodoServiceClient } from '../../grpc-generated/unitodo_grpc_pb';
 import { GetTodosRequest, GetTodosResponse, TodoCategory as PbTodoCategory, TodoItem as PbTodoItem } from '../../grpc-generated/unitodo_pb'; // Imported PbTodoCategory and PbTodoItem
 import { TodoCategory as AppTodoCategory, TodoItem as AppTodoItem } from '@/app/types';
 
-const GRPC_BACKEND_ADDRESS = 'localhost:50051';
-
-// Removed redundant helper functions as direct mapping will be used with proper types
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   // Prevent gRPC calls during Next.js build phase
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log('[API Route GET /api/todos] Build phase, skipping gRPC call.');
     return NextResponse.json({ categories: [] }); // Return empty data or appropriate default
   }
 
+  const grpcPort = request.headers.get('X-GRPC-Port');
+  if (!grpcPort) {
+    console.error('[API Route GET /api/todos] X-GRPC-Port header missing');
+    return NextResponse.json(
+      { error: 'X-GRPC-Port header is required', details: 'Client did not provide the gRPC port.' },
+      { status: 400 } // Bad Request
+    );
+  }
+  const GRPC_BACKEND_ADDRESS = `localhost:${grpcPort}`;
+  console.log(`[API Route GET /api/todos] Connecting to gRPC server at: ${GRPC_BACKEND_ADDRESS}`);
+
   const client = new TodoServiceClient(
     GRPC_BACKEND_ADDRESS,
     grpc.credentials.createInsecure()
   );
 
-  const request = new GetTodosRequest();
+  const grpcApiRequest = new GetTodosRequest();
 
   return new Promise<NextResponse>((resolve) => {
-    client.getTodos(request, (error: grpc.ServiceError | null, response: GetTodosResponse | null) => {
+    client.getTodos(grpcApiRequest, (error: grpc.ServiceError | null, response: GetTodosResponse | null) => {
       if (error) {
         console.error('gRPC Error fetching todos:', error);
         resolve(NextResponse.json(
