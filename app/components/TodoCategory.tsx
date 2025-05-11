@@ -65,7 +65,7 @@ export default function TodoCategory({
       ref={categoryRef}
     >
       <div 
-        className="hn-category-header dark:border-gray-700 dark:text-gray-200 sticky top-0 bg-white dark:bg-gray-900 z-10"
+        className="hn-category-header dark:border-neutral-700 dark:text-neutral-200 sticky top-0 bg-white dark:bg-neutral-900 z-10"
         onClick={() => setExpanded(!expanded)}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
@@ -78,10 +78,10 @@ export default function TodoCategory({
           className="text-sm mr-1"
         />
         {category.name}
-        <span className="ml-1 text-subtle-color dark:text-gray-500 text-xs">
+        <span className="ml-1 text-subtle-color dark:text-neutral-500 text-xs">
           ({completedCount}/{totalCount})
         </span>
-        <span className="ml-1 text-subtle-color dark:text-gray-500 text-xs">
+        <span className="ml-1 text-subtle-color dark:text-neutral-500 text-xs">
           {expanded ? '▼' : '►'}
         </span>
       </div>
@@ -105,7 +105,7 @@ export default function TodoCategory({
               );
             })
           ) : (
-            <div className="text-center p-1 text-subtle-color dark:text-gray-500 text-xs">
+            <div className="text-center p-1 text-subtle-color dark:text-neutral-500 text-xs">
               No todos in this category
             </div>
           )}

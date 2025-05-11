@@ -419,7 +419,7 @@ export default function TodoItem({
   return (
     <div
       className={`hn-todo-item flex items-center h-6 ${
-        hovered ? 'bg-gray-50 dark:bg-gray-800' : ''
+        hovered ? 'bg-neutral-50 dark:bg-neutral-800' : ''
       } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''} ${isSaving ? 'opacity-50 pointer-events-none' : ''} ${isFocused ? 'focused' : ''}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -493,7 +493,7 @@ export default function TodoItem({
         {todo.location && (
           <a
             href={getVSCodeUrl() || '#'}
-            className={`hn-todo-location text-xs truncate text-gray-500 transition-all duration-200 flex items-center ${
+            className={`hn-todo-location text-xs truncate text-neutral-500 transition-all duration-200 flex items-center ${
               (hovered || isFocused || isEditing) ? 'flex-shrink-0' : 'flex-grow-0 pr-2'
             }`}
             title={todo.location}

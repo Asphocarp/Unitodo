@@ -14,14 +14,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const InputField: React.FC<InputProps> = ({ label, description, ...props }) => (
   <div className="mb-4">
-    <label className="block text-xs font-medium mb-1.5 text-gray-700 dark:text-gray-300" htmlFor={props.id || props.name}>{label}</label>
+    <label className="block text-xs font-medium mb-1.5 text-neutral-700 dark:text-neutral-300" htmlFor={props.id || props.name}>{label}</label>
     <input 
-      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm 
+      className="w-full px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm 
                 focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color 
-                dark:bg-gray-800 dark:text-gray-200 transition-all duration-150" 
+                dark:bg-neutral-800 dark:text-neutral-200 transition-all duration-150" 
       {...props} 
     />
-    {description && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
+    {description && <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{description}</p>}
   </div>
 );
 
@@ -33,15 +33,15 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 const TextareaField: React.FC<TextareaProps> = ({ label, description, ...props }) => (
   <div className="mb-4">
-    <label className="block text-xs font-medium mb-1.5 text-gray-700 dark:text-gray-300" htmlFor={props.id || props.name}>{label}</label>
+    <label className="block text-xs font-medium mb-1.5 text-neutral-700 dark:text-neutral-300" htmlFor={props.id || props.name}>{label}</label>
     <textarea 
-      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm 
+      className="w-full px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm 
                 focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color
-                dark:bg-gray-800 dark:text-gray-200 transition-all duration-150" 
+                dark:bg-neutral-800 dark:text-neutral-200 transition-all duration-150" 
       rows={3}
       {...props} 
     />
-    {description && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{description}</p>}
+    {description && <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{description}</p>}
   </div>
 );
 
@@ -114,8 +114,8 @@ export default function ConfigPage() {
   return (
     <div className={`max-w-4xl mx-auto p-4 ${isDarkMode ? 'dark' : ''}`}>
       {/* Header with back button */}
-      <div className="hn-header dark:border-gray-700 flex items-center mb-4 rounded-md shadow-sm">
-        <Link href="/" className="hn-meta text-gray-200 hover:text-white transition-colors mr-2" prefetch={false}>
+      <div className="hn-header dark:border-neutral-700 flex items-center mb-4 rounded-md shadow-sm">
+        <Link href="/" className="hn-meta text-neutral-200 hover:text-white transition-colors mr-2" prefetch={false}>
           &larr;
         </Link>
         <h1 className="hn-title">Unitodo Configuration</h1>
@@ -146,8 +146,8 @@ export default function ConfigPage() {
       <form onSubmit={(e) => { e.preventDefault(); saveConfig(); }} className="text-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Frontend Settings */}
-          <section className="mb-5 p-4 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800/50">
-            <h2 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 pb-2 border-b border-gray-200 dark:border-gray-700">Frontend Settings</h2>
+          <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
+            <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Frontend Settings</h2>
             <InputField
               label="Auto-Refresh Interval (ms)"
               description="Refresh frequency for TODO list" // UNITODO_IGNORE_LINE
@@ -175,8 +175,8 @@ export default function ConfigPage() {
           </section>
           
           {/* Backend Settings (rg) */}
-          <section className="mb-5 p-4 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800/50">
-              <h2 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 pb-2 border-b border-gray-200 dark:border-gray-700">Search Settings</h2>
+          <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
+              <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Search Settings</h2>
               <TextareaField
                   label="Search Paths"
                   description="Locations to scan (one per line)"
@@ -195,17 +195,17 @@ export default function ConfigPage() {
         </div>
 
         {/* Backend Settings (Projects) */}
-        <section className="mb-5 p-4 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800/50">
-            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Project Definitions</h2>
+        <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+              <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Project Definitions</h2>
               <div className="flex items-center">
                 <input
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="New project name"
-                  className="mr-2 px-3 py-1 text-xs border border-gray-300 dark:border-gray-700 rounded-md 
-                           dark:bg-gray-800 dark:text-gray-200 w-36 focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color transition-all duration-150"
+                  className="mr-2 px-3 py-1 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md 
+                           dark:bg-neutral-800 dark:text-neutral-200 w-36 focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color transition-all duration-150"
                 />
                 <button 
                   type="button"
@@ -219,13 +219,13 @@ export default function ConfigPage() {
             </div>
             
             {Object.entries(projects).length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">No projects defined yet. Add a project to categorize TODOs.</p>// UNITODO_IGNORE_LINE
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">No projects defined yet. Add a project to categorize TODOs.</p>// UNITODO_IGNORE_LINE
             ) : (
               <div className="space-y-4">
                 {Object.entries(projects).map(([projectName, projectConfig]) => (
-                    <div key={projectName} className="p-4 border border-gray-200 dark:border-gray-700 rounded-md relative hover:border-gray-300 dark:hover:border-gray-600 transition-colors bg-white dark:bg-gray-800 shadow-sm">
+                    <div key={projectName} className="p-4 border border-neutral-200 dark:border-neutral-700 rounded-md relative hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors bg-white dark:bg-neutral-800 shadow-sm">
                         <div className="flex justify-between items-center mb-3">
-                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{projectName}</h3>
+                          <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{projectName}</h3>
                           <button 
                             type="button"
                             onClick={() => removeProject(projectName)}
@@ -239,10 +239,10 @@ export default function ConfigPage() {
                           </button>
                         </div>
                         <div className="mb-3">
-                          <label className="block text-xs font-medium mb-1.5 text-gray-600 dark:text-gray-400">Path Patterns</label>
+                          <label className="block text-xs font-medium mb-1.5 text-neutral-600 dark:text-neutral-400">Path Patterns</label>
                           <textarea
-                              className="w-full px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-700 rounded-md
-                                        dark:bg-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-accent-color transition-all duration-150"
+                              className="w-full px-3 py-1.5 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md
+                                        dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-accent-color transition-all duration-150"
                               rows={2}
                               placeholder="Path glob patterns (one per line, e.g., src/**/*.js)"
                               value={projectConfig.patterns.join('\n')}
@@ -265,9 +265,9 @@ export default function ConfigPage() {
             )}
         </section>
 
-        <section className="mb-5 p-4 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm bg-white dark:bg-gray-800/50">
-          <h2 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 pb-2 border-b border-gray-200 dark:border-gray-700">TODO/DONE Pattern Pairs</h2> {/* UNITODO_IGNORE_LINE */}
-          <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-sm">
+        <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
+          <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">TODO/DONE Pattern Pairs</h2> {/* UNITODO_IGNORE_LINE */}
+          <div className="mb-4 p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <InputField
                 label="New TODO Pattern" // UNITODO_IGNORE_LINE
@@ -275,7 +275,7 @@ export default function ConfigPage() {
                 value={newTodoPattern}
                 onChange={(e) => setNewTodoPattern(e.target.value)}
                 placeholder="e.g., - [ ] or TODO:" // UNITODO_IGNORE_LINE
-                className="focus:z-10 dark:bg-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-1.5"
+                className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
               />
               <InputField
                 label="New DONE Pattern"
@@ -283,7 +283,7 @@ export default function ConfigPage() {
                 value={newDonePattern}
                 onChange={(e) => setNewDonePattern(e.target.value)}
                 placeholder="e.g., - [x] or DONE:"
-                className="focus:z-10 dark:bg-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-1.5"
+                className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
               />
             </div>
             <button 
@@ -299,16 +299,16 @@ export default function ConfigPage() {
           {config.todo_done_pairs && config.todo_done_pairs.length > 0 ? (
             <div className="space-y-2">
               {config.todo_done_pairs.map((pair, index) => (
-                <div key={index} className="p-3 border border-gray-200 dark:border-gray-700 rounded-md flex justify-between items-center bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors shadow-sm">
+                <div key={index} className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md flex justify-between items-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-sm">
                   <div className="flex-grow grid grid-cols-2 gap-4">
-                    <div className="text-xs dark:text-gray-300">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">TODO:</span> {/* UNITODO_IGNORE_LINE */}
+                    <div className="text-xs dark:text-neutral-300">
+                      <span className="font-medium text-neutral-600 dark:text-neutral-400">TODO:</span> {/* UNITODO_IGNORE_LINE */}
                       {/* making sure blank chars are shown via .replace(/ /g, '\u00A0') */}
-                      <code className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md">{pair[0].replace(/ /g, '\u00A0')}</code>
+                      <code className="ml-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{pair[0].replace(/ /g, '\u00A0')}</code>
                     </div>
-                    <div className="text-xs dark:text-gray-300">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">DONE:</span> 
-                      <code className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md">{pair[1].replace(/ /g, '\u00A0')}</code>
+                    <div className="text-xs dark:text-neutral-300">
+                      <span className="font-medium text-neutral-600 dark:text-neutral-400">DONE:</span> 
+                      <code className="ml-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{pair[1].replace(/ /g, '\u00A0')}</code>
                     </div>
                   </div>
                   <button 
@@ -325,7 +325,7 @@ export default function ConfigPage() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">No TODO/DONE pattern pairs defined. Defaults will be used.</p> // UNITODO_IGNORE_LINE
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">No TODO/DONE pattern pairs defined. Defaults will be used.</p> // UNITODO_IGNORE_LINE
           )}
         </section>
 

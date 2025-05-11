@@ -60,12 +60,12 @@ export default function AddTodoModal({
   
   return (
     <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop" onClick={() => onClose()}>
-      <div className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg max-w-lg w-full mx-4 modal-content dark:text-gray-200" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-neutral-800 p-5 rounded-lg shadow-lg max-w-lg w-full mx-4 modal-content dark:text-neutral-200" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-medium">Add Todo to {categoryName}</h3>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             aria-label="Close modal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,7 +76,7 @@ export default function AddTodoModal({
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            {/* <label htmlFor="todoText" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+            {/* <label htmlFor="todoText" className="block text-sm font-medium mb-1 text-neutral-700 dark:text-neutral-300">
               Todo text
             </label> */}
             <input
@@ -86,11 +86,11 @@ export default function AddTodoModal({
                 onChange={(e) => setTodoText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Enter your todo here..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-notion-green focus:border-notion-green dark:bg-gray-800 dark:text-gray-200"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-notion-green focus:border-notion-green dark:bg-neutral-800 dark:text-neutral-200"
                 autoFocus
                 type="text"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               {categoryType === 'git' 
                 ? 'This todo will be added to your git repository'
                 : 'This todo will be added to your project file'}
@@ -101,7 +101,7 @@ export default function AddTodoModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
+              className="px-4 py-2 text-sm border border-neutral-300 dark:border-neutral-600 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 dark:text-neutral-300 transition-colors"
             >
               Cancel
             </button>
