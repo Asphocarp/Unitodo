@@ -114,7 +114,7 @@ export default function ConfigPage() {
   return (
     <div className={`max-w-4xl mx-auto p-4 ${isDarkMode ? 'dark' : ''}`}>
       {/* Header with back button */}
-      <div className="hn-header dark:border-neutral-700 flex items-center mb-4 rounded-md shadow-sm">
+      <div className="hn-header dark:border-neutral-700 flex items-center mb-4 rounded-md shadow-sm" data-tauri-drag-region="">
         <Link href="/" className="hn-meta text-neutral-200 hover:text-white transition-colors mr-2" prefetch={false}>
           &larr;
         </Link>

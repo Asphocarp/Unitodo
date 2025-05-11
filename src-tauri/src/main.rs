@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::net::TcpListener;
 
-use tauri::Emitter;
+use tauri::{Emitter, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 use tauri::Manager;
 use tauri_plugin_updater::UpdaterExt;
 
@@ -1818,6 +1818,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                  eprintln!("[Rust Backend] Failed to acquire read lock on grpc_port immediately during setup.");
             }
+
+            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                .title("Unitodo")
+                .inner_size(820.0, 980.0)
+                .resizable(true)
+                .fullscreen(false)
+                .devtools(true)
+                .hidden_title(true);
+            
+            #[cfg(target_os = "macos")]
+            let win_builder = win_builder.title_bar_style(TitleBarStyle::Overlay);
+            let _window = win_builder.build().unwrap();
+
             Ok(())
         })
         .run(tauri::generate_context!())
