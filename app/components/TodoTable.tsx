@@ -61,13 +61,17 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = ({ header, children }) =
       ref={setNodeRef}
       style={style}
       colSpan={header.colSpan}
-      className="px-2 py-1 border-b border-r dark:border-neutral-700 relative group"
+      className="px-2 py-1 border-b border-r dark:border-neutral-700 relative group hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
     >
       <div className="flex items-center justify-between">
         {children}
         {header.id !== 'select' && (
-          <button {...attributes} {...listeners} className="cursor-grab p-1">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+          <button 
+            {...attributes} 
+            {...listeners} 
+            className="cursor-grab p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
             </svg>
           </button>
@@ -77,9 +81,11 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = ({ header, children }) =
         <div
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
-          className={`absolute top-0 right-0 h-full w-1 bg-neutral-300 dark:bg-neutral-600 opacity-0 group-hover:opacity-100 cursor-col-resize select-none touch-none ${
-            header.column.getIsResizing() ? 'opacity-100' : ''
-          }`}
+          className={`absolute top-0 right-0 h-full w-3 cursor-col-resize select-none touch-none flex items-center justify-end
+            after:absolute after:right-0 after:w-0.5 after:h-3/5 after:bg-transparent after:transition-all after:duration-200 after:rounded-full
+            hover:after:bg-neutral-500 dark:hover:after:bg-neutral-400
+            ${header.column.getIsResizing() ? 'after:bg-neutral-600 dark:after:bg-neutral-300' : ''}
+          `}
         />
       )}
     </th>
@@ -98,17 +104,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
   const columns = useMemo((): ColumnDef<TodoTableRow>[] => [
     {
       id: 'select',
-      header: ({ table }) => (
-        <input
-          type="checkbox"
-          className="hn-checkbox"
-          {...{
-            checked: table.getIsAllRowsSelected(),
-            indeterminate: table.getIsSomeRowsSelected(),
-            onChange: table.getToggleAllRowsSelectedHandler(),
-          }}
-        />
-      ),
+      header: () => null,
       cell: ({ row }) => (
         <input
           type="checkbox"
