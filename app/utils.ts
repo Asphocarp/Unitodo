@@ -233,7 +233,7 @@ export function parseTodoContent(content: string): ParsedTodo {
     const priority = match[3] || null; // Optional priority (Group 3)
     const idPart = match[4] || null;   // ID part (@..., #..., ##...) (Group 4)
     const donePart = match[5] || null; // Optional done timestamp (@@...) (Corrected: Group 5)
-    const mainContent = match[7] || ''; // The actual todo text content (Corrected: Group 7)
+    const mainContent = match[3]+match[6] || ''; // The actual todo text content (include priority and normal part)
 
     // Corrected Group Indices Explanation:
     // Group 1: leadingWhitespace?                  e.g., '   '
@@ -242,7 +242,7 @@ export function parseTodoContent(content: string): ParsedTodo {
     // Group 4:   idPart (@ | ## | #)                e.g., '@abcde'
     // Group 5:   donePart? (@@...)                  e.g., '@@fghij'
     // Group 6: separatorAndContent? (\s+ .*)        e.g., '  the content'
-    // Group 7:   mainContent? (.*)                  e.g., 'the content'
+    // Group 7:   mainContentEnd? (.*)                  e.g., 'the content'
 
     const isUnique = !!idPart && (idPart.startsWith('#') || idPart.startsWith('@')); 
 

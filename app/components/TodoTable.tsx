@@ -168,8 +168,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
       header: 'Content',
       size: 450, 
       cell: ({ row }) => {
-        // const content = row.original.parsedContent.mainContent || row.original.content;
-        const content = row.original.content;
+        const content = row.original.parsedContent.mainContent || row.original.content;
         return (
           <div 
             className="truncate text-sm"
@@ -417,9 +416,6 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
       case ' ':
       case 'Spacebar':
         e.preventDefault();
-        if (!row.original.parsedContent.isUnique) return;
-        
-        // Toggle done status
         const todo = row.original.originalTodo;
         const store = useTodoStore.getState();
         markTodoAsDone({
