@@ -21,7 +21,7 @@ interface TodoState {
   // UI state
   filter: 'all' | 'completed' | 'active';
   searchQuery: string;
-  displayMode: 'section' | 'tab';
+  displayMode: 'section' | 'tab' | 'table';
   activeTabIndex: number;
   focusedItem: { categoryIndex: number, itemIndex: number };
   showKeyboardHelp: boolean;
@@ -59,7 +59,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   
   filter: 'all',
   searchQuery: '',
-  displayMode: 'tab',
+  displayMode: 'table',
   activeTabIndex: 0,
   focusedItem: { categoryIndex: -1, itemIndex: -1 },
   showKeyboardHelp: false,
@@ -114,7 +114,15 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   
   toggleDisplayMode: () => set((state) => ({ 
-    displayMode: state.displayMode === 'section' ? 'tab' : 'section' 
+    displayMode: state.displayMode === 'section' 
+      ? 'tab' 
+      : state.displayMode === 'tab' 
+        ? 'table' 
+        : 'section',
+    // Optionally reset focus when switching to table or from table
+    // focusedItem: state.displayMode === 'tab' || state.displayMode === 'table' 
+    //   ? { categoryIndex: -1, itemIndex: -1 } 
+    //   : state.focusedItem 
   })),
   
   setActiveTabIndex: (activeTabIndex) => set((state) => {

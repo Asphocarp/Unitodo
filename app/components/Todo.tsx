@@ -9,6 +9,7 @@ import TodoCategory from './TodoCategory';
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
+import TodoTable from './TodoTable';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
 import { useDarkMode } from '../utils/darkMode';
 import { parseTodoContent } from '../utils';
@@ -592,9 +593,9 @@ export default function Todo() {
           <button
             className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
             onClick={toggleDisplayMode}
-            title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode (m)`}
+            title={`Switch to ${displayMode === 'section' ? 'tab' : displayMode === 'tab' ? 'table' : 'section'} mode (m)`}
           >
-            {displayMode === 'section' ? '⊞' : '≡'}
+            {displayMode === 'section' ? '≡' : displayMode === 'tab' ? '▦' : '⊞'}
           </button>
           
           <button
@@ -671,7 +672,13 @@ export default function Todo() {
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
             <strong>Error:</strong> {error}
           </div>
-        ) : filteredCategories.length > 0 || flattenedList.length > 0 ? (
+        ) : displayMode === 'table' && filteredCategories.length > 0 ? (
+           <TodoTable 
+               categories={filteredCategories} 
+               onRowClick={(categoryIndex, itemIndex) => setFocusedItem({ categoryIndex, itemIndex })}
+               focusedItem={focusedItem}
+           />
+        ) : filteredCategories.length > 0 || (displayMode === 'section' && flattenedList.length > 0) ? (
           displayMode === 'section' ? (
             <AutoSizer>
               {({ height, width }) => (

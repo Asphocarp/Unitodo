@@ -164,7 +164,9 @@ xattr -cr /Applications/Unitodo.app
   - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration).
     - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
   - find a way to quick debug the frontend ui without re-run the entire app
-  - contain nerd icon in the source col; show only basename in file col
+  - round corners of the table; make the table more compact, info-dense; polish its UI to fit overall style.
+  - contain corresponding nerd icon in the source col;
+  - show only basename in file col;
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@Aq7DJ separate dev and release config? or let the frontend connect the same one
