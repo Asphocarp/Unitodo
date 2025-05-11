@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "tauri": "tauri",
-    "dev": "tauri dev --release",
+    "dev": "tauri dev",
+    "dev:release": "tauri dev --release",
     "build": "tauri build",
     "dev:frontend": "next dev",
     "build:frontend": "next build",
