@@ -149,5 +149,7 @@ xattr -cr /Applications/Unitodo.app
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 - [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
-- [ ] 0@AqoSu log or track: log when done/create, est time, time elapsed
-- [ ] 00@AqpXr in a row -> profiles; tree mode
+- [ ] 0@AqoSu feat: log or track: log when done/create, est time, time elapsed
+- [ ] 00 (no more width cons) in a row -> profiles (filter append algo); tree mode
+- [ ] 000@Aq2kC update config
+- [ ] 00@Aq2qH fix dark mode titlebar color

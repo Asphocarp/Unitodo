@@ -5,8 +5,8 @@
   "identifier": "app.jyu.unitodo",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm run dev:frontend",
+    "devUrl": "http://localhost:43672",
+    "beforeDevCommand": "PORT=43672 npm run dev:frontend",
     "beforeBuildCommand": "npm run build:frontend"
   },
   "app": {
