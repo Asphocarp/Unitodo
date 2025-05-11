@@ -570,7 +570,7 @@ export default function Todo() {
       role="application"
       aria-label="Todo Application"
     >
-      <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between">
+      <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between" data-tauri-drag-region="">
         <div className="flex items-center">
           <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
           {lastUpdated && (

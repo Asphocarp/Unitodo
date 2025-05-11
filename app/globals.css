@@ -214,6 +214,7 @@ body {
 }
 
 .hn-header {
+  -webkit-app-region: drag;
   background-color: var(--notion-bg);
   color: var(--notion-text);
   padding: 0.5rem 0.75rem;

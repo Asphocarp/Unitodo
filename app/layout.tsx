@@ -26,6 +26,8 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen">
         <Providers>
+          {/* Transparent overlay drag region for Tauri */}
+          <div data-tauri-drag-region className="fixed top-0 left-0 w-full h-8 z-50" />
           <WinTitleBar />
           <div className="electron-content">
             {children}
