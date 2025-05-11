@@ -157,7 +157,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         // Use original categoryIndex to get icon from the main store categories
         const categoryIcon = todoStoreCategories[row.original.categoryIndex]?.icon || ''; 
         return (
-          <div className="flex items-center">
+          <div className="flex items-center truncate">
             <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-0.5 text-sm" />
             <span className="truncate" title={row.original.zone}>{row.original.zone}</span>
           </div>
@@ -308,9 +308,8 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                row.original.itemIndex === focusedItem.itemIndex
       );
       if (targetRowIndex !== -1) {
-        rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto', behavior: 'smooth' });
-        // Focusing the actual DOM element after scrolling might still be needed for keyboard navigation
-        // This part might need further refinement depending on how focus is managed globally
+        rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto' });
+        // TODO: 2 maybe optimize this `querySelector`
         const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
         rowElement?.focus({ preventScroll: true }); 
       }
