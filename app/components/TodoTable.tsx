@@ -129,7 +129,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
             className="hn-checkbox h-3.5 w-3.5"
             {...{
               checked: row.original.originalTodo.completed, // Reflect actual completion
-              disabled: !row.original.parsedContent.isUnique, // Or other conditions for read-only
+              disabled: false,
               onChange: async () => {
                 const todo = row.original.originalTodo;
                 const store = useTodoStore.getState();
@@ -168,7 +168,8 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
       header: 'Content',
       size: 450, 
       cell: ({ row }) => {
-        const content = row.original.parsedContent.mainContent || row.original.content;
+        // const content = row.original.parsedContent.mainContent || row.original.content;
+        const content = row.original.content;
         return (
           <div 
             className="truncate text-sm"

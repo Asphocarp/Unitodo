@@ -160,13 +160,14 @@ xattr -cr /Applications/Unitodo.app
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
-- [ ] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); 
+- [x] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); 
   - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration).
     - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
-  - find a way to quick debug the frontend ui without re-run the entire app
+  - x find a way to quick debug the frontend ui without re-run the entire app
   - round corners of the table; make the table more compact, info-dense; polish its UI to fit overall style.
   - contain corresponding nerd icon in the source col;
   - show only basename in file col;
+- usable: show only cols of checkbox/zone/content/file, for now; frontend sorting
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@Aq7DJ separate dev and release config? or let the frontend connect the same one
