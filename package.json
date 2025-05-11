@@ -11,7 +11,8 @@
     "dev:backend": "cargo run --release",
     "dev:frontend": "next dev",
     "build:frontend": "next build",
-    "start": "next start"
+    "start": "next start",
+    "generate:grpc": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:./app/grpc-generated --grpc_out=grpc_js:./app/grpc-generated --plugin=protoc-gen-grpc=`which grpc_tools_node_protoc_plugin` -I ./src-tauri/proto ./src-tauri/proto/unitodo.proto && grpc_tools_node_protoc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=grpc_js:./app/grpc-generated -I ./src-tauri/proto ./src-tauri/proto/unitodo.proto"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
