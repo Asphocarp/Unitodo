@@ -16,7 +16,10 @@
         "width": 820,
         "height": 980,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "devtools": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Transparent"
       }
     ],
     "security": {

@@ -564,7 +564,7 @@ export default function Todo() {
 
   return (
     <div
-      className="hn-style group dark:bg-gray-900 dark:text-gray-100 focus:outline-none flex flex-col min-h-screen"
+      className="p-4 group dark:bg-gray-900 dark:text-gray-100 focus:outline-none flex flex-col min-h-screen"
       tabIndex={-1}
       ref={containerRef}
       role="application"
