@@ -150,7 +150,7 @@ xattr -cr /Applications/Unitodo.app
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 - [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
 - [ ] 0@AqoSu feat: log or track: log when done/create, est time, time elapsed
-- [ ] 00 (no more width cons) in a row -> profiles (filter append algo); tree mode
+- [ ] 00 (no more width constraint) in a row -> profiles (filter append algo); tree mode
 - [x] 000@Aq2kC@@Aq24r update config
 - [ ] 00@Aq2qH fix dark mode titlebar color
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized

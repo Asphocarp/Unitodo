@@ -25,7 +25,7 @@ fs2 = "0.4"
 lazy_static = "1.4.0"
 parking_lot = "0.12"
 dirs = "5.0"
-tauri = { version = "2.0.0-beta", features = [] }
+tauri = { version = "2.0.0-beta.1", features = [] }
 
 # gRPC dependencies
 tonic = "0.11"
@@ -39,7 +39,7 @@ features = []
 
 [build-dependencies]
 tonic-build = "0.11"
-tauri-build = { version = "2.0.0-beta", features = [] }
+tauri-build = { version = "2.0.0-beta.1", features = [] }
 
 [profile.release]
 lto = true

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import * as grpc from '@grpc/grpc-js';
 import { ConfigServiceClient } from '../../grpc-generated/unitodo_grpc_pb';
 import {
@@ -13,8 +13,6 @@ import {
 } from '../../grpc-generated/unitodo_pb';
 import { Config as AppConfig, RgConfig as AppRgConfig, ProjectConfig as AppProjectConfig } from '@/app/types';
 
-const GRPC_BACKEND_ADDRESS = 'localhost:50051';
-
 // --- Helper: AppConfig (from frontend/app/types.ts) to gRPC ConfigMessage ---
 function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
     const configMessage = new PbConfigMessage();
@@ -22,7 +20,7 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
     const rgMessage = new PbRgConfigMessage();
     rgMessage.setPathsList(appConfig.rg.paths || []);
     rgMessage.setIgnoreList(appConfig.rg.ignore || []);
-    rgMessage.setFileTypesList(appConfig.rg.file_types || []); // Corrected: app_config to appConfig
+    rgMessage.setFileTypesList(appConfig.rg.file_types || []);
     configMessage.setRg(rgMessage);
 
     const projectsMap = configMessage.getProjectsMap();
@@ -75,11 +73,9 @@ function grpcConfigMessageToAppConfig(configMessage: PbConfigMessage): AppConfig
 }
 
 // Handler for GET requests to fetch config
-export async function GET() {
-    // Prevent gRPC calls during Next.js build phase
+export async function GET(request: NextRequest) {
     if (process.env.NEXT_PHASE === 'phase-production-build') {
         console.log('[API Route GET /api/config] Build phase, skipping gRPC call.');
-        // Return a default or empty config structure
         return NextResponse.json({
             rg: { paths: [], ignore: [], file_types: [] },
             projects: {},
@@ -90,11 +86,22 @@ export async function GET() {
         });
     }
 
+    const grpcPort = request.headers.get('X-GRPC-Port');
+    if (!grpcPort) {
+        console.error('[API Route GET /api/config] X-GRPC-Port header missing');
+        return NextResponse.json(
+            { error: 'X-GRPC-Port header is required' }, 
+            { status: 400 }
+        );
+    }
+    const GRPC_BACKEND_ADDRESS = `localhost:${grpcPort}`;
+    console.log(`[API Route GET /api/config] Connecting to gRPC server at: ${GRPC_BACKEND_ADDRESS}`);
+
     const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
-    const request = new GetConfigRequest();
+    const getConfigGrpcRequest = new GetConfigRequest();
 
     return new Promise<NextResponse>((resolve) => {
-        client.getConfig(request, (error: grpc.ServiceError | null, response: GetConfigResponse | null) => {
+        client.getConfig(getConfigGrpcRequest, (error: grpc.ServiceError | null, response: GetConfigResponse | null) => {
             if (error) {
                 console.error('gRPC Error fetching config:', error);
                 resolve(NextResponse.json(
@@ -118,16 +125,26 @@ export async function GET() {
 }
 
 // Handler for POST requests to update config
-export async function POST(requestRequest: Request) {
-    // Prevent gRPC calls during Next.js build phase
+export async function POST(request: NextRequest) {
     if (process.env.NEXT_PHASE === 'phase-production-build') {
         console.log('[API Route POST /api/config] Build phase, skipping gRPC call.');
         return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build' }, { status: 200 });
     }
 
+    const grpcPort = request.headers.get('X-GRPC-Port');
+    if (!grpcPort) {
+        console.error('[API Route POST /api/config] X-GRPC-Port header missing');
+        return NextResponse.json(
+            { error: 'X-GRPC-Port header is required' }, 
+            { status: 400 }
+        );
+    }
+    const GRPC_BACKEND_ADDRESS = `localhost:${grpcPort}`;
+    console.log(`[API Route POST /api/config] Connecting to gRPC server at: ${GRPC_BACKEND_ADDRESS}`);
+
     const client = new ConfigServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
     try {
-        const payload: AppConfig = await requestRequest.json();
+        const payload: AppConfig = await request.json();
         const grpcRequest = new UpdateConfigRequest();
         grpcRequest.setConfig(appConfigToGrpcConfigMessage(payload));
 

@@ -1,9 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import * as grpc from '@grpc/grpc-js';
 import { TodoServiceClient } from '../../../grpc-generated/unitodo_grpc_pb'; // Adjusted path for nesting
 import { EditTodoRequest, EditTodoResponse } from '../../../grpc-generated/unitodo_pb'; // Adjusted path
-
-const GRPC_BACKEND_ADDRESS = 'localhost:50051';
 
 interface EditTodoApiRequestBody {
   location: string;
@@ -12,12 +10,22 @@ interface EditTodoApiRequestBody {
   completed: boolean;
 }
 
-export async function POST(request: Request) {
-  // Prevent gRPC calls during Next.js build phase
+export async function POST(request: NextRequest) {
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log('[API Route POST /api/todos/edit] Build phase, skipping gRPC call.');
     return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build' }, { status: 200 });
   }
+
+  const grpcPort = request.headers.get('X-GRPC-Port');
+  if (!grpcPort) {
+    console.error('[API Route POST /api/todos/edit] X-GRPC-Port header missing');
+    return NextResponse.json(
+        { error: 'X-GRPC-Port header is required' }, 
+        { status: 400 }
+    );
+  }
+  const GRPC_BACKEND_ADDRESS = `localhost:${grpcPort}`;
+  console.log(`[API Route POST /api/todos/edit] Connecting to gRPC server at: ${GRPC_BACKEND_ADDRESS}`);
 
   const client = new TodoServiceClient(GRPC_BACKEND_ADDRESS, grpc.credentials.createInsecure());
   try {

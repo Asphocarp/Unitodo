@@ -38,3 +38,5 @@ node_modules
 # Tauri
 src-tauri/target/
 *.log
+
+.env.local
