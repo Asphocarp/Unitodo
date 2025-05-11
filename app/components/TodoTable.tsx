@@ -131,16 +131,6 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
       size: 40,
     },
     {
-      accessorKey: 'content',
-      header: 'Content',
-      size: 450, 
-      cell: ({ row }) => (
-        <div className="truncate" title={row.original.content}>
-          {row.original.parsedContent.mainContent || row.original.content}
-        </div>
-      ),
-    },
-    {
       accessorKey: 'zone',
       header: 'Zone',
       size: 150, // Adjusted size slightly for icon
@@ -153,6 +143,16 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
           </div>
         );
       }
+    },
+    {
+      accessorKey: 'content',
+      header: 'Content',
+      size: 450, 
+      cell: ({ row }) => (
+        <div className="truncate" title={row.original.content}>
+          {row.original.parsedContent.mainContent || row.original.content}
+        </div>
+      ),
     },
     {
       accessorKey: 'filePath',
