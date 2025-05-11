@@ -157,7 +157,7 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
         const categoryIcon = categories[row.original.categoryIndex]?.icon || ''; // Default icon
         return (
           <div className="flex items-center">
-            <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-1.5 text-sm" />
+            <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-0.5 text-sm" />
             <span className="truncate" title={row.original.zone}>{row.original.zone}</span>
           </div>
         );
