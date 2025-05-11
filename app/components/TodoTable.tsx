@@ -505,22 +505,29 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
                     role="row"
                     aria-current={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 'true' : undefined}
                   >
-                    {row.getVisibleCells().map(cell => (
-                      <td 
-                        key={cell.id} 
-                        className={`px-2 py-0.5 border-b dark:border-neutral-700 ${
-                          cell.column.id === 'select' ? 'w-10' : ''
-                        }`} 
-                        style={{ width: cell.column.getSize() }}
-                      >
-                        <div className={`h-full flex items-center ${
-                          isCompleted && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
-                          'line-through text-neutral-500 dark:text-neutral-400' : ''
-                        }`}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </div>
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map(cell => {
+                      const columnSize = cell.column.getSize();
+                      return (
+                        <td 
+                          key={cell.id} 
+                          className={`px-2 py-0.5 border-b dark:border-neutral-700 ${
+                            cell.column.id === 'select' ? 'w-10' : ''
+                          }`} 
+                          style={{ 
+                            width: `${columnSize}px`,
+                            minWidth: `${columnSize}px`,
+                            maxWidth: `${columnSize}px`
+                          }}
+                        >
+                          <div className={`h-full flex items-center ${
+                            isCompleted && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
+                            'line-through text-neutral-500 dark:text-neutral-400' : ''
+                          }`}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })}
