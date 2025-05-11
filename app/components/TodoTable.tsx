@@ -8,6 +8,7 @@ import {
   flexRender,
   Row,
   ColumnOrderState,
+  ColumnSizingState,
 } from '@tanstack/react-table';
 import { DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
@@ -113,6 +114,9 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
 
   // Ref for the scrolling container
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track column sizing state
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
   const columns = useMemo((): ColumnDef<TodoTableRow>[] => [
     {
@@ -301,8 +305,10 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
     columns, // Use dynamic columns
     state: {
       columnOrder,
+      columnSizing,
     },
     onColumnOrderChange: setColumnOrder,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
@@ -506,17 +512,18 @@ export default function TodoTable({ categories, onRowClick, focusedItem, height,
                     aria-current={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 'true' : undefined}
                   >
                     {row.getVisibleCells().map(cell => {
-                      const columnSize = cell.column.getSize();
+                      // Get the column size from the table's current state
+                      const width = cell.column.getSize();
                       return (
                         <td 
                           key={cell.id} 
                           className={`px-2 py-0.5 border-b dark:border-neutral-700 ${
                             cell.column.id === 'select' ? 'w-10' : ''
-                          }`} 
+                          }`}
                           style={{ 
-                            width: `${columnSize}px`,
-                            minWidth: `${columnSize}px`,
-                            maxWidth: `${columnSize}px`
+                            width: `${width}px`,
+                            minWidth: `${width}px`,
+                            maxWidth: `${width}px`
                           }}
                         >
                           <div className={`h-full flex items-center ${
