@@ -81,7 +81,7 @@ xattr -cr /Applications/Unitodo.app
 - [x] 2@@AptmE DB instead of json (200KB though)? X - gRPC now
 - [ ] 3 rg: file types?
 - [ ] 3 curious of battery consumption
-- [ ] 3@AoVsd see from cease plugin, how to inline-render a string
+- [x] 3@AoVsd@@Aq6f3 see from cease plugin, how to inline-render a string - X no need to see it inline
 - [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
 - [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
@@ -136,12 +136,12 @@ xattr -cr /Applications/Unitodo.app
 - [ ] 2@AptAw doc: say that by default config at ~/.config/unitodo/unitodo.toml
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
 - [ ] 1@Aptsh fix: make click on a lexcial editor starts editing
-- [ ] 1@Aptww fix: click on filename should behave the same as pressing enter (no new windows popup)
+- [x] 1@Aptww@@Aq6dl fix: click on filename should behave the same as pressing enter (no new windows popup)
 - [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
 - [ ] 2@Apt3d fancy: fetch from notion, slack, etc
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
 - [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
-- [ ] 2@Apt81 let the priority part include "-" (not just alphanumeric)- maybe no more concept of fisrt word, simply append timestamp and stuff at the end
+- [x] 2@Apt81@@Aq6fI let the priority part include "-" (not just alphanumeric)- X no more concept of fisrt word, simply append timestamp and stuff at the end
 - [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
 - [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
 - [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
@@ -150,8 +150,14 @@ xattr -cr /Applications/Unitodo.app
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 - [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
 - [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
-- [ ] 00 in a row -> profiles (filter append algo); tree mode
 - [x] 000@Aq2kC@@Aq24r update config
-- [ ] 1@Aq2qH fix dark mode titlebar color
+- [x] 1@Aq2qH@@Aq6c- fix dark mode titlebar color
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized
-- [ ] 1@Aq6Ux ci: fix windows linux error caused by drag-feat
+- [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
+
+- [ ] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); profiles (filter append algo)
+  - add a table view of this todo page items (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration)
+    - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around)
+  - find a way to quick debug the frontend ui without re-run the entire app
+- [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
+- [ ] 1@Aq6kT item color (base on git repo or project color)
