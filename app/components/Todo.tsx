@@ -673,11 +673,17 @@ export default function Todo() {
             <strong>Error:</strong> {error}
           </div>
         ) : displayMode === 'table' && filteredCategories.length > 0 ? (
-           <TodoTable 
-               categories={filteredCategories} 
-               onRowClick={(categoryIndex, itemIndex) => setFocusedItem({ categoryIndex, itemIndex })}
-               focusedItem={focusedItem}
-           />
+           <AutoSizer>
+            {({ height, width }) => (
+              <TodoTable 
+                  categories={filteredCategories} 
+                  onRowClick={(categoryIndex, itemIndex) => setFocusedItem({ categoryIndex, itemIndex })}
+                  focusedItem={focusedItem}
+                  height={height}
+                  width={width}
+              />
+            )}
+          </AutoSizer>
         ) : filteredCategories.length > 0 || (displayMode === 'section' && flattenedList.length > 0) ? (
           displayMode === 'section' ? (
             <AutoSizer>

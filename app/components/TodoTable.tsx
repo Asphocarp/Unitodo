@@ -22,6 +22,9 @@ import NerdFontIcon from './NerdFontIcon'; // Import NerdFontIcon
 import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
+// Import for virtualization
+import { useVirtualizer } from '@tanstack/react-virtual';
+
 // Define a type for our table row data
 export interface TodoTableRow {
   id: string; // Unique ID for the row (e.g., todo.location + todo.content hash)
@@ -100,11 +103,17 @@ interface TodoTableProps {
   // Add other necessary props like focus handlers, etc.
   onRowClick: (categoryIndex: number, itemIndex: number) => void;
   focusedItem: { categoryIndex: number; itemIndex: number; };
+  height: number;
+  width: number;
 }
 
-export default function TodoTable({ categories, onRowClick, focusedItem }: TodoTableProps) {
+export default function TodoTable({ categories, onRowClick, focusedItem, height, width }: TodoTableProps) {
   const { config: appConfig } = useConfigStore();
-  const focusedRowRef = useRef<HTMLTableRowElement>(null);
+  // const focusedRowRef = useRef<HTMLTableRowElement>(null); // No longer needed
+
+  // Ref for the scrolling container
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
   const columns = useMemo((): ColumnDef<TodoTableRow>[] => [
     {
       id: 'select',
@@ -319,12 +328,33 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
   // Helper to get column IDs for SortableContext
   const columnIds = useMemo(() => table.getFlatHeaders().map(header => header.id),[table.getFlatHeaders()])
 
+  // Row virtualization
+  const rowVirtualizer = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 24, // Estimate row height (h-6 class means 1.5rem = 24px)
+    overscan: 10, // Render some extra items for smoother scrolling
+  });
+
+  // Get virtual items
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
   // Add this effect to focus the row when focusedItem changes
   useEffect(() => {
-    if (focusedRowRef.current) {
-      focusedRowRef.current.focus({ preventScroll: false });
+    if (focusedItem && table.getRowModel().rows.length > 0) {
+      const targetRowIndex = table.getRowModel().rows.findIndex(
+        row => row.original.categoryIndex === focusedItem.categoryIndex && 
+               row.original.itemIndex === focusedItem.itemIndex
+      );
+      if (targetRowIndex !== -1) {
+        rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto', behavior: 'smooth' });
+        // Focusing the actual DOM element after scrolling might still be needed for keyboard navigation
+        // This part might need further refinement depending on how focus is managed globally
+        const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
+        rowElement?.focus({ preventScroll: true }); 
+      }
     }
-  }, [focusedItem]);
+  }, [focusedItem, rowVirtualizer, table.getRowModel().rows]);
 
   // Function to get the editor URL for a todo item
   const getEditorUrl = (location: string) => {
@@ -422,8 +452,11 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
       onDragEnd={handleDragEnd}
       modifiers={[restrictToHorizontalAxis]}
     >
-      <div className="h-full flex flex-col overflow-hidden rounded-lg border dark:border-neutral-700">
-        <div className="flex-grow overflow-auto">
+      <div 
+        style={{ height: `${height}px`, width: `${width}px` }}
+        className="flex flex-col overflow-hidden rounded-lg border dark:border-neutral-700"
+      >
+        <div ref={tableContainerRef} className="flex-grow overflow-auto" style={{ position: 'relative' }}>
           <table className="text-sm border-collapse dark:text-neutral-300 table-fixed w-full">
             <thead className="bg-neutral-50 dark:bg-neutral-800 sticky top-0 z-10">
               {table.getHeaderGroups().map(headerGroup => (
@@ -443,15 +476,20 @@ export default function TodoTable({ categories, onRowClick, focusedItem }: TodoT
                 </tr>
               ))}
             </thead>
-            <tbody>
-              {table.getRowModel().rows.map(row => {
+            <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+              {virtualRows.map(virtualRow => {
+                const row = table.getRowModel().rows[virtualRow.index];
                 const isCompleted = row.original.originalTodo.completed;
                 return (
                   <tr 
                     key={row.id} 
-                    ref={focusedItem.categoryIndex === row.original.categoryIndex && 
-                         focusedItem.itemIndex === row.original.itemIndex ? 
-                         focusedRowRef : undefined}
+                    ref={node => rowVirtualizer.measureElement(node)}
+                    data-index={virtualRow.index}
+                    style={{
+                      position: 'absolute',
+                      transform: `translateY(${virtualRow.start}px)`,
+                      width: '100%',
+                    }}
                     className={`h-6 cursor-pointer transition-colors
                       ${isCompleted ? 'opacity-70' : ''}
                       ${focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex 
