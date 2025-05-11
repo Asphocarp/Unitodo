@@ -456,15 +456,15 @@ export default function Todo() {
 
     return (
       <div className="relative flex flex-col flex-grow min-h-0">
-        <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm flex-shrink-0">
-          <div className="flex flex-wrap border-b border-border-color dark:border-gray-700 text-xs overflow-visible">
+        <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-neutral-900 shadow-sm flex-shrink-0">
+          <div className="flex flex-wrap border-b border-border-color dark:border-neutral-700 text-xs overflow-visible">
             {categories.map((category, index) => (
               <button
                 key={index}
                 className={`px-2 py-1 my-1 mr-1 font-medium ${
                   activeTabIndex === index
-                  ? 'border-b-2 border-accent-color font-bold dark:text-gray-200'
-                  : 'text-subtle-color dark:text-gray-400'
+                  ? 'border-b-2 border-accent-color font-bold dark:text-neutral-200'
+                  : 'text-subtle-color dark:text-neutral-400'
                 }`}
                 onClick={() => {
                   setActiveTabIndex(index);
@@ -479,7 +479,7 @@ export default function Todo() {
                   className="text-sm"
                 />
                 {category.name}
-                <span className="ml-1 text-subtle-color dark:text-gray-500">
+                <span className="ml-1 text-subtle-color dark:text-neutral-500">
                   ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
                 </span>
               </button>
@@ -505,7 +505,7 @@ export default function Todo() {
               )}
             </AutoSizer>
           ) : (
-            <div className="p-2 text-center text-subtle-color dark:text-gray-500 text-xs">
+            <div className="p-2 text-center text-subtle-color dark:text-neutral-500 text-xs">
               No todos in this category
             </div>
           )}
@@ -564,17 +564,17 @@ export default function Todo() {
 
   return (
     <div
-      className="p-4 group dark:bg-gray-900 dark:text-gray-100 focus:outline-none flex flex-col min-h-screen"
+      className="p-4 group dark:bg-neutral-900 dark:text-neutral-100 focus:outline-none flex flex-col min-h-screen"
       tabIndex={-1}
       ref={containerRef}
       role="application"
       aria-label="Todo Application"
     >
-      <div className="hn-header dark:border-gray-700 flex-shrink-0 flex justify-between">
+      <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between">
         <div className="flex items-center">
           <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
           {lastUpdated && (
-            <span className="ml-3 text-xs text-gray-500 dark:text-gray-400">
+            <span className="ml-3 text-xs text-neutral-500 dark:text-neutral-400">
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           )}
@@ -582,7 +582,7 @@ export default function Todo() {
         
         <div className="flex items-center gap-2">
           <button
-            className="hn-filter-button dark:hover:bg-gray-700 dark:text-gray-300"
+            className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300"
             onClick={loadData}
             title="Refresh data (Ctrl+R)"
           >
@@ -590,7 +590,7 @@ export default function Todo() {
           </button>
           
           <button
-            className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-gray-700 dark:text-gray-300`}
+            className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
             onClick={toggleDisplayMode}
             title={`Switch to ${displayMode === 'section' ? 'tab' : 'section'} mode (m)`}
           >
@@ -598,7 +598,7 @@ export default function Todo() {
           </button>
           
           <button
-            className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
             title="Toggle dark mode"
             aria-label="Toggle dark mode"
             onClick={toggleDarkMode}
@@ -607,7 +607,7 @@ export default function Todo() {
           </button>
           
           <button
-            className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
             title="Keyboard shortcuts (?)"
             aria-label="Show keyboard shortcuts"
             onClick={toggleKeyboardHelp}
@@ -617,7 +617,7 @@ export default function Todo() {
           
           <Link href="config" passHref legacyBehavior prefetch={false}>
             <a 
-              className="hn-filter-button text-xs dark:hover:bg-gray-700 dark:text-gray-300"
+              className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
               title="Configure Unitodo"
               aria-label="Configure Unitodo"
             >
@@ -634,26 +634,26 @@ export default function Todo() {
           placeholder="Search todos... (/)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="hn-search dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:placeholder-gray-500 flex-grow"
+          className="hn-search dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700 dark:placeholder-neutral-500 flex-grow"
         />
         
         <div className="flex ml-2">
           <button 
-            className={`hn-filter-button ${filter === 'all' ? 'active' : ''} dark:hover:bg-gray-700 dark:text-gray-300`}
+            className={`hn-filter-button ${filter === 'all' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
             onClick={() => setFilter('all')}
             title="All todos (1)"
           >
             All
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-gray-700 dark:text-gray-300 ml-1`}
+            className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
             onClick={() => setFilter('active')}
             title="Active todos (2)"
           >
             Active
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'completed' ? 'active' : ''} dark:hover:bg-gray-700 dark:text-gray-300 ml-1`}
+            className={`hn-filter-button ${filter === 'completed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
             onClick={() => setFilter('completed')}
             title="Completed todos (3)"
           >
@@ -705,12 +705,12 @@ export default function Todo() {
       {/* Keyboard shortcuts modal with improved styling */}
       {showKeyboardHelp && (
         <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-w-md w-full mx-4 text-xs modal-content dark:text-gray-200 border dark:border-gray-700">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-4 max-w-md w-full mx-4 text-xs modal-content dark:text-neutral-200 border dark:border-neutral-700">
             <div className="flex justify-between items-center mb-3">
               <div className="font-medium text-base">Keyboard Shortcuts</div>
               <button 
                 onClick={() => toggleKeyboardHelp()}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                 aria-label="Close shortcuts help"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -718,35 +718,35 @@ export default function Todo() {
                 </svg>
               </button>
             </div>
-            <div className="italic text-gray-500 dark:text-gray-400 mb-3 text-xs">
+            <div className="italic text-neutral-500 dark:text-neutral-400 mb-3 text-xs">
               Note: Shortcuts only work when not editing text
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <div className="col-span-2 font-medium text-xs text-gray-600 dark:text-gray-300 mt-1.5 mb-1 border-b dark:border-gray-700 pb-1">Navigation</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">↑</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">k</kbd> Navigate up</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">↓</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">j</kbd> Navigate down</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Shift</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">k</kbd> Navigate up 5 items</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Shift</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">j</kbd> Navigate down 5 items</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">←</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">h</kbd> Previous tab</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">→</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">l</kbd> Next tab</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Esc</kbd> Exit edit mode</div>
+              <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Navigation</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">↑</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">k</kbd> Navigate up</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">↓</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">j</kbd> Navigate down</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">k</kbd> Navigate up 5 items</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">j</kbd> Navigate down 5 items</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">←</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">h</kbd> Previous tab</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">→</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">l</kbd> Next tab</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Esc</kbd> Exit edit mode</div>
               
-              <div className="col-span-2 font-medium text-xs text-gray-600 dark:text-gray-300 mt-1.5 mb-1 border-b dark:border-gray-700 pb-1">Todo actions</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">a</kbd> / <kbd className="dark:bg-gray-700 dark:border-gray-600">i</kbd> Edit todo</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">o</kbd> Add todo to current section</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">x</kbd> Append ignore comment</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Space</kbd> Toggle completion</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Enter</kbd> Open in editor</div>
+              <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Todo actions</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">a</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">i</kbd> Edit todo</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">o</kbd> Add todo to current section</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">x</kbd> Append ignore comment</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Space</kbd> Toggle completion</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Enter</kbd> Open in editor</div>
               
-              <div className="col-span-2 font-medium text-xs text-gray-600 dark:text-gray-300 mt-1.5 mb-1 border-b dark:border-gray-700 pb-1">Global</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">?</kbd> Toggle this shortcut help</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">d</kbd> Toggle dark mode</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">/</kbd> Focus search</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">m</kbd> Switch view mode</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">Ctrl</kbd>+<kbd className="dark:bg-gray-700 dark:border-gray-600">R</kbd> Refresh data</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">1</kbd> Show all todos</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">2</kbd> Show active todos</div>
-              <div><kbd className="dark:bg-gray-700 dark:border-gray-600">3</kbd> Show completed todos</div>
+              <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Global</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">?</kbd> Toggle this shortcut help</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">d</kbd> Toggle dark mode</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">/</kbd> Focus search</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">m</kbd> Switch view mode</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Ctrl</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">R</kbd> Refresh data</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">1</kbd> Show all todos</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">2</kbd> Show active todos</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">3</kbd> Show completed todos</div>
             </div>
           </div>
         </div>

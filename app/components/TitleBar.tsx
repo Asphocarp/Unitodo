@@ -22,7 +22,7 @@ const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
 
   return (
     <div 
-      className="hn-title-bar flex items-center h-8 px-2 drag select-none bg-white dark:bg-gray-900 border-b dark:border-gray-800"
+      className="hn-title-bar flex items-center h-8 px-2 drag select-none bg-white dark:bg-neutral-900 border-b dark:border-neutral-800"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -66,16 +66,16 @@ const TitleBar: React.FC<{ title?: string }> = ({ title = 'Unitodo' }) => {
       )} */}
 
       {/* App title */}
-      <div className="flex-1 text-center text-sm font-medium dark:text-gray-200">
+      <div className="flex-1 text-center text-sm font-medium dark:text-neutral-200">
         {title}
       </div>
 
       {/* Navigation links */}
       <div className="flex space-x-4">
-        <Link href="./" className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+        <Link href="./" className="text-xs text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200">
           Home
         </Link>
-        <Link href="./config" className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+        <Link href="./config" className="text-xs text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200">
           Config
         </Link>
       </div>
