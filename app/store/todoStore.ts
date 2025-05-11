@@ -605,6 +605,18 @@ const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
   return result;
 };
 
+// Helper function for Rust-like character ranking sort
+const getCharRank = (char: string): number => {
+  const c = char.charCodeAt(0);
+  if (c >= 65 && c <= 90) return c - 65; // A-Z (0-25)
+  if (c >= 97 && c <= 122) return c - 97 + 26; // a-z (26-51)
+  if (c >= 48 && c <= 57) return c - 48 + 52; // 0-9 (52-61)
+  if (char === '-') return 62;
+  if (char === '_') return 63;
+  if (char === ' ') return 64;
+  return 65; // Other characters
+};
+
 // Selector for globally sorted and filtered todos for table view
 // Returns items with their *original* categoryIndex and itemIndex
 export const getGloballySortedAndFilteredTodos = (state: TodoState): { originalTodo: TodoItem, categoryIndex: number, itemIndex: number, displayContent: string }[] => {
@@ -638,10 +650,34 @@ export const getGloballySortedAndFilteredTodos = (state: TodoState): { originalT
 
   // Sort
   allItems.sort((a, b) => {
-    const contentA = a.displayContent.toLowerCase();
-    const contentB = b.displayContent.toLowerCase();
-    if (contentA < contentB) return -1;
-    if (contentA > contentB) return 1;
+    const contentA = a.displayContent;
+    const contentB = b.displayContent;
+    const lenA = contentA.length;
+    const lenB = contentB.length;
+    const minLen = Math.min(lenA, lenB);
+
+    for (let i = 0; i < minLen; i++) {
+      const charA = contentA[i];
+      const charB = contentB[i];
+
+      if (charA === charB) continue;
+
+      const rankA = getCharRank(charA);
+      const rankB = getCharRank(charB);
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+      // If ranks are the same (e.g., both are "other" characters),
+      // sort them using standard lexical comparison for those specific characters.
+      if (charA < charB) return -1;
+      if (charA > charB) return 1;
+    }
+
+    // If one string is a prefix of the other, the shorter string comes first
+    if (lenA < lenB) return -1;
+    if (lenA > lenB) return 1;
+
     // As a secondary sort criterion, use original category name then original item index for stability
     const catNameA = state.categories[a.categoryIndex]?.name.toLowerCase() || '';
     const catNameB = state.categories[b.categoryIndex]?.name.toLowerCase() || '';
