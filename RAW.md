@@ -70,17 +70,6 @@ MacOS users may need to run the following command to remove the quarantine attri
 xattr -cr /Applications/Unitodo.app
 ```
 
-## update
-
-change all versions and tag via:
-```bash
-cd src-tauri
-cargo bump patch
-git add .
-git commit -m "chore: cargo bump patch"
-npm version patch
-```
-
 
 ## Todos
 
