@@ -608,9 +608,9 @@ const getFilteredCategoryInfo = (state: TodoState): FilteredCategoryInfo[] => {
 // Helper function for Rust-like character ranking sort
 const getCharRank = (char: string): number => {
   const c = char.charCodeAt(0);
-  if (c >= 65 && c <= 90) return c - 65; // A-Z (0-25)
-  if (c >= 97 && c <= 122) return c - 97 + 26; // a-z (26-51)
-  if (c >= 48 && c <= 57) return c - 48 + 52; // 0-9 (52-61)
+  if (c >= 48 && c <= 57) return c - 48; // 0-9 (0-9)
+  if (c >= 65 && c <= 90) return c - 65 + 10; // A-Z (10-35)
+  if (c >= 97 && c <= 122) return c - 97 + 36; // a-z (36-61)
   if (char === '-') return 62;
   if (char === '_') return 63;
   if (char === ' ') return 64;
