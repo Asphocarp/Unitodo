@@ -183,4 +183,4 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
 - [x] 00@ArSeL@@ArUS3 minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing:
   - make the content cell in TodoTable @TodoTable.tsx  editable, and we can start to edit it like we can do via pressing 'a' or 'i' like in @TodoItem.tsx @Todo.tsx .
-- [ ] 00@ArYft font
+- [x] 00@ArYft@@ArYkt font
