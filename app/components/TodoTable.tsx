@@ -17,7 +17,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
 import { parseTodoContent, decodeTimestampId } from '../utils'; // Added decodeTimestampId here
 import TodoItem from './TodoItem'; // We might reuse parts or styling
-import { markTodoAsDone } from '../services/todoService'; // Import for checkbox functionality
+import { markTodoAsDone, editTodoItem } from '../services/todoService'; // Import for checkbox and edit functionality
 import { useTodoStore, getGloballySortedAndFilteredTodos } from '../store/todoStore'; // To call updateTodo or loadData
 import NerdFontIcon from './NerdFontIcon'; // Import NerdFontIcon
 import useConfigStore from '../store/configStore';
@@ -111,6 +111,9 @@ interface TodoTableProps {
 export default function TodoTable({ tableRows, onRowClick, focusedItem, height, width }: TodoTableProps) {
   const { config: appConfig } = useConfigStore();
   const todoStoreCategories = useTodoStore(state => state.categories); // For icons
+  // Editing state for inline content cell editing
+  const [editingCell, setEditingCell] = useState<{categoryIndex: number; itemIndex: number} | null>(null);
+  const [editedContent, setEditedContent] = useState<string>('');
 
   // Ref for the scrolling container
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -169,6 +172,40 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       header: 'Content',
       size: 1000, 
       cell: ({ row }) => {
+        const isThisEditing = editingCell?.categoryIndex === row.original.categoryIndex && editingCell?.itemIndex === row.original.itemIndex;
+        if (isThisEditing) {
+          return (
+            <input
+              type="text"
+              value={editedContent}
+              onChange={e => setEditedContent(e.target.value)}
+              onBlur={() => setEditingCell(null)}
+              onKeyDown={async e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  try {
+                    await editTodoItem({
+                      location: row.original.originalTodo.location,
+                      new_content: editedContent,
+                      original_content: row.original.originalTodo.content,
+                      completed: row.original.originalTodo.completed,
+                    });
+                    useTodoStore.getState().loadData();
+                  } catch (err) {
+                    console.error('Failed to save todo in table:', err);
+                  } finally {
+                    setEditingCell(null);
+                  }
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setEditingCell(null);
+                }
+              }}
+              className="w-full bg-transparent outline-none"
+              autoFocus
+            />
+          );
+        }
         const content = row.original.parsedContent.mainContent || row.original.content;
         return (
           <div 
@@ -245,7 +282,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [todoStoreCategories]); // Depend on todoStoreCategories for icons
+  ], [todoStoreCategories, editingCell, editedContent]); // Depend on todoStoreCategories for icons
 
   const data = useMemo((): TodoTableRow[] => {
     return tableRows;
@@ -343,7 +380,13 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
   // Update keyboard handler to use the Tauri openUrl
   const handleRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: Row<TodoTableRow>) => {
     const { originalTodo, categoryIndex, itemIndex } = row.original;
-    
+    // Start inline editing on 'a' or 'i'
+    if (!editingCell && (e.key === 'a' || e.key === 'i')) {
+      e.preventDefault();
+      setEditingCell({ categoryIndex, itemIndex });
+      setEditedContent(originalTodo.content);
+      return;
+    }
     switch (e.key) {
       case 'Enter':
         e.preventDefault();
