@@ -170,9 +170,9 @@ xattr -cr /Applications/Unitodo.app
 - usable: show only cols of checkbox/zone/content/file, for now; frontend sorting;
   - [ ] 1@ArCCd add feat: profiles of configs, meaning user can switch between different config profiles. 
     - add feat: profiles of configs, meaning user can switch between different config profiles. 
-    - let each profile contain most of current config items.
-    - remember to adjust the config page to fit the new profile-switchable feature. (add, modify, delete profile)
-    - maybe save global settings in `~/.config/unitodo/settings.toml`, and save profile-specific settings in `~/.config/profiles/[profile-name].toml`
+    - let each profile contain all of current config items.
+    - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile)
+    - continue to save all profiles in `~/.config/unitodo/config.toml`, the default profile is `default` (which can not be deleted).
   - (then design algo for appending to filters)
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
