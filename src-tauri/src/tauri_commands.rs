@@ -229,9 +229,5 @@ pub mod app_updates {
         } else {
             return Err("No pending update to install.".to_string());
         }
-        // This part is effectively unreachable if app_handle.restart() works as expected.
-        // If restart can fail or is not guaranteed to exit, then an Ok(()) might be needed.
-        // For now, assuming restart exits the current flow.
-        unreachable!("app_handle.restart() should have exited."); 
     }
 } 

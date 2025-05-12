@@ -5,8 +5,8 @@
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:43672",
-    "beforeDevCommand": "PORT=43672 npm run dev:frontend",
-    "beforeBuildCommand": "npm run build:frontend"
+    "beforeDevCommand": "PORT=43672 npm run dev:frontend:turbo",
+    "beforeBuildCommand": "npm run build:frontend:turbo"
   },
   "app": {
     "security": {
