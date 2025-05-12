@@ -17,6 +17,9 @@
 *.creator
 *.creator.user
 
+# Build-related
+Cargo.lock
+
 # OS-specific
 .DS_Store
 ._*
