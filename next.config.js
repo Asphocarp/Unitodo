@@ -8,6 +8,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  pageExtensions: ['jsx', 'tsx'],
   // appDir is now stable and enabled by default if you have an `app` directory.
   // The experimental.appDir key is no longer needed and can cause warnings.
 }
