@@ -161,7 +161,7 @@ xattr -cr /Applications/Unitodo.app
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
 - [x] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); 
-  - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finished(time), est(duration).
+  - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finishe    d(time), est(duration).
     - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
   - x find a way to quick debug the frontend ui without re-run the entire app
   - D round corners of the table; make the table more compact, info-dense; polish its UI to fit overall style.
@@ -169,9 +169,10 @@ xattr -cr /Applications/Unitodo.app
   - D show only basename in file col;
 - usable: show only cols of checkbox/zone/content/file, for now; frontend sorting;
   - [ ] 1@ArCCd add feat: profiles of configs, meaning user can switch between different config profiles. 
+    - @app  @src @tauri.conf.json @unitodo.proto @Cargo.toml @package.json
     - add feat: profiles of configs, meaning user can switch between different config profiles. 
     - let each profile contain all of current config items.
-    - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile)
+    - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile); use shadcn if you want.
     - continue to save all profiles in `~/.config/unitodo/config.toml`, the default profile is `default` (which can not be deleted).
   - (then design algo for appending to filters)
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
