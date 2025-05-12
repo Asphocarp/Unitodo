@@ -70,6 +70,14 @@ MacOS users may need to run the following command to remove the quarantine attri
 xattr -cr /Applications/Unitodo.app
 ```
 
+## update
+
+change all versions and tag via:
+```bash
+npm version patch
+cargo bump patch
+```
+
 
 ## Todos
 

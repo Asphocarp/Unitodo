@@ -1,7 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Unitodo",
-  "version": "0.1.2",
   "identifier": "app.jyu.unitodo",
   "build": {
     "frontendDist": "../out",
