@@ -56,7 +56,7 @@ const SelectField: React.FC<SelectProps> = ({ label, description, children, ...p
     <select
       className="w-full px-3 py-1.5 text-sm border border-neutral-300 dark:border-neutral-700 rounded-md shadow-sm 
                  focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color 
-                 dark:bg-neutral-800 dark:text-neutral-200 transition-all duration-150 appearance-none bg-white dark:bg-neutral-800 pr-8 bg-no-repeat"
+                 dark:text-neutral-200 transition-all duration-150 appearance-none bg-white dark:bg-neutral-800 pr-8 bg-no-repeat"
       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.5em 1.5em'}}
       {...props}
     >
