@@ -81,11 +81,11 @@ pub fn add_todo_to_file_grpc(active_profile_config: &Config, category_type: &str
 
     let timestamp_str = generate_short_timestamp();
     let sanitized_content = content.replace('\n', " ").trim().to_string();
-    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); }
+    if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
     
     let priority_marker = active_profile_config.todo_done_pairs.get(0)
         .and_then(|pair| pair.get(0))
-        .map_or("- [ ] ", |marker_str| marker_str.as_str());
+        .map_or("- [ ] ", |marker_str| marker_str.as_str()); // UNITODO_IGNORE_LINE
 
     let (effective_priority_segment, content_segment) = {
         let trimmed_content = sanitized_content.trim();

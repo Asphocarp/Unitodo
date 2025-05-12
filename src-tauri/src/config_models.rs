@@ -85,9 +85,9 @@ pub fn default_refresh_interval() -> u32 { 5000 } // Made public
 pub fn default_editor_uri_scheme() -> String { "vscode://file/".to_string() } // Made public
 pub fn default_todo_done_pairs() -> Vec<Vec<String>> { // Made public
     vec![
-        vec!["- [ ] ".to_string(), "- [x] ".to_string()],
-        vec!["TODO:".to_string(), "DONE:".to_string()],
-        vec!["TODO".to_string(), "DONE".to_string()],
+        vec!["- [ ] ".to_string(), "- [x] ".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO:".to_string(), "DONE:".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO".to_string(), "DONE".to_string()], // UNITODO_IGNORE_LINE
     ]
 }
 pub fn default_append_basename() -> String { "unitodo.append.md".to_string() } // Made public 

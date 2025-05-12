@@ -309,7 +309,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       );
       if (targetRowIndex !== -1) {
         rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto' });
-        // TODO: 2 maybe optimize this `querySelector`
+        // DONE: 2@@ArSNo maybe optimize this `querySelector` - X dont seem to be needed anymore
         const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
         rowElement?.focus({ preventScroll: true }); 
       }

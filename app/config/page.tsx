@@ -380,7 +380,7 @@ export default function ConfigPage() {
         </section>
 
         <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
-          <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">TODO/DONE Pattern Pairs (Profile: {activeProfileName})</h2>
+          <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">TODO/DONE Pattern Pairs (Profile: {activeProfileName})</h2> {/* UNITODO_IGNORE_LINE */}
           <div className="mb-4 p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <InputField
@@ -418,7 +418,7 @@ export default function ConfigPage() {
                 <div key={index} className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md flex justify-between items-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-sm">
                   <div className="flex-grow grid grid-cols-2 gap-4">
                     <div className="text-xs dark:text-neutral-300">
-                      <span className="font-medium text-neutral-600 dark:text-neutral-400">TODO:</span>
+                      <span className="font-medium text-neutral-600 dark:text-neutral-400">TODO:</span> {/* UNITODO_IGNORE_LINE */}
                       <code className="ml-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{pair[0].replace(/ /g, '\u00A0')}</code>
                     </div>
                     <div className="text-xs dark:text-neutral-300">
@@ -439,7 +439,7 @@ export default function ConfigPage() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">No TODO/DONE pattern pairs defined for this profile. Defaults will be used by the backend if not specified.</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">No TODO/DONE pattern pairs defined for this profile. Defaults will be used by the backend if not specified.</p> {/* UNITODO_IGNORE_LINE */}
           )}
         </section>
 

@@ -70,24 +70,25 @@ MacOS users may need to run the following command to remove the quarantine attri
 xattr -cr /Applications/Unitodo.app
 ```
 
+The config file is at `~/.config/unitodo/config.toml`.
 
 ## Todos
 
-- [ ] 2 unique-id can be fucking doomed! (with checking before applying)
-    - [ ] 2 render timestamp (even when not leading) / remove it?
+- [x] 2@@ArSOf unique-id can be fucking doomed! (with checking before applying)
+    - [x] 2@@ArSOR render timestamp (even when not leading) / remove it?
 - [ ] 1 ci: submit to homebrew cask; make doc and everything more user-friendly
 
-- [ ] 2 move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
+- [x] 2@@ArSOC move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 1 feat: show est time, like @1h; record time?
 
-- [ ] 1 render basic markdown of the content; open wikilink using obsidian-uri
-- [ ] 2 check command injection safety
+- [ ] 1 render basic markdown of the content, like bold, italic, code, link, wikilink etc.
+- [x] 2@@ArSL8 X check command injection safety
 - [ ] 2 (fancy) show dependency of todos?
 - [x] 2@@AptmE DB instead of json (200KB though)? X - gRPC now
-- [ ] 3 rg: file types?
-- [ ] 3 curious of battery consumption
+- [x] 3@@ArSOs rg: file types?
+- [x] 3@@ArSOq curious of battery consumption
 - [x] 3@AoVsd@@Aq6f3 see from cease plugin, how to inline-render a string - X no need to see it inline
-- [ ] 3 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
+- [x] 3@@ArSO4 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
 - [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
 
@@ -133,17 +134,17 @@ xattr -cr /Applications/Unitodo.app
 - [x] 0@Apdzo@@ApqxA fix: when appending via `o`, do not ignore my leading prior 0/1/2/3;
 - [x] 1@@Apqxs X fancy: make it a native app? (rn/swift?) - Electron now
 - [x] 1 polish UI: more rounded corners for buttons and everything, fancier&elegant, minimalistic style; just remove the header inside the webpage, move the updated time info to the header besides the buttons; 
-- [ ] 1 polish dark mode UI
-- [ ] 1 why is my macos electron .app file so huge (500MB)? any idea to make the electron app package size smaller?
-- [ ] 1 remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; 
-- [ ] 2@Apdxw config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
-- [ ] 2 remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
-- [ ] 2@AptAw doc: say that by default config at ~/.config/unitodo/unitodo.toml
+- [x] 1@@ArSIH polish dark mode UI
+- [x] 1@@ArSLR why is my macos electron .app file so huge (500MB)? any idea to make the electron app package size smaller? - Tauri now
+- [x] 1@@ArSIq X remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; - using table now
+- [x] 2@Apdxw@@ArSMR config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
+- [x] 2@@ArSOJ remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
+- [x] 2@AptAw@@ArSMz doc: say that by default config at ~/.config/unitodo/unitodo.toml
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
 - [ ] 1@Aptsh fix: make click on a lexcial editor starts editing
 - [x] 1@Aptww@@Aq6dl fix: click on filename should behave the same as pressing enter (no new windows popup)
 - [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
-- [ ] 2@Apt3d fancy: fetch from notion, slack, etc
+- [ ] 2@Apt3d (fancy) fetch from notion, slack, etc
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
 - [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
 - [x] 2@Apt81@@Aq6fI let the priority part include "-" (not just alphanumeric)- X no more concept of fisrt word, simply append timestamp and stuff at the end
@@ -167,8 +168,8 @@ xattr -cr /Applications/Unitodo.app
   - D round corners of the table; make the table more compact, info-dense; polish its UI to fit overall style.
   - D contain corresponding nerd icon in the source col;
   - D show only basename in file col;
-- usable: show only cols of checkbox/zone/content/file, for now; frontend sorting;
-  - [ ] 1@ArCCd add feat: profiles of configs, meaning user can switch between different config profiles. 
+- D usable: show only cols of checkbox/zone/content/file, for now; frontend sorting;
+  - [x] 1@ArCCd@@ArSHm add feat: profiles of configs, meaning user can switch between different config profiles. 
     - @app  @src @tauri.conf.json @unitodo.proto @Cargo.toml @package.json
     - add feat: profiles of configs, meaning user can switch between different config profiles. 
     - let each profile contain all of current config items.
@@ -177,5 +178,7 @@ xattr -cr /Applications/Unitodo.app
   - (then design algo for appending to filters)
 - [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
-- [ ] 1@Aq7DJ separate dev and release config? or let the frontend connect the same one
-- [ ] 1@ArB_8 tofix: align cells in a col when resizing window
+- [x] 1@Aq7DJ@@ArSKQ X separate dev and release config? or let the frontend connect the same one
+- [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
+- [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
+- [ ] 00@ArSeL minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing
