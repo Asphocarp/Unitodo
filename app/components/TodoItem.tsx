@@ -315,10 +315,8 @@ export default function TodoItem({
           }
           break;
         case 'x':
-        //   if (!isReadOnly) {
           e.preventDefault();
           handleAddIgnoreComment();
-        //   }
           break;
         case 'Enter':
           e.preventDefault();

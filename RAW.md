@@ -181,5 +181,5 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 1@Aq7DJ@@ArSKQ X separate dev and release config? or let the frontend connect the same one
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
 - [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
-- [ ] 00@ArSeL minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing:
+- [x] 00@ArSeL@@ArUS3 minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing:
   - make the content cell in TodoTable @TodoTable.tsx  editable, and we can start to edit it like we can do via pressing 'a' or 'i' like in @TodoItem.tsx @Todo.tsx .

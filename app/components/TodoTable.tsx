@@ -398,14 +398,37 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       return;
     }
     const { originalTodo, categoryIndex, itemIndex } = row.original;
-    // Start inline editing on 'a' or 'i'
-    if (!editingCell && (e.key === 'a' || e.key === 'i')) {
-      e.preventDefault();
-      setEditingCell({ categoryIndex, itemIndex });
-      setEditedContent(originalTodo.content);
-      return;
-    }
     switch (e.key) {
+      case 'a':
+      case 'i':
+        e.preventDefault();
+        setEditingCell({ categoryIndex, itemIndex });
+        setEditedContent(originalTodo.content);
+        return;
+      case 'x':
+        e.preventDefault();
+        // add ignore comment " // UNITODO_IGNORE_LINE"
+        ;(async () => {
+          const todo = originalTodo;
+          const newContent = `${todo.content} // UNITODO_IGNORE_LINE`;
+          try {
+            await editTodoItem({
+              location: todo.location,
+              new_content: newContent,
+              original_content: todo.content,
+              completed: todo.completed,
+            });
+            useTodoStore.getState().updateTodo({
+              ...todo,
+              content: newContent,
+            });
+          } catch (err) {
+            console.error('[TodoTable] Failed to add ignore comment:', err);
+          } finally {
+            focusRowElement(categoryIndex, itemIndex);
+          }
+        })();
+        return;
       case 'Enter':
         e.preventDefault();
         // Open file at location if possible
