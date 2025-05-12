@@ -248,7 +248,7 @@ export default function ConfigPage() {
             <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Display & Behavior (Profile: {activeProfileName})</h2>
             <InputField
               label="Auto-Refresh Interval (ms)"
-              description="Refresh frequency for TODO list"
+              description="Refresh frequency for TODO list" // UNITODO_IGNORE_LINE
               type="number"
               id="refresh_interval"
               value={config.refresh_interval}
@@ -266,7 +266,7 @@ export default function ConfigPage() {
             />
             <InputField
               label="Default Append File Basename (for Git)"
-              description="Default filename for new TODOs in git repos (e.g., unitodo.append.md)"
+              description="Default filename for new TODOs in git repos (e.g., unitodo.append.md)" // UNITODO_IGNORE_LINE
               type="text"
               id="default_append_basename"
               value={config.default_append_basename}
@@ -363,8 +363,8 @@ export default function ConfigPage() {
                           />
                         </div>
                         <InputField
-                          label="Append TODO File Path"
-                          description="Path where new TODOs for this project will be added"
+                          label="Append TODO File Path" // UNITODO_IGNORE_LINE
+                          description="Path where new TODOs for this project will be added" // UNITODO_IGNORE_LINE
                           type="text"
                           id={`project_append_path_${projectName}`}
                           name={`project_append_path_${projectName}`}
@@ -384,11 +384,11 @@ export default function ConfigPage() {
           <div className="mb-4 p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <InputField
-                label="New TODO Pattern"
+                label="New TODO Pattern" // UNITODO_IGNORE_LINE
                 type="text"
                 value={newTodoPattern}
                 onChange={(e) => setNewTodoPattern(e.target.value)}
-                placeholder="e.g., - [ ] or TODO:"
+                placeholder="e.g., - [ ] or TODO:" // UNITODO_IGNORE_LINE
                 className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
                 disabled={isSaving || profilesLoading}
               />

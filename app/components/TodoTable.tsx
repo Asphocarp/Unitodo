@@ -167,7 +167,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     {
       accessorKey: 'content',
       header: 'Content',
-      size: 450, 
+      size: 1000, 
       cell: ({ row }) => {
         const content = row.original.parsedContent.mainContent || row.original.content;
         return (

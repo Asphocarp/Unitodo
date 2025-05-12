@@ -56,7 +56,7 @@ pub fn edit_todo_in_file_grpc(active_profile_config: &Config, location: &str, ne
             file.write_all(final_write_content.as_bytes())?;
             Ok(())
         } else {
-            Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line for edit"))
+            Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line for edit")) // UNITODO_IGNORE_LINE
         }
     })();
     fs2::FileExt::unlock(&file)?;
@@ -191,7 +191,7 @@ pub fn mark_todo_as_done_in_file_grpc(active_profile_config: &Config, location: 
             let final_content_part_with_timestamp = if rest_of_content.is_empty() { first_word_of_content } else { format!("{} {}", first_word_of_content, rest_of_content) };
             final_line_to_write = format!("{}{}{}{}", prefix_before_marker, transformed_marker_str, leading_space_after_marker, final_content_part_with_timestamp);
             final_content_for_frontend = final_content_part_with_timestamp;
-        } else { return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line for mark_done")); }
+        } else { return Err(io::Error::new(io::ErrorKind::NotFound, "TODO pattern not found on line for mark_done")); } // UNITODO_IGNORE_LINE
 
         lines[line_index] = final_line_to_write;
         let new_full_content = lines.join("\n");

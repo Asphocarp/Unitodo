@@ -89,7 +89,7 @@ pub fn extract_cleaned_content_from_line(
     } else {
         Err(io::Error::new(
             io::ErrorKind::NotFound,
-            "TODO pattern not found in line for content extraction",
+            "TODO pattern not found in line for content extraction", // UNITODO_IGNORE_LINE
         ))
     }
 }

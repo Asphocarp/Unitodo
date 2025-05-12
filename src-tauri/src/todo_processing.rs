@@ -124,7 +124,7 @@ impl Sink for TodoSink {
 // --- Core todo Finding Logic --- (Accepts &Config from active profile)
 pub fn find_and_process_todos(active_profile_config: &Config, debug: bool) -> io::Result<ProcessedTodosOutput> {
     let start_time = Instant::now();
-    if debug { println!("[{:.2?}] Starting TODO processing for active profile", start_time.elapsed()); }
+    if debug { println!("[{:.2?}] Starting TODO processing for active profile", start_time.elapsed()); } // UNITODO_IGNORE_LINE
 
     if active_profile_config.rg.paths.is_empty() {
         if debug {
