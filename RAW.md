@@ -74,8 +74,11 @@ xattr -cr /Applications/Unitodo.app
 
 change all versions and tag via:
 ```bash
-npm version patch
+cd src-tauri
 cargo bump patch
+git add .
+git commit -m "chore: cargo bump patch"
+npm version patch
 ```
 
 
