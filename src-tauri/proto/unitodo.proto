@@ -93,14 +93,55 @@ message TodoDonePair {
     string done_marker = 2;
 }
 
+// New messages for profile management
+message GetActiveProfileRequest {}
+message GetActiveProfileResponse {
+    string profile_name = 1;
+}
+
+message SetActiveProfileRequest {
+    string profile_name = 1;
+}
+message SetActiveProfileResponse {
+    string status = 1;
+    string message = 2;
+}
+
+message ListProfilesRequest {}
+message ProfileInfo {
+    string name = 1;
+}
+message ListProfilesResponse {
+    repeated ProfileInfo profiles = 1;
+    string active_profile_name = 2;
+}
+
+message AddProfileRequest {
+    string new_profile_name = 1;
+    optional string copy_from_profile_name = 2; // If provided, copy config from this profile
+}
+message AddProfileResponse {
+    string status = 1;
+    string message = 2;
+}
+
+message DeleteProfileRequest {
+    string profile_name = 1;
+}
+message DeleteProfileResponse {
+    string status = 1;
+    string message = 2;
+}
+
 message GetConfigRequest {}
 
 message GetConfigResponse {
     ConfigMessage config = 1;
+    string active_profile_name = 2;
 }
 
 message UpdateConfigRequest {
-    ConfigMessage config = 1;
+    ConfigMessage config = 1; // Config for the active profile
 }
 
 message UpdateConfigResponse {
@@ -111,4 +152,11 @@ message UpdateConfigResponse {
 service ConfigService {
     rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
     rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
+
+    // New RPCs for profile management
+    rpc GetActiveProfile (GetActiveProfileRequest) returns (GetActiveProfileResponse);
+    rpc SetActiveProfile (SetActiveProfileRequest) returns (SetActiveProfileResponse);
+    rpc ListProfiles (ListProfilesRequest) returns (ListProfilesResponse);
+    rpc AddProfile (AddProfileRequest) returns (AddProfileResponse);
+    rpc DeleteProfile (DeleteProfileRequest) returns (DeleteProfileResponse);
 } 

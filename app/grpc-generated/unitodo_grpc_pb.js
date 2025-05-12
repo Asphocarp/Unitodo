@@ -4,6 +4,28 @@
 var grpc = require('@grpc/grpc-js');
 var unitodo_pb = require('./unitodo_pb.js');
 
+function serialize_unitodo_AddProfileRequest(arg) {
+  if (!(arg instanceof unitodo_pb.AddProfileRequest)) {
+    throw new Error('Expected argument of type unitodo.AddProfileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_AddProfileRequest(buffer_arg) {
+  return unitodo_pb.AddProfileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_AddProfileResponse(arg) {
+  if (!(arg instanceof unitodo_pb.AddProfileResponse)) {
+    throw new Error('Expected argument of type unitodo.AddProfileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_AddProfileResponse(buffer_arg) {
+  return unitodo_pb.AddProfileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_unitodo_AddTodoRequest(arg) {
   if (!(arg instanceof unitodo_pb.AddTodoRequest)) {
     throw new Error('Expected argument of type unitodo.AddTodoRequest');
@@ -26,6 +48,28 @@ function deserialize_unitodo_AddTodoResponse(buffer_arg) {
   return unitodo_pb.AddTodoResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_unitodo_DeleteProfileRequest(arg) {
+  if (!(arg instanceof unitodo_pb.DeleteProfileRequest)) {
+    throw new Error('Expected argument of type unitodo.DeleteProfileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_DeleteProfileRequest(buffer_arg) {
+  return unitodo_pb.DeleteProfileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_DeleteProfileResponse(arg) {
+  if (!(arg instanceof unitodo_pb.DeleteProfileResponse)) {
+    throw new Error('Expected argument of type unitodo.DeleteProfileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_DeleteProfileResponse(buffer_arg) {
+  return unitodo_pb.DeleteProfileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_unitodo_EditTodoRequest(arg) {
   if (!(arg instanceof unitodo_pb.EditTodoRequest)) {
     throw new Error('Expected argument of type unitodo.EditTodoRequest');
@@ -46,6 +90,28 @@ function serialize_unitodo_EditTodoResponse(arg) {
 
 function deserialize_unitodo_EditTodoResponse(buffer_arg) {
   return unitodo_pb.EditTodoResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_GetActiveProfileRequest(arg) {
+  if (!(arg instanceof unitodo_pb.GetActiveProfileRequest)) {
+    throw new Error('Expected argument of type unitodo.GetActiveProfileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_GetActiveProfileRequest(buffer_arg) {
+  return unitodo_pb.GetActiveProfileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_GetActiveProfileResponse(arg) {
+  if (!(arg instanceof unitodo_pb.GetActiveProfileResponse)) {
+    throw new Error('Expected argument of type unitodo.GetActiveProfileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_GetActiveProfileResponse(buffer_arg) {
+  return unitodo_pb.GetActiveProfileResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_unitodo_GetConfigRequest(arg) {
@@ -92,6 +158,28 @@ function deserialize_unitodo_GetTodosResponse(buffer_arg) {
   return unitodo_pb.GetTodosResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_unitodo_ListProfilesRequest(arg) {
+  if (!(arg instanceof unitodo_pb.ListProfilesRequest)) {
+    throw new Error('Expected argument of type unitodo.ListProfilesRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_ListProfilesRequest(buffer_arg) {
+  return unitodo_pb.ListProfilesRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_ListProfilesResponse(arg) {
+  if (!(arg instanceof unitodo_pb.ListProfilesResponse)) {
+    throw new Error('Expected argument of type unitodo.ListProfilesResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_ListProfilesResponse(buffer_arg) {
+  return unitodo_pb.ListProfilesResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_unitodo_MarkDoneRequest(arg) {
   if (!(arg instanceof unitodo_pb.MarkDoneRequest)) {
     throw new Error('Expected argument of type unitodo.MarkDoneRequest');
@@ -112,6 +200,28 @@ function serialize_unitodo_MarkDoneResponse(arg) {
 
 function deserialize_unitodo_MarkDoneResponse(buffer_arg) {
   return unitodo_pb.MarkDoneResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_SetActiveProfileRequest(arg) {
+  if (!(arg instanceof unitodo_pb.SetActiveProfileRequest)) {
+    throw new Error('Expected argument of type unitodo.SetActiveProfileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_SetActiveProfileRequest(buffer_arg) {
+  return unitodo_pb.SetActiveProfileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_SetActiveProfileResponse(arg) {
+  if (!(arg instanceof unitodo_pb.SetActiveProfileResponse)) {
+    throw new Error('Expected argument of type unitodo.SetActiveProfileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_SetActiveProfileResponse(buffer_arg) {
+  return unitodo_pb.SetActiveProfileResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_unitodo_UpdateConfigRequest(arg) {
@@ -207,6 +317,62 @@ var ConfigServiceService = exports.ConfigServiceService = {
     requestDeserialize: deserialize_unitodo_UpdateConfigRequest,
     responseSerialize: serialize_unitodo_UpdateConfigResponse,
     responseDeserialize: deserialize_unitodo_UpdateConfigResponse,
+  },
+  // New RPCs for profile management
+getActiveProfile: {
+    path: '/unitodo.ConfigService/GetActiveProfile',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.GetActiveProfileRequest,
+    responseType: unitodo_pb.GetActiveProfileResponse,
+    requestSerialize: serialize_unitodo_GetActiveProfileRequest,
+    requestDeserialize: deserialize_unitodo_GetActiveProfileRequest,
+    responseSerialize: serialize_unitodo_GetActiveProfileResponse,
+    responseDeserialize: deserialize_unitodo_GetActiveProfileResponse,
+  },
+  setActiveProfile: {
+    path: '/unitodo.ConfigService/SetActiveProfile',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.SetActiveProfileRequest,
+    responseType: unitodo_pb.SetActiveProfileResponse,
+    requestSerialize: serialize_unitodo_SetActiveProfileRequest,
+    requestDeserialize: deserialize_unitodo_SetActiveProfileRequest,
+    responseSerialize: serialize_unitodo_SetActiveProfileResponse,
+    responseDeserialize: deserialize_unitodo_SetActiveProfileResponse,
+  },
+  listProfiles: {
+    path: '/unitodo.ConfigService/ListProfiles',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.ListProfilesRequest,
+    responseType: unitodo_pb.ListProfilesResponse,
+    requestSerialize: serialize_unitodo_ListProfilesRequest,
+    requestDeserialize: deserialize_unitodo_ListProfilesRequest,
+    responseSerialize: serialize_unitodo_ListProfilesResponse,
+    responseDeserialize: deserialize_unitodo_ListProfilesResponse,
+  },
+  addProfile: {
+    path: '/unitodo.ConfigService/AddProfile',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.AddProfileRequest,
+    responseType: unitodo_pb.AddProfileResponse,
+    requestSerialize: serialize_unitodo_AddProfileRequest,
+    requestDeserialize: deserialize_unitodo_AddProfileRequest,
+    responseSerialize: serialize_unitodo_AddProfileResponse,
+    responseDeserialize: deserialize_unitodo_AddProfileResponse,
+  },
+  deleteProfile: {
+    path: '/unitodo.ConfigService/DeleteProfile',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.DeleteProfileRequest,
+    responseType: unitodo_pb.DeleteProfileResponse,
+    requestSerialize: serialize_unitodo_DeleteProfileRequest,
+    requestDeserialize: deserialize_unitodo_DeleteProfileRequest,
+    responseSerialize: serialize_unitodo_DeleteProfileResponse,
+    responseDeserialize: deserialize_unitodo_DeleteProfileResponse,
   },
 };
 

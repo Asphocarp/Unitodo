@@ -79,7 +79,7 @@ export default function Todo() {
   const tabListRef = useRef<FixedSizeList>(null);
   const sectionListRef = useRef<VariableSizeList>(null);
 
-  const { config: appConfig, loadConfig: loadAppConfig, initialConfigLoaded } = useConfigStore();
+  const { config: appConfig, loadActiveProfileAndConfig: loadAppConfig, initialConfigLoaded } = useConfigStore();
 
   const flattenedList = useMemo((): FlatListItem[] => {
     if (displayMode !== 'section') return [];

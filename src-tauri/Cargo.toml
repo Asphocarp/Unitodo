@@ -27,6 +27,7 @@ parking_lot = "0.12"
 dirs = "5.0"
 cocoa = "0.25"
 tauri = { version = "2.0.0-beta.1", features = ["macos-private-api"] }
+log = "0.4"
 
 # gRPC dependencies
 tonic = "0.11"

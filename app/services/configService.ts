@@ -2,7 +2,34 @@ import { invoke } from '@tauri-apps/api/core';
 import { Config as AppConfig } from '../types';
 // Assuming unitodo_pb contains the necessary class definitions for ProtoConfigMessage etc.
 // Adjust the import path and names if they differ in your actual generated file.
-import { ConfigMessage as ProtoConfigMessage, RgConfigMessage as ProtoRgConfigMessage, ProjectConfigMessage as ProtoProjectConfigMessage, TodoDonePair as ProtoTodoDonePair, UpdateConfigResponse as ProtoUpdateConfigResponse } from '../grpc-generated/unitodo_pb';
+import {
+    ConfigMessage as ProtoConfigMessage,
+    RgConfigMessage as ProtoRgConfigMessage,
+    ProjectConfigMessage as ProtoProjectConfigMessage,
+    TodoDonePair as ProtoTodoDonePair,
+    // Request and Response types from gRPC for config service, including new profile ones
+    GetConfigResponse as ProtoGetConfigResponse,
+    UpdateConfigResponse as ProtoUpdateConfigResponse,
+    GetActiveProfileResponse as ProtoGetActiveProfileResponse,
+    SetActiveProfileRequest as ProtoSetActiveProfileRequest, // Only if needed directly, usually wrapped
+    SetActiveProfileResponse as ProtoSetActiveProfileResponse,
+    ListProfilesResponse as ProtoListProfilesResponse,
+    ProfileInfo as ProtoProfileInfo, // Ensure this is imported if used directly by a service function
+    AddProfileRequest as ProtoAddProfileRequest, // Only if needed directly
+    AddProfileResponse as ProtoAddProfileResponse,
+    DeleteProfileRequest as ProtoDeleteProfileRequest, // Only if needed directly
+    DeleteProfileResponse as ProtoDeleteProfileResponse
+} from '../grpc-generated/unitodo_pb';
+
+// --- Plain Object Interfaces for Service Function Return Types ---
+interface PlainProfileInfo {
+    name: string;
+}
+
+interface PlainListProfilesResponse {
+    profiles: PlainProfileInfo[];
+    activeProfileName: string;
+}
 
 // Helper to convert frontend AppConfig to ProtoConfigMessage for sending to Rust
 function appConfigToProtoConfigMessage(appConfig: AppConfig): ProtoConfigMessage {
@@ -50,141 +77,171 @@ function appConfigToProtoConfigMessage(appConfig: AppConfig): ProtoConfigMessage
     return protoConfig;
 }
 
-// Helper to convert ProtoConfigMessage (from Rust command) to frontend AppConfig
-function protoConfigMessageToAppConfig(protoMsg: ProtoConfigMessage): AppConfig {
-    const projects: { [key: string]: { patterns: string[]; append_file_path?: string } } = {};
-    protoMsg.getProjectsMap().forEach((protoProjectConfig: ProtoProjectConfigMessage, key: string) => {
-        projects[key] = {
-            patterns: protoProjectConfig.getPatternsList(),
-            append_file_path: protoProjectConfig.getAppendFilePath() || undefined,
-        };
-    });
+// New helper to convert AppConfig to a plain JS object suitable for Rust backend via Tauri
+function appConfigToRustPayload(appConfig: AppConfig): any {
+    const rgPayload: any = {
+        paths: appConfig.rg?.paths || [],
+        ignore: appConfig.rg?.ignore || [],
+        file_types: appConfig.rg?.file_types || [] // Matches 'file_types' in .proto
+    };
 
-    const rgConfig = protoMsg.getRg();
+    const projectsPayload: { [key: string]: any } = {};
+    if (appConfig.projects) {
+        for (const [key, projConfig] of Object.entries(appConfig.projects)) {
+            projectsPayload[key] = {
+                patterns: projConfig.patterns || [],
+                append_file_path: projConfig.append_file_path // Matches 'append_file_path' in .proto
+            };
+        }
+    }
+
+    const todoDonePairsPayload = (appConfig.todo_done_pairs || []).map(pair => ({
+        todo_marker: pair[0] || "", // Matches 'todo_marker' in .proto
+        done_marker: pair[1] || ""  // Matches 'done_marker' in .proto
+    }));
 
     return {
-        rg: rgConfig ? {
-            paths: rgConfig.getPathsList(),
-            ignore: rgConfig.getIgnoreList(),
-            file_types: rgConfig.getFileTypesList(),
-        } : { paths: [] }, 
-        projects: projects,
-        refresh_interval: protoMsg.getRefreshInterval(),
-        editor_uri_scheme: protoMsg.getEditorUriScheme(),
-        todo_done_pairs: protoMsg.getTodoDonePairsList().map(p => [p.getTodoMarker(), p.getDoneMarker()]),
-        default_append_basename: protoMsg.getDefaultAppendBasename(),
+        rg: rgPayload,
+        projects: projectsPayload,
+        refresh_interval: appConfig.refresh_interval, // Matches 'refresh_interval' in .proto
+        editor_uri_scheme: appConfig.editor_uri_scheme, // Matches 'editor_uri_scheme' in .proto
+        todo_done_pairs: todoDonePairsPayload, // Matches 'todo_done_pairs' in .proto
+        default_append_basename: appConfig.default_append_basename // Matches 'default_append_basename' in .proto
     };
 }
 
-export async function fetchConfig(): Promise<AppConfig> {
-  try {
-    // Assuming the Rust command get_config_command returns a structure compatible with ProtoConfigMessage
-    const result = await invoke<ProtoConfigMessage>('get_config_command');
-    // The result from invoke might be a plain object, not an instance of ProtoConfigMessage.
-    // We need to instantiate ProtoConfigMessage and populate it if direct casting isn't enough.
-    // For now, assuming the structure matches and can be passed to the converter.
-    // If result is a plain object: Object.assign(new ProtoConfigMessage(), result)
-    // However, with protobuf.js, you usually get instances if the invoke deserializes correctly based on types, 
-    // or you might get a plain object if Tauri's JSON deserialization is used directly.
-    // Let's assume for now it's a plain JS object that matches the structure of ProtoConfigMessage fields.
-    // The safest way is to manually construct a ProtoConfigMessage if 'result' is a plain object.
-    // This highly depends on how Tauri serializes complex Rust structs with nested fields to JS.
-    // For simplicity, we'll assume the converter can handle a plain object matching the structure.
-
-    // If result from invoke is a plain object, we need to make it an instance of ProtoConfigMessage
-    // or ensure our protoConfigMessageToAppConfig can handle a plain object.
-    // Let's make protoConfigMessageToAppConfig more robust by not assuming methods like .getRg()
-    // if the input could be a plain object from JSON deserialization.
-
-    // Re-designing the converter to accept a plain object that structurally matches ProtoConfigMessage
-    const plainObjectToAppConfig = (data: any): AppConfig => {
-        const projectsMapData = data.projects || {}; // Assuming 'projects' is the key for the map in the plain object
-        const projects: { [key: string]: { patterns: string[]; append_file_path?: string } } = {};
-        Object.entries(projectsMapData).forEach(([key, val]: [string, any]) => {
+// Helper to convert ProtoConfigMessage (from Rust command) to frontend AppConfig
+function protoConfigMessageToAppConfig(protoMsg?: any): AppConfig {
+    if (!protoMsg) { // Handle case where protoMsg might be undefined
+        return {
+            rg: { paths: [], ignore: [], file_types: [] }, 
+            projects: {}, 
+            refresh_interval: 5000, 
+            editor_uri_scheme: 'vscode://file/',
+            todo_done_pairs: [],
+            default_append_basename: 'unitodo.append.md'
+        } as AppConfig;
+    }
+    const projects: { [key: string]: { patterns: string[]; append_file_path?: string } } = {};
+    // Directly access the 'projects' property if it's a plain object map
+    if (protoMsg.projects && typeof protoMsg.projects === 'object') {
+        Object.entries(protoMsg.projects).forEach(([key, projectVal]: [string, any]) => {
             projects[key] = {
-                patterns: val.patterns || [],
-                append_file_path: val.append_file_path || undefined,
+                patterns: projectVal.patterns || [], // Assuming 'patterns' is an array
+                append_file_path: projectVal.append_file_path, // Matches 'append_file_path' in .proto
             };
         });
+    }
 
-        const rgData = data.rg || {};
-        return {
-            rg: {
-                paths: rgData.paths || [],
-                ignore: rgData.ignore || [],
-                file_types: rgData.file_types || [],
-            },
-            projects: projects,
-            refresh_interval: data.refresh_interval || 0,
-            editor_uri_scheme: data.editor_uri_scheme || '',
-            todo_done_pairs: (data.todo_done_pairs || []).map((p: any) => [p.todo_marker, p.done_marker]),
-            default_append_basename: data.default_append_basename || '',
-        };
+    const rgVal = protoMsg.rg as any; // Cast to any for direct property access
+
+    return {
+        rg: rgVal ? {
+            paths: rgVal.paths || [], // Assuming 'paths' is an array
+            ignore: rgVal.ignore || [], // Assuming 'ignore' is an array
+            file_types: rgVal.file_types || [], // Matches 'file_types' in .proto
+        } : { paths: [], ignore: [], file_types: [] }, 
+        projects: projects,
+        refresh_interval: protoMsg.refresh_interval || 0, // Matches 'refresh_interval' in .proto
+        editor_uri_scheme: protoMsg.editor_uri_scheme || '', // Matches 'editor_uri_scheme' in .proto
+        // Assuming todo_done_pairs is an array of objects like { todo_marker: string, done_marker: string }
+        todo_done_pairs: (protoMsg.todo_done_pairs || []).map((p: any) => [p.todo_marker || '', p.done_marker || '']),
+        default_append_basename: protoMsg.default_append_basename || '', // Matches 'default_append_basename' in .proto
     };
+}
 
-    return plainObjectToAppConfig(result as any); // Cast to any to use with the new converter
-
+// fetchConfig now returns the active profile's config and its name
+export async function fetchConfig(): Promise<{ config: AppConfig; activeProfileName: string }> {
+  try {
+    const result = await invoke<any>('get_config_command');
+    // Result is likely a plain object from Tauri, not a ProtoGetConfigResponse instance
+    const plainResult = result as any; 
+    const appConfig = protoConfigMessageToAppConfig(plainResult.config);
+    return { 
+        config: appConfig, 
+        activeProfileName: plainResult.active_profile_name || 'default' 
+    };
   } catch (error) {
     console.error('Error invoking get_config_command:', error);
-    // Return a default/empty-like config or rethrow
-    return Promise.resolve({
-        rg: { paths: [] }, 
-        projects: {}, 
-        refresh_interval: 5000, 
-        editor_uri_scheme: 'vscode://file/',
-        todo_done_pairs: [],
-        default_append_basename: 'unitodo.append.md'
-    } as AppConfig);
+    return {
+        config: protoConfigMessageToAppConfig(), // Return default config
+        activeProfileName: 'default'
+    };
   }
 }
 
+// updateConfig updates the config for the currently active profile
 export async function updateConfig(newConfig: AppConfig): Promise<{ status: string; message: string }> {
   try {
-    const payloadProtoInstance = appConfigToProtoConfigMessage(newConfig);
-
-    // Manually construct the plain payload object to ensure correct JSON structure for Rust/serde
-    const plainPayload: any = {
-      // Ensure snake_case keys match protobuf field names
-      refresh_interval: payloadProtoInstance.getRefreshInterval(),
-      editor_uri_scheme: payloadProtoInstance.getEditorUriScheme(),
-      todo_done_pairs: payloadProtoInstance.getTodoDonePairsList().map(p => ({
-        todo_marker: p.getTodoMarker(), // snake_case
-        done_marker: p.getDoneMarker(), // snake_case
-      })),
-      default_append_basename: payloadProtoInstance.getDefaultAppendBasename(),
-      projects: {}, // Initialize projects as an empty object
-    };
-
-    if (payloadProtoInstance.hasRg()) {
-      const rgInstance = payloadProtoInstance.getRg()!;
-      plainPayload.rg = {
-        paths: rgInstance.getPathsList(),
-        ignore: rgInstance.getIgnoreList(),
-        file_types: rgInstance.getFileTypesList(), // snake_case
-      };
-    }
-    // If rg is not present in payloadProtoInstance, plainPayload.rg will be undefined,
-    // which is correct for an Option<RgConfigMessage> in Rust.
-
-    // Populate the projects map
-    payloadProtoInstance.getProjectsMap().forEach((projectInstance: ProtoProjectConfigMessage, key: string) => {
-      const projectObj: any = {
-        patterns: projectInstance.getPatternsList(),
-      };
-      if (projectInstance.hasAppendFilePath()) {
-        projectObj.append_file_path = projectInstance.getAppendFilePath(); // snake_case
-      }
-      plainPayload.projects[key] = projectObj;
-    });
-
-    const result = await invoke<ProtoUpdateConfigResponse>('update_config_command', { newConfigPayload: plainPayload });
+    // Convert AppConfig directly to the plain object structure Rust expects
+    const plainPayload = appConfigToRustPayload(newConfig);
     
+    const result = await invoke<any>('update_config_command', { newConfigPayload: plainPayload });
+    const plainResult = result as any;
     return {
-        status: (result as any).status || 'error',
-        message: (result as any).message || 'Unknown error'
+        status: plainResult.status || 'error',
+        message: plainResult.message || 'Unknown error'
     };
   } catch (error) {
     console.error('Error invoking update_config_command:', error);
     return Promise.reject({ status: 'error', message: (error as Error).message || 'Failed to update config' });
   }
+}
+
+// New service functions for profile management
+export async function fetchActiveProfile(): Promise<string> {
+    try {
+        const result = await invoke<any>('get_active_profile_command');
+        // Access property directly, handle potential casing differences if any from proto
+        return (result as any).profile_name || 'default'; // Rust sends 'profile_name'
+    } catch (error) {
+        console.error('Error fetching active profile:', error);
+        return 'default'; // Fallback
+    }
+}
+
+export async function setActiveProfile(profileName: string): Promise<ProtoSetActiveProfileResponse> {
+    try {
+        const result = await invoke<any>('set_active_profile_command', { profileName });
+        return result as any; // Assuming direct cast is okay or plain object matches
+    } catch (error) {
+        console.error(`Error setting active profile to ${profileName}:`, error);
+        throw error;
+    }
+}
+
+export async function fetchProfiles(): Promise<PlainListProfilesResponse> {
+    try {
+        const result = await invoke<any>('list_profiles_command');
+        const plainResult = result as any; 
+        // Rust backend sends: { profiles: [{ name: string }, ...], active_profile_name: string }
+        return { 
+            profiles: (plainResult.profiles || []).map((p: any) => ({ name: p.name || '' })), // Ensure name exists
+            activeProfileName: plainResult.active_profile_name || 'default' 
+        };
+    } catch (error) {
+        console.error('Error fetching profiles:', error);
+        // Return a default structure that matches PlainListProfilesResponse
+        return { profiles: [], activeProfileName: 'default' };
+    }
+}
+
+export async function addProfile(newProfileName: string, copyFromProfileName?: string): Promise<ProtoAddProfileResponse> {
+    try {
+        const result = await invoke<any>('add_profile_command', { newProfileName, copyFromProfileName });
+        return result as any;
+    } catch (error) {
+        console.error(`Error adding profile ${newProfileName}:`, error);
+        throw error;
+    }
+}
+
+export async function deleteProfile(profileName: string): Promise<ProtoDeleteProfileResponse> {
+    try {
+        const result = await invoke<any>('delete_profile_command', { profileName });
+        return result as any;
+    } catch (error) {
+        console.error(`Error deleting profile ${profileName}:`, error);
+        throw error;
+    }
 } 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Config } from '../types';
-import { fetchConfig, updateConfig } from '../services/configService';
+import { fetchConfig, updateConfig, fetchActiveProfile, setActiveProfile, fetchProfiles, addProfile, deleteProfile } from '../services/configService';
 
 interface ConfigState {
   config: Config | null;
@@ -8,21 +8,30 @@ interface ConfigState {
   error: string | null;
   isSaving: boolean;
   saveMessage: string | null;
-  initialConfigLoaded: boolean; // Track if initial load has happened
+  initialConfigLoaded: boolean;
 
-  loadConfig: () => Promise<void>;
-  saveConfig: () => Promise<void>;
-  setConfig: (newConfig: Config) => void; // Allow direct setting
-  updateConfigField: <K extends keyof Config>(field: K, value: Config[K]) => void;
-  updateRgField: <K extends keyof Omit<Config['rg'], 'pattern'>>(field: K, value: Config['rg'][K]) => void; // Exclude 'pattern'
-  updateProjectField: (projectName: string, patterns: string[]) => void;
-  updateProjectAppendPath: (projectName: string, path: string) => void;
-  addProject: (projectName: string) => void;
-  removeProject: (projectName: string) => void;
-  // Actions for todo_done_pairs
-  addTodoDonePair: (pair: [string, string]) => void;
-  updateTodoDonePair: (index: number, pair: [string, string]) => void;
-  removeTodoDonePair: (index: number) => void;
+  activeProfileName: string | null;
+  availableProfiles: string[];
+  profilesLoading: boolean;
+  profileError: string | null;
+
+  loadActiveProfileAndConfig: () => Promise<void>;
+  switchActiveProfile: (profileName: string) => Promise<void>;
+  loadAvailableProfiles: () => Promise<void>;
+  addNewProfile: (newProfileName: string, copyFromProfileName?: string) => Promise<void>;
+  deleteCurrentProfile: (profileName: string) => Promise<void>;
+
+  saveCurrentProfileConfig: () => Promise<void>;
+  setConfigForCurrentProfile: (newConfig: Config) => void;
+  updateConfigFieldForCurrentProfile: <K extends keyof Config>(field: K, value: Config[K]) => void;
+  updateRgFieldForCurrentProfile: <K extends keyof Omit<Config['rg'], 'pattern'>>(field: K, value: Config['rg'][K]) => void;
+  updateProjectFieldForCurrentProfile: (projectName: string, patterns: string[]) => void;
+  updateProjectAppendPathForCurrentProfile: (projectName: string, path: string) => void;
+  addProjectToCurrentProfile: (projectName: string) => void;
+  removeProjectFromCurrentProfile: (projectName: string) => void;
+  addTodoDonePairToCurrentProfile: (pair: [string, string]) => void;
+  updateTodoDonePairInCurrentProfile: (index: number, pair: [string, string]) => void;
+  removeTodoDonePairFromCurrentProfile: (index: number) => void;
 }
 
 const useConfigStore = create<ConfigState>((set, get) => ({
@@ -33,25 +42,103 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   saveMessage: null,
   initialConfigLoaded: false,
 
-  loadConfig: async () => {
-    if (get().loading || get().initialConfigLoaded) return; // Prevent multiple initial loads
-    set({ loading: true, error: null });
+  activeProfileName: null,
+  availableProfiles: [],
+  profilesLoading: false,
+  profileError: null,
+
+  loadActiveProfileAndConfig: async () => {
+    if (get().loading || get().initialConfigLoaded) return;
+    set({ loading: true, error: null, profileError: null });
     try {
-      const config = await fetchConfig();
-      // Ensure todo_done_pairs exists, default to empty array if backend doesn't send it (should not happen with defaults)
+      const { config, activeProfileName } = await fetchConfig(); 
       const validatedConfig = {
         ...config,
         todo_done_pairs: config.todo_done_pairs || [],
       };
-      set({ config: validatedConfig, loading: false, initialConfigLoaded: true });
+      set({
+        config: validatedConfig,
+        activeProfileName: activeProfileName,
+        loading: false,
+        initialConfigLoaded: true,
+      });
+      get().loadAvailableProfiles(); 
     } catch (err: any) {
       set({ error: err.message || 'Failed to load configuration.', loading: false });
     }
   },
 
-  saveConfig: async () => {
+  loadAvailableProfiles: async () => {
+    set({ profilesLoading: true, profileError: null });
+    try {
+      const plainResponse = await fetchProfiles(); // Now returns PlainListProfilesResponse
+      const profileNames = plainResponse.profiles.map(p => p.name);
+      const activeName = plainResponse.activeProfileName;
+      set({
+        availableProfiles: profileNames,
+        activeProfileName: activeName,
+        profilesLoading: false,
+      });
+    } catch (err: any) {
+      set({ profileError: err.message || 'Failed to load profiles.', profilesLoading: false });
+    }
+  },
+
+  switchActiveProfile: async (profileName: string) => {
+    if (get().isSaving) return;
+    set({ profilesLoading: true, profileError: null, error: null });
+    try {
+      await setActiveProfile(profileName);
+      const { config, activeProfileName: newActiveProfileName } = await fetchConfig(); 
+      const validatedConfig = {
+        ...config,
+        todo_done_pairs: config.todo_done_pairs || [],
+      };
+      set({
+        config: validatedConfig,
+        activeProfileName: newActiveProfileName,
+        profilesLoading: false,
+      });
+      get().loadAvailableProfiles();
+    } catch (err: any) {
+      set({ profileError: err.message || `Failed to switch to profile ${profileName}.`, profilesLoading: false });
+    }
+  },
+
+  addNewProfile: async (newProfileName: string, copyFromProfileName?: string) => {
+    if (get().isSaving) return;
+    set({ profilesLoading: true, profileError: null });
+    try {
+      await addProfile(newProfileName, copyFromProfileName);
+      await get().loadAvailableProfiles();
+      await get().switchActiveProfile(newProfileName);
+      set({ profilesLoading: false });
+    } catch (err: any) {
+      set({ profileError: err.message || `Failed to add profile ${newProfileName}.`, profilesLoading: false });
+    }
+  },
+
+  deleteCurrentProfile: async (profileName: string) => {
+    if (profileName === 'default') {
+      set({ profileError: "Cannot delete the default profile." });
+      return;
+    }
+    if (get().isSaving) return;
+    set({ profilesLoading: true, profileError: null });
+    try {
+      await deleteProfile(profileName);
+      await get().loadAvailableProfiles();
+      await get().loadActiveProfileAndConfig();
+      set({ profilesLoading: false });
+    } catch (err: any) {
+      set({ profileError: err.message || `Failed to delete profile ${profileName}.`, profilesLoading: false });
+    }
+  },
+
+  saveCurrentProfileConfig: async () => {
     const currentConfig = get().config;
-    if (!currentConfig || get().isSaving) return;
+    const activeProfile = get().activeProfileName;
+    if (!currentConfig || !activeProfile || get().isSaving) return;
 
     set({ isSaving: true, error: null, saveMessage: null });
     try {
@@ -59,7 +146,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       set((state) => ({
         isSaving: false,
         saveMessage: response.message || 'Configuration saved successfully.',
-        config: state.config, 
+        config: state.config,
       }));
       setTimeout(() => set({ saveMessage: null }), 5000);
     } catch (err: any) {
@@ -67,11 +154,11 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     }
   },
   
-  setConfig: (newConfig) => {
+  setConfigForCurrentProfile: (newConfig) => {
       set({ config: newConfig });
   },
 
-  updateConfigField: (field, value) => {
+  updateConfigFieldForCurrentProfile: (field, value) => {
     set((state) => {
       if (!state.config) return {};
       return {
@@ -80,9 +167,9 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     });
   },
 
-  updateRgField: (field, value) => {
+  updateRgFieldForCurrentProfile: (field, value) => {
     set((state) => {
-      if (!state.config) return {};
+      if (!state.config || !state.config.rg) return {};
       return {
         config: {
           ...state.config,
@@ -92,7 +179,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     });
   },
   
-  updateProjectField: (projectName, patterns) => {
+  updateProjectFieldForCurrentProfile: (projectName, patterns) => {
       set((state) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
@@ -107,7 +194,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       });
   },
 
-  updateProjectAppendPath: (projectName, path) => {
+  updateProjectAppendPathForCurrentProfile: (projectName, path) => {
       set((state) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
@@ -122,7 +209,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       });
   },
 
-  addProject: (projectName) => {
+  addProjectToCurrentProfile: (projectName) => {
       set((state) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
@@ -134,7 +221,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       });
   },
 
-  removeProject: (projectName) => {
+  removeProjectFromCurrentProfile: (projectName) => {
       set((state) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
@@ -146,8 +233,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       });
   },
 
-  // --- TodoDonePairs Actions ---
-  addTodoDonePair: (pair) => {
+  addTodoDonePairToCurrentProfile: (pair) => {
     set((state) => {
       if (!state.config) return {};
       const currentPairs = state.config.todo_done_pairs || [];
@@ -160,11 +246,11 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     });
   },
 
-  updateTodoDonePair: (index, pair) => {
+  updateTodoDonePairInCurrentProfile: (index, pair) => {
     set((state) => {
       if (!state.config) return {};
       const currentPairs = state.config.todo_done_pairs || [];
-      if (index < 0 || index >= currentPairs.length) return {}; // Invalid index
+      if (index < 0 || index >= currentPairs.length) return {};
       const newPairs = [...currentPairs];
       newPairs[index] = pair;
       return {
@@ -176,11 +262,11 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     });
   },
 
-  removeTodoDonePair: (index) => {
+  removeTodoDonePairFromCurrentProfile: (index) => {
     set((state) => {
       if (!state.config) return {};
       const currentPairs = state.config.todo_done_pairs || [];
-      if (index < 0 || index >= currentPairs.length) return {}; // Invalid index
+      if (index < 0 || index >= currentPairs.length) return {};
       return {
         config: {
           ...state.config,
