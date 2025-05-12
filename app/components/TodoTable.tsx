@@ -121,6 +121,15 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
   // Track column sizing state
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
+  // Helper to refocus the row after editing
+  const focusRowElement = (catIdx: number, itmIdx: number) => {
+    setTimeout(() => {
+      const selector = `tr[data-category-index="${catIdx}"][data-item-index="${itmIdx}"]`;
+      const rowEl = tableContainerRef.current?.querySelector(selector) as HTMLElement | null;
+      rowEl?.focus();
+    }, 0);
+  };
+
   const columns = useMemo((): ColumnDef<TodoTableRow>[] => [
     {
       id: 'select',
@@ -179,7 +188,10 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               type="text"
               value={editedContent}
               onChange={e => setEditedContent(e.target.value)}
-              onBlur={() => setEditingCell(null)}
+              onBlur={() => {
+                setEditingCell(null);
+                focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+              }}
               onKeyDown={async e => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -195,10 +207,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     console.error('Failed to save todo in table:', err);
                   } finally {
                     setEditingCell(null);
+                    focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                   }
                 } else if (e.key === 'Escape') {
                   e.preventDefault();
                   setEditingCell(null);
+                  focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                 }
               }}
               className="w-full bg-transparent outline-none"
@@ -379,6 +393,10 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
   
   // Update keyboard handler to use the Tauri openUrl
   const handleRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: Row<TodoTableRow>) => {
+    // Do not handle row shortcuts when an inline edit is active
+    if (editingCell) {
+      return;
+    }
     const { originalTodo, categoryIndex, itemIndex } = row.original;
     // Start inline editing on 'a' or 'i'
     if (!editingCell && (e.key === 'a' || e.key === 'i')) {
