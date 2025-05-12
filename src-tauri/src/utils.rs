@@ -94,6 +94,7 @@ pub fn extract_cleaned_content_from_line(
     }
 }
 
+// change those two ranking from order of "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_ " to order of "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_ "
 pub fn get_char_rank(c: char) -> u8 {
     if c.is_ascii_uppercase() { (c as u8) - b'A' }
     else if c.is_ascii_lowercase() { (c as u8 - b'a') + 26 }
