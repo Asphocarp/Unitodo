@@ -13,6 +13,10 @@ import {
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_HIGH,
   LexicalEditor,
+  $isElementNode,
+  $isTextNode,
+  $isRangeSelection,
+  BaseSelection
 } from 'lexical';
 import React, { useEffect, Component, ErrorInfo, ReactNode, ReactElement } from 'react';
 
@@ -53,12 +57,13 @@ function globalOnError(error: Error) {
   console.error("Global error handler:", error);
 }
 
-interface LexicalTodoEditorProps {
+export interface LexicalTodoEditorProps {
   initialFullContent: string;
   isReadOnly: boolean;
   onChange?: (editorState: EditorState) => void;
   onSubmit?: () => void;
   displayMode?: 'table-view' | 'full-edit';
+  initialFocus?: 'afterPriority' | 'end';
 }
 
 function InitialStatePlugin({ initialFullContent, displayMode }: { initialFullContent: string, displayMode?: 'table-view' | 'full-edit' }) {
@@ -119,30 +124,75 @@ function InitialStatePlugin({ initialFullContent, displayMode }: { initialFullCo
   return null;
 }
 
-function UpdateEditablePlugin({ isReadOnly }: { isReadOnly: boolean }) {
+function UpdateEditablePlugin({ isReadOnly, initialFocus }: { isReadOnly: boolean, initialFocus?: 'afterPriority' | 'end' }) {
   const [editor] = useLexicalComposerContext();
+
   useEffect(() => {
     const isNowEditable = !isReadOnly;
     editor.setEditable(isNowEditable);
 
     if (isNowEditable) {
        setTimeout(() => {
-          editor.focus();
           editor.update(() => {
             const root = $getRoot();
+            if (initialFocus === 'afterPriority') {
+              let priorityNodeFoundAndFocused = false;
+              if (root.getChildrenSize() > 0) {
+                const firstChild = root.getFirstChild();
+                if (firstChild && $isElementNode(firstChild)) {
+                  const nodes = firstChild.getChildren();
+                  const priorityNode = nodes.find(node => node instanceof PriorityNode || (typeof (node as any).getType === 'function' && (node as any).getType() === PriorityNode.getType()));
+
+                  if (priorityNode) {
+                    // priorityNode.selectEnd();
+                    // priorityNodeFoundAndFocused = true;
+                    const nextSibling = priorityNode.getNextSibling();
+                    if (nextSibling && $isTextNode(nextSibling) && nextSibling.getTextContent().startsWith(' ')) {
+                      nextSibling.select(0, 0);
+                      priorityNodeFoundAndFocused = true;
+                    } else if (nextSibling && ($isTextNode(nextSibling) || $isElementNode(nextSibling))) {
+                      nextSibling.select(0, 0);
+                      priorityNodeFoundAndFocused = true;
+                    } else if (nextSibling) {
+                      if ($isElementNode(firstChild)) firstChild.selectEnd();
+                      priorityNodeFoundAndFocused = true;
+                    } else {
+                      if ($isElementNode(firstChild)) firstChild.selectEnd();
+                      priorityNodeFoundAndFocused = true;
+                    }
+                  }
+                }
+              }
+              if (priorityNodeFoundAndFocused) {
+                return;
+              }
+            }
+
             if (root.getChildrenSize() > 0) {
                 const lastNode = root.getLastDescendant();
                 if (lastNode) {
-                    const selection = $getSelection();
-                    if (selection === null) {
-                        lastNode.selectEnd();
+                    const currentSelection = $getSelection();
+                    const editorRootElement = editor.getRootElement();
+                    const isActiveElement = editorRootElement && document.activeElement === editorRootElement;
+
+                    if ($isRangeSelection(currentSelection)) {
+                      if (currentSelection === null ||
+                          !currentSelection.isCollapsed() ||
+                          !isActiveElement ||
+                          currentSelection.anchor.key !== lastNode.getKey() ||
+                          currentSelection.anchor.offset !== lastNode.getTextContentSize()) {
+                            lastNode.selectEnd();
+                      }
+                    } else if (currentSelection === null || !isActiveElement) {
+                       lastNode.selectEnd();
                     }
                 }
             }
           });
-       }, 0); 
+          editor.focus();
+       }, 0);
     }
-  }, [editor, isReadOnly]);
+  }, [editor, isReadOnly, initialFocus]);
 
   return null;
 }
@@ -211,6 +261,7 @@ export default function LexicalTodoEditor({
   onChange,
   onSubmit,
   displayMode = 'full-edit',
+  initialFocus,
 }: LexicalTodoEditorProps) {
   const initialConfig = {
     namespace: 'UnitodoEditor',
@@ -244,7 +295,7 @@ export default function LexicalTodoEditor({
         <OnChangePlugin onChange={onChange ? onChange : () => {}} />
         <HistoryPlugin />
         <InitialStatePlugin initialFullContent={initialFullContent} displayMode={displayMode} />
-        <UpdateEditablePlugin isReadOnly={isReadOnly} />
+        <UpdateEditablePlugin isReadOnly={isReadOnly} initialFocus={initialFocus} />
         <EnterSubmitPlugin onSubmit={onSubmit} />
       </div>
     </LexicalComposer>

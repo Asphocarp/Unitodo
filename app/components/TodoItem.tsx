@@ -38,6 +38,7 @@ export default function TodoItem({
   const [editedContent, setEditedContent] = useState(todo.content);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingInitialFocus, setEditingInitialFocus] = useState<'afterPriority' | 'end' | undefined>();
   const itemRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   
@@ -163,6 +164,7 @@ export default function TodoItem({
       });
       
       setIsEditing(false);
+      setEditingInitialFocus(undefined); // Reset focus hint
     } catch (err: any) {
       console.error('Error saving todo:', err);
       
@@ -184,6 +186,7 @@ export default function TodoItem({
     setIsEditing(false);
     setEditedContent(todo.content);
     setError(null);
+    setEditingInitialFocus(undefined); // Reset focus hint
   };
 
   const handleEnterSubmit = () => {
@@ -289,10 +292,11 @@ export default function TodoItem({
     }
   };
   
-  const handleEditStart = () => {
+  const handleEditStart = (focusMode?: 'afterPriority' | 'end') => {
     if (!isReadOnly) {
       setEditedContent(todo.content);
       setIsEditing(true);
+      setEditingInitialFocus(focusMode);
     }
   };
   
@@ -311,7 +315,13 @@ export default function TodoItem({
         case 'a':
           if (!isReadOnly) {
             e.preventDefault();
-            handleEditStart();
+            handleEditStart('end');
+          }
+          break;
+        case 'I': // Shift + i
+          if (e.shiftKey && !isReadOnly) {
+            e.preventDefault();
+            handleEditStart('afterPriority');
           }
           break;
         case 'x':
@@ -484,6 +494,7 @@ export default function TodoItem({
             isReadOnly={!isEditing || isReadOnly}
             onChange={handleEditorContentChange}
             onSubmit={handleEnterSubmit}
+            initialFocus={editingInitialFocus}
           />
         </div>
 

@@ -241,6 +241,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     }
                   }
                 }}
+                initialFocus={tableEditingCell?.initialFocus} // Pass the focus hint
               />
             </div>
           );
@@ -432,8 +433,16 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       case 'i':
         e.preventDefault();
         e.stopPropagation();
-        setTableEditingCell({ categoryIndex, itemIndex });
+        setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'end' });
         setEditedContent(originalTodo.content);
+        return;
+      case 'I': // Shift + i
+        if (e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'afterPriority' });
+          setEditedContent(originalTodo.content);
+        }
         return;
       case 'x':
         e.preventDefault();

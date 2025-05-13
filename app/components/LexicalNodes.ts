@@ -30,7 +30,7 @@ export class PriorityNode extends TextNode {
 
   constructor(text: string, key?: NodeKey) {
     super(text, key);
-    this.__mode = 1; // Make it immutable and atomic for cursor movement
+    this.__mode = 0; // not atomic
   }
 
   createDOM(config: EditorConfig): HTMLElement {

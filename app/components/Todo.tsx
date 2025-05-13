@@ -793,7 +793,8 @@ export default function Todo() {
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Esc</kbd> Exit edit mode</div>
               
               <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Todo actions</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">a</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">i</kbd> Edit todo</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">a</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">i</kbd> Edit todo (cursor at end)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">I</kbd> Edit todo (cursor after priority)</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">o</kbd> Add todo to current section</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">x</kbd> Append ignore comment</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Space</kbd> Toggle completion</div>

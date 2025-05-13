@@ -33,7 +33,7 @@ interface TodoState {
     categoryName: string;
     exampleItemLocation?: string;
   } | null;
-  tableEditingCell: { categoryIndex: number; itemIndex: number; } | null;
+  tableEditingCell: { categoryIndex: number; itemIndex: number; initialFocus?: 'afterPriority' | 'end' } | null;
   
   // Actions
   loadData: () => Promise<void>;
@@ -49,7 +49,7 @@ interface TodoState {
   openAddTodoModal: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => void;
   closeAddTodoModal: () => void;
   submitAddTodo: (content: string) => Promise<void>;
-  setTableEditingCell: (cell: { categoryIndex: number; itemIndex: number; } | null) => void;
+  setTableEditingCell: (cell: { categoryIndex: number; itemIndex: number; initialFocus?: 'afterPriority' | 'end' } | null) => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
