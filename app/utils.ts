@@ -216,6 +216,7 @@ export interface ParsedTodo {
   idPart: string | null;
   donePart: string | null;
   mainContent: string;
+  tableContent: string;
   isUnique: boolean;
   isValidTodoFormat: boolean;
 }
@@ -233,7 +234,8 @@ export function parseTodoContent(content: string): ParsedTodo {
     const priority = match[3] || null; // Optional priority (Group 3)
     const idPart = match[4] || null;   // ID part (@..., #..., ##...) (Group 4)
     const donePart = match[5] || null; // Optional done timestamp (@@...) (Corrected: Group 5)
-    const mainContent = match[3]+match[6] || ''; // The actual todo text content (include priority and normal part)
+    const mainContent = match[7] || ''; // The text content for others (no priority and id part)
+    const tableContent = match[3]+match[6] || ''; // The text content for table (include priority, no id part)
 
     // Corrected Group Indices Explanation:
     // Group 1: leadingWhitespace?                  e.g., '   '
@@ -251,6 +253,7 @@ export function parseTodoContent(content: string): ParsedTodo {
       idPart,
       donePart,
       mainContent: mainContent.trim(),
+      tableContent: tableContent.trim(),
       isUnique,
       isValidTodoFormat: true,
     };
@@ -262,6 +265,7 @@ export function parseTodoContent(content: string): ParsedTodo {
     idPart: null,
     donePart: null,
     mainContent: content.trim(),
+    tableContent: content.trim(),
     isUnique: false,
     isValidTodoFormat: false,
   };

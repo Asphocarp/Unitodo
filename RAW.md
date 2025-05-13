@@ -184,3 +184,10 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 00@ArSeL@@ArUS3 minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing:
   - make the content cell in TodoTable @TodoTable.tsx  editable, and we can start to edit it like we can do via pressing 'a' or 'i' like in @TodoItem.tsx @Todo.tsx .
 - [x] 00@ArYft@@ArYkt font
+- [ ] 000@Arnrm fix: when i am editing and typing, my 'i' and 'a' still triggers hotkeys
+- [ ] 001@AroT3 fix: too much margin at the right of icon; 
+- [ ] 000 time format; 
+- [ ] 000 rounded highlight whole item; 
+- [ ] 000 make 000 prior a chip (render using lexcial in table-view)
+- [x] fix other mode content should not be original
+- [ ] 1@Aron2 allow for switch profile in main page

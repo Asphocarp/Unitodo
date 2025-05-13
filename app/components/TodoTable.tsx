@@ -111,8 +111,9 @@ interface TodoTableProps {
 export default function TodoTable({ tableRows, onRowClick, focusedItem, height, width }: TodoTableProps) {
   const { config: appConfig } = useConfigStore();
   const todoStoreCategories = useTodoStore(state => state.categories); // For icons
-  // Editing state for inline content cell editing
-  const [editingCell, setEditingCell] = useState<{categoryIndex: number; itemIndex: number} | null>(null);
+  // Access editing state and action from Zustand store
+  const tableEditingCell = useTodoStore(state => state.tableEditingCell);
+  const setTableEditingCell = useTodoStore(state => state.setTableEditingCell);
   const [editedContent, setEditedContent] = useState<string>('');
 
   // Ref for the scrolling container
@@ -179,9 +180,9 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     {
       accessorKey: 'content',
       header: 'Content',
-      size: 1000, 
+      size: 1250, 
       cell: ({ row }) => {
-        const isThisEditing = editingCell?.categoryIndex === row.original.categoryIndex && editingCell?.itemIndex === row.original.itemIndex;
+        const isThisEditing = tableEditingCell?.categoryIndex === row.original.categoryIndex && tableEditingCell?.itemIndex === row.original.itemIndex;
         if (isThisEditing) {
           return (
             <input
@@ -189,7 +190,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               value={editedContent}
               onChange={e => setEditedContent(e.target.value)}
               onBlur={() => {
-                setEditingCell(null);
+                setTableEditingCell(null);
                 focusRowElement(row.original.categoryIndex, row.original.itemIndex);
               }}
               onKeyDown={async e => {
@@ -206,12 +207,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                   } catch (err) {
                     console.error('Failed to save todo in table:', err);
                   } finally {
-                    setEditingCell(null);
+                    setTableEditingCell(null);
                     focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                   }
                 } else if (e.key === 'Escape') {
                   e.preventDefault();
-                  setEditingCell(null);
+                  setTableEditingCell(null);
                   focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                 }
               }}
@@ -220,7 +221,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
             />
           );
         }
-        const content = row.original.parsedContent.mainContent || row.original.content;
+        const content = row.original.parsedContent.tableContent || row.original.content;
         return (
           <div 
             className="truncate text-sm"
@@ -296,7 +297,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [todoStoreCategories, editingCell, editedContent]); // Depend on todoStoreCategories for icons
+  ], [todoStoreCategories, tableEditingCell, editedContent]); // Depend on todoStoreCategories for icons
 
   const data = useMemo((): TodoTableRow[] => {
     return tableRows;
@@ -394,7 +395,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
   // Update keyboard handler to use the Tauri openUrl
   const handleRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: Row<TodoTableRow>) => {
     // Do not handle row shortcuts when an inline edit is active
-    if (editingCell) {
+    if (tableEditingCell) {
       return;
     }
     const { originalTodo, categoryIndex, itemIndex } = row.original;
@@ -402,7 +403,8 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       case 'a':
       case 'i':
         e.preventDefault();
-        setEditingCell({ categoryIndex, itemIndex });
+        e.stopPropagation();
+        setTableEditingCell({ categoryIndex, itemIndex });
         setEditedContent(originalTodo.content);
         return;
       case 'x':

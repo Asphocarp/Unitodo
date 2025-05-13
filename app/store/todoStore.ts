@@ -33,6 +33,7 @@ interface TodoState {
     categoryName: string;
     exampleItemLocation?: string;
   } | null;
+  tableEditingCell: { categoryIndex: number; itemIndex: number; } | null;
   
   // Actions
   loadData: () => Promise<void>;
@@ -48,6 +49,7 @@ interface TodoState {
   openAddTodoModal: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => void;
   closeAddTodoModal: () => void;
   submitAddTodo: (content: string) => Promise<void>;
+  setTableEditingCell: (cell: { categoryIndex: number; itemIndex: number; } | null) => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -67,6 +69,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   // Modal state
   showAddTodoModal: false,
   addTodoModalData: null,
+  tableEditingCell: null,
   
   // Actions
   loadData: async () => {
@@ -521,7 +524,9 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   addNewTodo: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => {
     const { openAddTodoModal } = get();
     openAddTodoModal(categoryType, categoryName, exampleItemLocation);
-  }
+  },
+
+  setTableEditingCell: (cell) => set({ tableEditingCell: cell }),
 }));
 
 // Helper function to filter categories based on filter state and search query
