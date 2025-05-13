@@ -203,11 +203,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                 }
               }}
               onBlur={(e) => { // Handles losing focus from the editor
-                // Check if the new focused element is outside the editor wrapper.
-                // If relatedTarget is null (e.g., window lost focus) or not inside editorWrapperRef.
-                // Also check if editorWrapperRef.current exists to prevent errors during unmount
                 if (editorWrapperRef.current && !editorWrapperRef.current.contains(e.relatedTarget as Node | null)) {
-                  // Check if still editing (i.e., tableEditingCell is not null)
                   if (useTodoStore.getState().tableEditingCell) {
                     setTableEditingCell(null);
                     focusRowElement(row.original.categoryIndex, row.original.itemIndex);
@@ -218,20 +214,14 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               <LexicalTodoEditor
                 initialFullContent={editedContent}
                 isReadOnly={false}
-                onChange={(editorState: EditorState) => {
-                  editorState.read(() => {
-                    const root = $getRoot();
-                    const text = root.getTextContent();
-                    setEditedContent(text);
-                  });
-                }}
                 onSubmit={async () => { // This is for Enter key
                   if (!useTodoStore.getState().tableEditingCell) return;
-
+                  const root = $getRoot();
+                  const text = root.getTextContent();
                   try {
                     await editTodoItem({
                       location: row.original.originalTodo.location,
-                      new_content: editedContent,
+                      new_content: text,
                       original_content: row.original.originalTodo.content,
                       completed: row.original.originalTodo.completed,
                     });
@@ -330,7 +320,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [todoStoreCategories, tableEditingCell, editedContent, setTableEditingCell]); // Depend on todoStoreCategories for icons
+  ], [todoStoreCategories, tableEditingCell, setTableEditingCell]); // Depend on todoStoreCategories for icons
 
   const data = useMemo((): TodoTableRow[] => {
     return tableRows;
