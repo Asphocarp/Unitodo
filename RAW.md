@@ -187,7 +187,9 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 000@Arnrm fix: when i am editing and typing, my 'i' and 'a' still triggers hotkeys
 - [ ] 001@AroT3 fix: too much margin at the right of icon;
 - [ ] 000 time format; 
-- [ ] 000 rounded highlight whole item; 
-- [ ] 000 make 000 prior a chip (render using lexcial in table-view)
+- [x] 000@@Aruxo rounded highlight whole item; 
+- [x] 000@@Aruxu make 000 prior a chip (render using lexcial in table-view)
 - [x] fix other mode content should not be original
 - [ ] 1@Aron2 allow for switch profile in main page
+- [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause)
+- [ ] 1@Aruxf figure history,bi-sync problem, so that supporting view on phone;
