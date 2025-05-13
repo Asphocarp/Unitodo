@@ -250,13 +250,17 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
             </div>
           );
         }
-        const content = row.original.parsedContent.tableContent || row.original.content;
         return (
           <div 
-            className="truncate text-sm"
+            className="truncate text-sm h-full flex items-center" // Ensure div takes full height for editor alignment
             title={row.original.content}
           >
-            {content}
+            <LexicalTodoEditor
+                key={row.original.id + '-display'} // Unique key for re-initialization
+                initialFullContent={row.original.content}
+                isReadOnly={true}
+                displayMode='table-view'
+            />
           </div>
         );
       },

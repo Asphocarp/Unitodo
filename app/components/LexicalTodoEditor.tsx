@@ -58,9 +58,10 @@ interface LexicalTodoEditorProps {
   isReadOnly: boolean;
   onChange?: (editorState: EditorState) => void;
   onSubmit?: () => void;
+  displayMode?: 'table-view' | 'full-edit';
 }
 
-function InitialStatePlugin({ initialFullContent }: { initialFullContent: string }) {
+function InitialStatePlugin({ initialFullContent, displayMode }: { initialFullContent: string, displayMode?: 'table-view' | 'full-edit' }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editor.update(() => {
@@ -68,42 +69,53 @@ function InitialStatePlugin({ initialFullContent }: { initialFullContent: string
       if (root.isEmpty() || root.getTextContent() !== initialFullContent) {
         root.clear();
         const parsed = parseTodoContent(initialFullContent);
-        
-        const nodesToAppend: LexicalNode[] = [];
-
-        if (parsed.priority) {
-          nodesToAppend.push($createPriorityNode(parsed.priority));
-        }
-        if (parsed.idPart) {
-          nodesToAppend.push($createIdNode(parsed.idPart));
-          if (parsed.mainContent || parsed.donePart) {
-             nodesToAppend.push($createTextNode(' '));
-          }
-        }
-        if (parsed.donePart) {
-          nodesToAppend.push($createDoneNode(parsed.donePart));
-          if (parsed.mainContent) {
-             nodesToAppend.push($createTextNode(' '));
-          }
-        }
-        if (parsed.mainContent) {
-          nodesToAppend.push($createTextNode(parsed.mainContent));
-        }
+        const paragraph = $createParagraphNode();
 
         if (!parsed.isValidTodoFormat) {
-           root.clear();
-           const paragraph = $createParagraphNode();
            paragraph.append($createTextNode(initialFullContent));
-           root.append(paragraph);
         } else {
-          const paragraph = $createParagraphNode();
-          nodesToAppend.forEach(node => paragraph.append(node));
-          root.append(paragraph);
-        }
+          if (displayMode === 'table-view') {
+            if (parsed.priority) {
+              paragraph.append($createPriorityNode(parsed.priority));
+            }
 
+            if (parsed.mainContent) {
+              if (parsed.priority && parsed.mainContent.length > 0) { // Add leading space only if priority chip exists and there's text after
+                paragraph.append($createTextNode(' '));
+                paragraph.append($createTextNode(parsed.mainContent));
+              } else if (!parsed.priority) { // No priority chip, just append the text
+                paragraph.append($createTextNode(parsed.mainContent));
+              }
+            }
+            // If only priority chip and no other text, nothing more to add.
+            // If no priority chip and no other text (empty valid line), paragraph remains empty.
+
+          } else { // 'full-edit' or default mode
+            let hasPreviousPart = false;
+            if (parsed.priority) {
+              paragraph.append($createPriorityNode(parsed.priority));
+              hasPreviousPart = true;
+            }
+            if (parsed.idPart) {
+              paragraph.append($createIdNode(parsed.idPart));
+              hasPreviousPart = true;
+            }
+            if (parsed.donePart) {
+              paragraph.append($createDoneNode(parsed.donePart));
+              hasPreviousPart = true;
+            }
+            if (parsed.mainContent) {
+              if (hasPreviousPart) paragraph.append($createTextNode(' '));
+              paragraph.append($createTextNode(parsed.mainContent));
+            } else if (parsed.isValidTodoFormat && !hasPreviousPart && initialFullContent.trim() === "") {
+              // Handles empty valid line, paragraph will be empty.
+            }
+          }
+        }
+        root.append(paragraph);
       }
     });
-  }, [editor, initialFullContent]); 
+  }, [editor, initialFullContent, displayMode]);
   return null;
 }
 
@@ -198,6 +210,7 @@ export default function LexicalTodoEditor({
   isReadOnly,
   onChange,
   onSubmit,
+  displayMode = 'full-edit',
 }: LexicalTodoEditorProps) {
   const initialConfig = {
     namespace: 'UnitodoEditor',
@@ -218,11 +231,11 @@ export default function LexicalTodoEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="editor-container relative inline-block w-full max-w-full overflow-hidden flex items-center">
+      <div className="editor-container relative inline-block w-full max-w-full overflow-hidden items-center">
         <RichTextPlugin
           contentEditable={
             <div className="w-full h-5 min-h-[16px]">
-              <ContentEditable className="outline-none focus:ring-0 focus:ring-offset-0 py-0 px-0 h-full w-full whitespace-nowrap overflow-hidden text-ellipsis dark:text-neutral-200 leading-5" />
+              <ContentEditable className="outline-none focus:ring-0 focus:ring-offset-0 py-0 px-0 h-full w-full overflow-hidden text-ellipsis dark:text-neutral-200 leading-5 whitespace-pre-wrap" />
             </div>
           }
           placeholder={<div className="editor-placeholder absolute top-0 bottom-0 my-auto h-fit left-0 text-subtle-color dark:text-neutral-500 pointer-events-none p-0">Enter todo...</div>}
@@ -230,7 +243,7 @@ export default function LexicalTodoEditor({
         />
         <OnChangePlugin onChange={onChange ? onChange : () => {}} />
         <HistoryPlugin />
-        <InitialStatePlugin initialFullContent={initialFullContent} />
+        <InitialStatePlugin initialFullContent={initialFullContent} displayMode={displayMode} />
         <UpdateEditablePlugin isReadOnly={isReadOnly} />
         <EnterSubmitPlugin onSubmit={onSubmit} />
       </div>

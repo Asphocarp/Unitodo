@@ -128,18 +128,21 @@ html {
   background-color: var(--notion-green-bg);
   color: var(--notion-green);
   border: 1px solid rgba(68, 131, 97, 0.2);
+  margin-right: 0.25rem;
 }
 
 .unitodo-id-node {
   background-color: #f3e8ff;
   color: #6b21a8;
   border: 1px solid #e9d5ff;
+  margin-right: 0.25rem;
 }
 
 .unitodo-done-node {
   background-color: #dcfce7;
   color: #166534;
   border: 1px solid #bbf7d0;
+  margin-right: 0.25rem;
 }
 
 /* Dark mode styles for custom Lexical nodes */
@@ -159,11 +162,6 @@ html {
   background-color: #14532d;
   color: #86efac;
   border: 1px solid #16a34a;
-}
-
-/* To simulate a spacing */
-div.hn-todo-content > div > div > div > div > p > span:nth-child(3){
-  margin-left: 0.25rem;
 }
 
 /* Optional: Placeholder styling for the editor */

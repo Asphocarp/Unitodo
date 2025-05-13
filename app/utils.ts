@@ -209,7 +209,8 @@ export function abbreviateTimeDistanceString(distanceString: string): string {
 //   (.*)                                 - Start group 7: The rest of the content
 // )?                                     - End group 6 & 7, make them optional (for lines with only the first word)
 // $                                      - End of the string
-const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+)|(?:\#[a-zA-Z0-9_\-]{20}))(@@[a-zA-Z0-9_\-]{5})?)(\s+(.*))?$/; // UNITODO_IGNORE_LINE
+// const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+)|(?:\#[a-zA-Z0-9_\-]{20}))(@@[a-zA-Z0-9_\-]{5})?)(\s+(.*))?$/; // UNITODO_IGNORE_LINE
+const TODO_REGEX = /^(\s*)?(([a-zA-Z0-9]+)?((?:@[a-zA-Z0-9_\-]{5})|(?:\#\#[0-9]+)|(?:\#[a-zA-Z0-9_\-]{20}))?(@@[a-zA-Z0-9_\-]{5})?)(\s+(.*))?$/; // UNITODO_IGNORE_LINE
 
 export interface ParsedTodo {
   priority: string | null;
@@ -226,6 +227,7 @@ export interface ParsedTodo {
  * ASSUMES input string starts optionally with whitespace, then the first word (priority/id/timestamp).
  * Handles different ID formats (@timestamp, #nanoid, ##incremented) and optional priority/done markers.
  */
+// TODO: 1 refine parser here, just get first occured (@[a-zA-Z0-9_\-]{5})[@\#\s] which is ts5 (\#[a-zA-Z0-9_\-]{23})[@#\s] which is nanoid as the idpart, the rest is matched as text_parts, parse into a json object.
 export function parseTodoContent(content: string): ParsedTodo {
   const match = content.match(TODO_REGEX); // UNITODO_IGNORE_LINE
 
