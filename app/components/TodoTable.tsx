@@ -15,11 +15,12 @@ import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
-import { parseTodoContent, decodeTimestampId } from '../utils'; // Added decodeTimestampId here
-import TodoItem from './TodoItem'; // We might reuse parts or styling
-import { markTodoAsDone, editTodoItem } from '../services/todoService'; // Import for checkbox and edit functionality
-import { useTodoStore, getGloballySortedAndFilteredTodos } from '../store/todoStore'; // To call updateTodo or loadData
-import NerdFontIcon from './NerdFontIcon'; // Import NerdFontIcon
+import { parseTodoContent, decodeTimestampId, abbreviateTimeDistanceString } from '../utils';
+import { formatDistanceStrict } from 'date-fns';
+import TodoItem from './TodoItem';
+import { markTodoAsDone, editTodoItem } from '../services/todoService';
+import { useTodoStore, getGloballySortedAndFilteredTodos } from '../store/todoStore';
+import NerdFontIcon from './NerdFontIcon';
 import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
@@ -303,8 +304,14 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       size: 150, // Adjusted size
       cell: info => {
         const createdVal = info.getValue() as string | null;
-        const displayDate = createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
-        return <div className="truncate" title={displayDate}>{displayDate}</div>;
+        if (!createdVal) return <div className="truncate" title="-"> - </div>;
+        const decodedDate = new Date(createdVal);
+        const strictDistance = formatDistanceStrict(decodedDate, new Date());
+        const abbreviated = abbreviateTimeDistanceString(strictDistance);
+        const displayDate = `[${abbreviated} ago]`;
+        return <div className="truncate" title={decodedDate.toLocaleString()}>{displayDate}</div>;
+        // const displayDate = createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        // return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
@@ -313,8 +320,14 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       size: 150, // Adjusted size
       cell: info => {
         const finishedVal = info.getValue() as string | null;
-        const displayDate = finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
-        return <div className="truncate" title={displayDate}>{displayDate}</div>;
+        if (!finishedVal) return <div className="truncate" title="-"> - </div>;
+        const decodedDate = new Date(finishedVal);
+        const strictDistance = formatDistanceStrict(decodedDate, new Date());
+        const abbreviated = abbreviateTimeDistanceString(strictDistance);
+        const displayDate = `[${abbreviated} ago]`;
+        return <div className="truncate" title={decodedDate.toLocaleString()}>{displayDate}</div>;
+        // const displayDate = finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
+        // return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
