@@ -185,8 +185,8 @@ The config file is at `~/.config/unitodo/config.toml`.
   - make the content cell in TodoTable @TodoTable.tsx  editable, and we can start to edit it like we can do via pressing 'a' or 'i' like in @TodoItem.tsx @Todo.tsx .
 - [x] 00@ArYft@@ArYkt font
 - [x] 000@Arnrm@@Arv8T fix: whenever i am editing the table content cell and typing in the middle of the content, it always got my cursor back to the end of the content (i guess it keeps on triggering setting editedContent and rerendering and resetting the cursor to the end of the content)
-- [ ] 001@AroT3 fix: too much margin at the right of icon;
-- [ ] 000 time format
+- [x] 001@AroT3@@ArwnW fix: too much margin at the right of icon;
+- [x] 000@@Arwm9 time format
 - [x] 000@@Aruxo rounded highlight whole item; 
 - [x] 000@@Aruxu make 000 prior a chip (render using lexcial in table-view)
 - [x] fix other mode content should not be original
