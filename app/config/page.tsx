@@ -167,7 +167,6 @@ export default function ConfigPage() {
         </div>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">Profile: <strong className="text-neutral-700 dark:text-neutral-200">{activeProfileName}</strong></span>
       </div>
-
       {/* Notifications for general errors and save messages */}
       {error && (
          <div className="mb-3 py-2 px-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs border border-red-200 dark:border-red-800/50">
@@ -185,7 +184,6 @@ export default function ConfigPage() {
             Profile Error: {profileError}
          </div>
       )}
-
       {/* Profile Management Section */}
       <section className="mb-6 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
         <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Profiles</h2>
@@ -239,7 +237,6 @@ export default function ConfigPage() {
           </button>
         </div>
       </section>
-
       {/* Form for the active profile's settings */}
       <form onSubmit={(e) => { e.preventDefault(); saveCurrentProfileConfig(); }} className="text-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
