@@ -443,7 +443,6 @@ body {
 /* Add styles for keyboard focus */
 .focused {
   outline: 2px solid var(--notion-green) !important;
-  outline-offset: 1px;
   position: relative;
   z-index: 10;
   border-radius: 0.25rem;

@@ -569,7 +569,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     className={`h-6 cursor-pointer transition-colors
                       ${isCompleted ? 'opacity-70' : ''}
                       ${focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex 
-                        ? 'bg-neutral-50 dark:bg-neutral-800 outline outline-1 outline-blue-400' 
+                        ? 'bg-neutral-50 dark:bg-neutral-800 focused' 
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'
                       }`}
                     onClick={() => onRowClick(row.original.categoryIndex, row.original.itemIndex)}
