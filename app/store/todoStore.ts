@@ -637,7 +637,7 @@ export const getGloballySortedAndFilteredTodos = (state: TodoState): { originalT
 
       // Apply search
       const parsed = parseTodoContent(todo.content);
-      const displayContent = parsed.mainContent || todo.content;
+      const displayContent = parsed.tableContent || todo.content;
       const matchesSearch = !state.searchQuery ||
         displayContent.toLowerCase().includes(lowerCaseSearchQuery) ||
         (todo.location && todo.location.toLowerCase().includes(lowerCaseSearchQuery));

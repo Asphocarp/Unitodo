@@ -26,6 +26,10 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 // Import for virtualization
 import { useVirtualizer } from '@tanstack/react-virtual';
 
+// Import Lexical editor and related types
+import LexicalTodoEditor from '../components/LexicalTodoEditor';
+import { EditorState, $getRoot } from 'lexical';
+
 // Define a type for our table row data
 export interface TodoTableRow {
   id: string; // Unique ID for the row (e.g., todo.location + todo.content hash)
@@ -118,6 +122,8 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
 
   // Ref for the scrolling container
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  // Ref for the editor wrapper to handle blur and escape
+  const editorWrapperRef = useRef<HTMLDivElement>(null);
 
   // Track column sizing state
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -185,17 +191,43 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         const isThisEditing = tableEditingCell?.categoryIndex === row.original.categoryIndex && tableEditingCell?.itemIndex === row.original.itemIndex;
         if (isThisEditing) {
           return (
-            <input
-              type="text"
-              value={editedContent}
-              onChange={e => setEditedContent(e.target.value)}
-              onBlur={() => {
-                setTableEditingCell(null);
-                focusRowElement(row.original.categoryIndex, row.original.itemIndex);
-              }}
-              onKeyDown={async e => {
-                if (e.key === 'Enter') {
+            <div
+              ref={editorWrapperRef}
+              className="w-full h-full flex items-center" // Ensure wrapper takes space and aligns editor
+              onKeyDown={async (e) => { // Handles Escape
+                if (e.key === 'Escape') {
                   e.preventDefault();
+                  e.stopPropagation();
+                  setTableEditingCell(null);
+                  focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                }
+              }}
+              onBlur={(e) => { // Handles losing focus from the editor
+                // Check if the new focused element is outside the editor wrapper.
+                // If relatedTarget is null (e.g., window lost focus) or not inside editorWrapperRef.
+                // Also check if editorWrapperRef.current exists to prevent errors during unmount
+                if (editorWrapperRef.current && !editorWrapperRef.current.contains(e.relatedTarget as Node | null)) {
+                  // Check if still editing (i.e., tableEditingCell is not null)
+                  if (useTodoStore.getState().tableEditingCell) {
+                    setTableEditingCell(null);
+                    focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                  }
+                }
+              }}
+            >
+              <LexicalTodoEditor
+                initialFullContent={editedContent}
+                isReadOnly={false}
+                onChange={(editorState: EditorState) => {
+                  editorState.read(() => {
+                    const root = $getRoot();
+                    const text = root.getTextContent();
+                    setEditedContent(text);
+                  });
+                }}
+                onSubmit={async () => { // This is for Enter key
+                  if (!useTodoStore.getState().tableEditingCell) return;
+
                   try {
                     await editTodoItem({
                       location: row.original.originalTodo.location,
@@ -206,19 +238,16 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     useTodoStore.getState().loadData();
                   } catch (err) {
                     console.error('Failed to save todo in table:', err);
+                    // Optionally, display an error message to the user here
                   } finally {
-                    setTableEditingCell(null);
-                    focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                    if (useTodoStore.getState().tableEditingCell) {
+                        setTableEditingCell(null);
+                        focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                    }
                   }
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setTableEditingCell(null);
-                  focusRowElement(row.original.categoryIndex, row.original.itemIndex);
-                }
-              }}
-              className="w-full bg-transparent outline-none"
-              autoFocus
-            />
+                }}
+              />
+            </div>
           );
         }
         const content = row.original.parsedContent.tableContent || row.original.content;
@@ -297,7 +326,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [todoStoreCategories, tableEditingCell, editedContent]); // Depend on todoStoreCategories for icons
+  ], [todoStoreCategories, tableEditingCell, editedContent, setTableEditingCell]); // Depend on todoStoreCategories for icons
 
   const data = useMemo((): TodoTableRow[] => {
     return tableRows;
