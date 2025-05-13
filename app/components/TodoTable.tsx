@@ -225,6 +225,11 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                       original_content: row.original.originalTodo.content,
                       completed: row.original.originalTodo.completed,
                     });
+                    // Optimistic update
+                    useTodoStore.getState().updateTodo({
+                      ...row.original.originalTodo,
+                      content: text,
+                    });
                     useTodoStore.getState().loadData();
                   } catch (err) {
                     console.error('Failed to save todo in table:', err);
