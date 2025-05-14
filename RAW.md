@@ -72,6 +72,16 @@ xattr -cr /Applications/Unitodo.app
 
 The config file is at `~/.config/unitodo/config.toml`.
 
+
+## NO_RELEASE_UNTIL:
+
+- [ ] 2@Apt3d (fancy) edit online; api to fetch from notion, slack, etc
+- [ ] 2 support timeline
+- [ ] 1@Aruxf figure out history-edit / bi-sync problem, so that supporting view on phone;
+- [ ] 0@Aq6hD tree-view / dep-chain-view  (table,tab,section,tree)-view
+- [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
+
+
 ## Todos
 
 - i feel that unitodo goes wrong. the goal was to make any thing i wanna do from anything to a linear list. so that i can keep on doing one by one.
@@ -154,13 +164,11 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 1@Aptsh fix: make click on a lexcial editor starts editing
 - [x] 1@Aptww@@Aq6dl fix: click on filename should behave the same as pressing enter (no new windows popup)
 - [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
-- [ ] 2@Apt3d (fancy) fetch from notion, slack, etc
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
 - [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
 - [x] 2@Apt81@@Aq6fI let the priority part include "-" (not just alphanumeric)- X no more concept of fisrt word, simply append timestamp and stuff at the end
 - [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
 - [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
-- [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
@@ -186,7 +194,6 @@ The config file is at `~/.config/unitodo/config.toml`.
     - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile); use shadcn if you want.
     - continue to save all profiles in `~/.config/unitodo/config.toml`, the default profile is `default` (which can not be deleted).
   - (then design algo for appending to filters)
-- [ ] 0@Aq6hD tree-view  (table,tab,section,tree)-view
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [x] 1@Aq7DJ@@ArSKQ X separate dev and release config? or let the frontend connect the same one
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
@@ -202,5 +209,4 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] fix other mode content should not be original
 - [ ] 1@Aron2 allow for switch profile in main page
 - [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause)
-- [ ] 1@Aruxf figure history,bi-sync problem, so that supporting view on phone;
 - [ ] 2@Ar4YD UI: align buttons
