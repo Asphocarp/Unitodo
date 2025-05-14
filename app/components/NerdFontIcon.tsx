@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface NerdFontIconProps {
   icon: string;
@@ -8,21 +8,24 @@ interface NerdFontIconProps {
   className?: string;
 }
 
+const categoryFallbackIconMap: Record<string, string> = {
+  other: '📋',
+  // Add other specific fallbacks if needed, default is handled below
+};
+
 export default function NerdFontIcon({ icon, category, className = '' }: NerdFontIconProps) {
-  // Map category names to appropriate fallback icons
-  const getNerdIcon = () => {
+  const getNerdIconFallback = () => {
     const lowerCategory = category.toLowerCase();
-    if (lowerCategory.includes('git')) return ''; 
-    if (lowerCategory === 'other') return '📋';
-    return '📁';
+    if (lowerCategory.includes('git')) return ''; // No fallback for git, rely on Nerd Font icon
+    return categoryFallbackIconMap[lowerCategory] || '📁'; // Default to folder icon
   };
   
   return (
     <span className={`inline-flex items-center justify-center ${className}`}>
       {/* Try to display the original Nerd Font icon */}
       <span className="nerd-font-icon">{icon}</span>
-      {/* Text fallback (only visible if first option fails) */}
-      <span className="sr-only">{getNerdIcon()}</span>
+      {/* Text fallback (only visible if first option fails or for screen readers) */}
+      <span className="sr-only">{getNerdIconFallback()}</span>
     </span>
   );
 } 

@@ -12,6 +12,7 @@ import {
     TodoDonePair as PbTodoDonePair
 } from '../../grpc-generated/unitodo_pb';
 import { Config as AppConfig, RgConfig as AppRgConfig, ProjectConfig as AppProjectConfig } from '@/app/types';
+import { grpcStatusToHttpStatus } from '../utils';
 
 // --- Helper: AppConfig (from frontend/app/types.ts) to gRPC ConfigMessage ---
 function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
@@ -191,27 +192,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-
-// Re-use grpcStatusToHttpStatus or ensure it's available (e.g. from a shared utils file)
-function grpcStatusToHttpStatus(grpcStatus: grpc.status | undefined): number {
-    switch (grpcStatus) {
-        case grpc.status.OK: return 200;
-        case grpc.status.CANCELLED: return 499;
-        case grpc.status.UNKNOWN: return 500;
-        case grpc.status.INVALID_ARGUMENT: return 400;
-        case grpc.status.DEADLINE_EXCEEDED: return 504;
-        case grpc.status.NOT_FOUND: return 404;
-        case grpc.status.ALREADY_EXISTS: return 409;
-        case grpc.status.PERMISSION_DENIED: return 403;
-        case grpc.status.RESOURCE_EXHAUSTED: return 429;
-        case grpc.status.FAILED_PRECONDITION: return 400;
-        case grpc.status.ABORTED: return 409;
-        case grpc.status.OUT_OF_RANGE: return 400;
-        case grpc.status.UNIMPLEMENTED: return 501;
-        case grpc.status.INTERNAL: return 500;
-        case grpc.status.UNAVAILABLE: return 503;
-        case grpc.status.DATA_LOSS: return 500;
-        case grpc.status.UNAUTHENTICATED: return 401;
-        default: return 500;
-    }
-} 
