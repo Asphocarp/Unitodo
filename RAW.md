@@ -203,3 +203,4 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 1@Aron2 allow for switch profile in main page
 - [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause)
 - [ ] 1@Aruxf figure history,bi-sync problem, so that supporting view on phone;
+- [ ] 2@Ar4YD UI: align buttons
