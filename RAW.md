@@ -74,6 +74,16 @@ The config file is at `~/.config/unitodo/config.toml`.
 
 ## Todos
 
+- i feel that unitodo goes wrong. the goal was to make any thing i wanna do from anything to a linear list. so that i can keep on doing one by one.
+    - which seem to require a unique id (for sorting)
+- feature
+    - list mode (In A Row)
+    - tree mode
+        - archive (remember position in tree)
+        - dependency relationship, taxonomy, in a row
+        - 3d? color? just highlight the first in the tree?
+    - vim modal
+
 - [x] 2@@ArSOf unique-id can be fucking doomed! (with checking before applying)
     - [x] 2@@ArSOR render timestamp (even when not leading) / remove it?
 - [ ] 1 ci: submit to homebrew cask; make doc and everything more user-friendly
