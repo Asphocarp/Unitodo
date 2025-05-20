@@ -693,7 +693,7 @@ proto.unitodo.TodoItem.toObject = function(includeInstance, msg) {
   var f, obj = {
     content: jspb.Message.getFieldWithDefault(msg, 1, ""),
     location: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    completed: jspb.Message.getBooleanFieldWithDefault(msg, 3, false)
+    status: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -739,8 +739,8 @@ proto.unitodo.TodoItem.deserializeBinaryFromReader = function(msg, reader) {
       msg.setLocation(value);
       break;
     case 3:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setCompleted(value);
+      var value = /** @type {string} */ (reader.readString());
+      msg.setStatus(value);
       break;
     default:
       reader.skipField();
@@ -785,9 +785,9 @@ proto.unitodo.TodoItem.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getCompleted();
-  if (f) {
-    writer.writeBool(
+  f = message.getStatus();
+  if (f.length > 0) {
+    writer.writeString(
       3,
       f
     );
@@ -832,20 +832,20 @@ proto.unitodo.TodoItem.prototype.setLocation = function(value) {
 
 
 /**
- * optional bool completed = 3;
- * @return {boolean}
+ * optional string status = 3;
+ * @return {string}
  */
-proto.unitodo.TodoItem.prototype.getCompleted = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+proto.unitodo.TodoItem.prototype.getStatus = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
 };
 
 
 /**
- * @param {boolean} value
+ * @param {string} value
  * @return {!proto.unitodo.TodoItem} returns this
  */
-proto.unitodo.TodoItem.prototype.setCompleted = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 3, value);
+proto.unitodo.TodoItem.prototype.setStatus = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 

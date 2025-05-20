@@ -50,16 +50,20 @@ pub struct Config {
 
 impl Config {
     pub fn get_effective_rg_pattern(&self) -> String {
-        if self.todo_states.is_empty() {
-            return "^$".to_string(); 
+        if self.todo_states.is_empty() { 
+            return "^$".to_string(); // Return a pattern that matches nothing if no states defined
         }
         let patterns: Vec<String> = self
             .todo_states
             .iter()
-            .filter_map(|state_set| state_set.get(0))
-            .map(|p| regex::escape(p)) 
+            .flat_map(|state_set| state_set.iter()) // Flatten the Vec<Vec<String>> into an iterator of &String
+            .map(|p_str| regex::escape(p_str))    // Escape each state string
             .collect();
-        patterns.join("|") 
+        
+        if patterns.is_empty() {
+            return "^$".to_string(); // Handle case where states might be empty arrays
+        }
+        patterns.join("|") // Join all escaped state strings with OR operator
     }
 }
 

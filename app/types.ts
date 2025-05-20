@@ -1,7 +1,7 @@
 export interface TodoItem {
   content: string;
   location: string; // Example: "src/main.rs:123"
-  completed: boolean;
+  status: string;
 }
 
 export interface TodoCategory {

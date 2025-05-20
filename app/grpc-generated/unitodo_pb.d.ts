@@ -11,8 +11,8 @@ export class TodoItem extends jspb.Message {
     setContent(value: string): TodoItem;
     getLocation(): string;
     setLocation(value: string): TodoItem;
-    getCompleted(): boolean;
-    setCompleted(value: boolean): TodoItem;
+    getStatus(): string;
+    setStatus(value: string): TodoItem;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TodoItem.AsObject;
@@ -28,7 +28,7 @@ export namespace TodoItem {
     export type AsObject = {
         content: string,
         location: string,
-        completed: boolean,
+        status: string,
     }
 }
 

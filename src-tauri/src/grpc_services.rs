@@ -44,7 +44,7 @@ fn to_proto_todo_item(item: &InternalTodoItem) -> ProtoTodoItem {
     ProtoTodoItem {
         content: item.content.clone(),
         location: item.location.clone(),
-        completed: item.completed,
+        status: item.status.clone(),
     }
 }
 

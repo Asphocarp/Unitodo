@@ -7,7 +7,7 @@ package unitodo;
 message TodoItem {
     string content = 1;
     string location = 2;
-    bool completed = 3;
+    string status = 3;
 }
 
 message TodoCategory {

@@ -65,17 +65,11 @@ impl Sink for TodoSink {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Invalid regex in sink: {}",e)))?;
 
         if let Some(found_match) = todo_pattern_re.find(line) {
-            let raw_todo_content = line[found_match.end()..].trim();
-            let completed =
-                raw_todo_content.starts_with("[x]") || raw_todo_content.starts_with("[X]");
-            let mut cleaned_content = raw_todo_content;
-            if cleaned_content.starts_with("[ ]") || cleaned_content.starts_with("[x]") || cleaned_content.starts_with("[X]") {
-                cleaned_content = cleaned_content[3..].trim_start();
-            }
-            cleaned_content = cleaned_content
-                .trim_start_matches(|c: char| c == '-' || c == '*' || c.is_whitespace())
-                .trim();
-
+            let matched_status_marker = found_match.as_str().to_string();
+            
+            let content_after_marker = &line[found_match.end()..];
+            let cleaned_content = content_after_marker.trim_start().to_string();
+            
             let location = format!("{}:{}", file_path_str, line_num);
             let mut category = TodoCategoryEnum::Other;
             let mut project_match = false;
@@ -113,7 +107,11 @@ impl Sink for TodoSink {
                 }
             }
 
-            let todo_item = TodoItem { content: cleaned_content.to_string(), location, completed };
+            let todo_item = TodoItem {
+                content: cleaned_content,
+                location,
+                status: matched_status_marker,
+            };
             let mut todos_map = self.grouped_todos.lock();
             todos_map.entry(category).or_insert_with(Vec::new).push(todo_item);
         }

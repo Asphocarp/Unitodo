@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
             todos: grpcCat.getTodosList().map((grpcItem: PbTodoItem) => ({
                 content: grpcItem.getContent(),
                 location: grpcItem.getLocation(),
-                completed: grpcItem.getCompleted(),
+                status: grpcItem.getStatus(),
             })),
         }));
 

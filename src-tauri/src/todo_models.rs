@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct TodoItem {
     pub content: String,
     pub location: String,
-    pub completed: bool,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
