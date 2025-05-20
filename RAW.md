@@ -262,5 +262,6 @@ The config file is at `~/.config/unitodo/config.toml`.
   - say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
   - no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
   - dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
-  - DOING asdasd
+  - lets do a huge refractor: replace all `zustand` with `mobx` for state management. including all affected in files in @app  . 
+
 - [ ] use tRPC instead of gRPC
