@@ -32,8 +32,8 @@ export interface TodoState {
   toggleDisplayMode: () => void;
   setActiveTabIndex: (index: number) => void;
   navigateTabs: (direction: 'left' | 'right') => void;
-  filter: 'all' | 'active' | 'completed';
-  setFilter: (filterValue: 'all' | 'active' | 'completed') => void;
+  filter: 'all' | 'active' | 'closed';
+  setFilter: (filterValue: 'all' | 'active' | 'closed') => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   showKeyboardHelp: boolean;
@@ -102,7 +102,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   tableEditingCell: null,
   displayMode: 'table', // Default display mode
   activeTabIndex: 0,    // Default active tab
-  filter: 'all', // Default filter state
+  filter: 'active', // Default filter state
   setTableEditingCell: (cell) => set({ tableEditingCell: cell }),
   searchQuery: '',
   showKeyboardHelp: false,

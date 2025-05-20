@@ -66,7 +66,7 @@ export default function Todo() {
   const submitAddTodo = useTodoStore(state => state.submitAddTodo);
   
   const todoStoreState = useTodoStore.getState();
-  const showCompleted = filter === 'all' || filter === 'completed';
+  const showCompleted = filter === 'all' || filter === 'closed';
   const selectors = useTodoSelectors(showCompleted);
   const { active: activeTodos, done: completedTodos, total: totalTodos } = selectors.getTotalCounts;
   
@@ -313,7 +313,7 @@ export default function Todo() {
           break;
         case '3':
           if (!isEditingContext) {
-            setFilter('completed');
+            setFilter('closed');
           }
           break;
         case '/':
@@ -613,11 +613,11 @@ export default function Todo() {
       role="application"
       aria-label="Todo Application"
     >
-      {loading && (
+      {/* {loading && (
         <div className="fixed bottom-4 right-4 z-50 p-2 bg-neutral-100 dark:bg-neutral-700 rounded-full shadow-lg">
           <div className="animate-spin h-5 w-5 border-2 border-t-transparent border-accent-color rounded-full"></div>
         </div>
-      )}
+      )} */}
 
       <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between" data-tauri-drag-region="">
         <div className="flex items-center">
@@ -702,11 +702,11 @@ export default function Todo() {
             Active
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'completed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
-            onClick={() => setFilter('completed')}
-            title="Completed todos (3)"
+            className={`hn-filter-button ${filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
+            onClick={() => setFilter('closed')}
+            title="Closed todos (3)"
           >
-            Completed
+            Closed
           </button>
         </div>
       </div>
