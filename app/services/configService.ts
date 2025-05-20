@@ -6,7 +6,7 @@ import {
     ConfigMessage as ProtoConfigMessage,
     RgConfigMessage as ProtoRgConfigMessage,
     ProjectConfigMessage as ProtoProjectConfigMessage,
-    TodoDonePair as ProtoTodoDonePair,
+    TodoStateSet as ProtoTodoStateSet, // Assuming this is the new generated type
     // Request and Response types from gRPC for config service, including new profile ones
     GetConfigResponse as ProtoGetConfigResponse,
     UpdateConfigResponse as ProtoUpdateConfigResponse,
@@ -62,15 +62,14 @@ function appConfigToProtoConfigMessage(appConfig: AppConfig): ProtoConfigMessage
     protoConfig.setRefreshInterval(appConfig.refresh_interval || 0);
     protoConfig.setEditorUriScheme(appConfig.editor_uri_scheme || '');
 
-    if (appConfig.todo_done_pairs) {
-        appConfig.todo_done_pairs.forEach(pair => {
-            if (pair && pair.length === 2) {
-                const protoPair = new ProtoTodoDonePair();
-                protoPair.setTodoMarker(pair[0]);
-                protoPair.setDoneMarker(pair[1]);
-                protoConfig.addTodoDonePairs(protoPair);
-            }
+    // Convert appConfig.todo_states (string[][]) to list of ProtoTodoStateSet
+    if (appConfig.todo_states) {
+        const protoStateSets = appConfig.todo_states.map(state_set_array => {
+            const protoStateSet = new ProtoTodoStateSet();
+            protoStateSet.setStatesList(state_set_array);
+            return protoStateSet;
         });
+        protoConfig.setTodoStatesList(protoStateSets); // Use setTodoStatesList or addTodoStates based on generated API
     }
     protoConfig.setDefaultAppendBasename(appConfig.default_append_basename || '');
 
@@ -82,7 +81,7 @@ function appConfigToRustPayload(appConfig: AppConfig): any {
     const rgPayload: any = {
         paths: appConfig.rg?.paths || [],
         ignore: appConfig.rg?.ignore || [],
-        file_types: appConfig.rg?.file_types || [] // Matches 'file_types' in .proto
+        file_types: appConfig.rg?.file_types || [] 
     };
 
     const projectsPayload: { [key: string]: any } = {};
@@ -90,63 +89,93 @@ function appConfigToRustPayload(appConfig: AppConfig): any {
         for (const [key, projConfig] of Object.entries(appConfig.projects)) {
             projectsPayload[key] = {
                 patterns: projConfig.patterns || [],
-                append_file_path: projConfig.append_file_path // Matches 'append_file_path' in .proto
+                append_file_path: projConfig.append_file_path 
             };
         }
     }
 
-    const todoDonePairsPayload = (appConfig.todo_done_pairs || []).map(pair => ({
-        todo_marker: pair[0] || "", // Matches 'todo_marker' in .proto
-        done_marker: pair[1] || ""  // Matches 'done_marker' in .proto
-    }));
+    // This needs to match the structure that serde will deserialize into ProtoConfigMessage
+    // where ProtoConfigMessage has a field `todo_states: Vec<ProtoTodoStateSet>`
+    // and ProtoTodoStateSet is struct { states: Vec<String> }
+    const todoStatesForPayload = (appConfig.todo_states || []).map(state_set => {
+        return { states: state_set }; // Each item is an object { states: string[] }
+    });
 
     return {
         rg: rgPayload,
         projects: projectsPayload,
-        refresh_interval: appConfig.refresh_interval, // Matches 'refresh_interval' in .proto
-        editor_uri_scheme: appConfig.editor_uri_scheme, // Matches 'editor_uri_scheme' in .proto
-        todo_done_pairs: todoDonePairsPayload, // Matches 'todo_done_pairs' in .proto
-        default_append_basename: appConfig.default_append_basename // Matches 'default_append_basename' in .proto
+        refresh_interval: appConfig.refresh_interval,
+        editor_uri_scheme: appConfig.editor_uri_scheme,
+        todo_states: todoStatesForPayload, 
+        default_append_basename: appConfig.default_append_basename 
     };
 }
 
-// Helper to convert ProtoConfigMessage (from Rust command) to frontend AppConfig
-function protoConfigMessageToAppConfig(protoMsg?: any): AppConfig {
-    if (!protoMsg) { // Handle case where protoMsg might be undefined
+interface ProtoRgConfigShape {
+    paths?: string[];
+    ignore?: string[];
+    file_types?: string[];
+}
+
+interface ProtoProjectConfigShape {
+    patterns?: string[];
+    append_file_path?: string;
+}
+
+interface ProtoTodoStateSetShape {
+    states?: string[];
+}
+
+interface ProtoConfigMessageShape {
+    rg?: ProtoRgConfigShape;
+    projects?: { [key: string]: ProtoProjectConfigShape };
+    refresh_interval?: number;
+    editor_uri_scheme?: string;
+    todo_states?: ProtoTodoStateSetShape[]; 
+    default_append_basename?: string;
+}
+
+function protoConfigMessageToAppConfig(protoMsg?: ProtoConfigMessageShape): AppConfig {
+    if (!protoMsg) { 
         return {
             rg: { paths: [], ignore: [], file_types: [] }, 
             projects: {}, 
             refresh_interval: 5000, 
             editor_uri_scheme: 'vscode://file/',
-            todo_done_pairs: [],
+            todo_states: [], 
             default_append_basename: 'unitodo.append.md'
         } as AppConfig;
     }
     const projects: { [key: string]: { patterns: string[]; append_file_path?: string } } = {};
-    // Directly access the 'projects' property if it's a plain object map
-    if (protoMsg.projects && typeof protoMsg.projects === 'object') {
-        Object.entries(protoMsg.projects).forEach(([key, projectVal]: [string, any]) => {
+    if (protoMsg.projects) {
+        Object.entries(protoMsg.projects).forEach(([key, projectVal]) => {
             projects[key] = {
-                patterns: projectVal.patterns || [], // Assuming 'patterns' is an array
-                append_file_path: projectVal.append_file_path, // Matches 'append_file_path' in .proto
+                patterns: projectVal.patterns || [], 
+                append_file_path: projectVal.append_file_path,
             };
         });
     }
 
-    const rgVal = protoMsg.rg as any; // Cast to any for direct property access
+    const rgVal = protoMsg.rg;
+
+    let appTodoStates: string[][] = [];
+    if (protoMsg.todo_states && Array.isArray(protoMsg.todo_states)) {
+        appTodoStates = protoMsg.todo_states.map((protoStateSet) => {
+            return protoStateSet.states || [];
+        });
+    }
 
     return {
-        rg: rgVal ? {
-            paths: rgVal.paths || [], // Assuming 'paths' is an array
-            ignore: rgVal.ignore || [], // Assuming 'ignore' is an array
-            file_types: rgVal.file_types || [], // Matches 'file_types' in .proto
-        } : { paths: [], ignore: [], file_types: [] }, 
+        rg: {
+            paths: rgVal?.paths || [], 
+            ignore: rgVal?.ignore || [], 
+            file_types: rgVal?.file_types || [], 
+        }, 
         projects: projects,
-        refresh_interval: protoMsg.refresh_interval || 0, // Matches 'refresh_interval' in .proto
-        editor_uri_scheme: protoMsg.editor_uri_scheme || '', // Matches 'editor_uri_scheme' in .proto
-        // Assuming todo_done_pairs is an array of objects like { todo_marker: string, done_marker: string }
-        todo_done_pairs: (protoMsg.todo_done_pairs || []).map((p: any) => [p.todo_marker || '', p.done_marker || '']),
-        default_append_basename: protoMsg.default_append_basename || '', // Matches 'default_append_basename' in .proto
+        refresh_interval: protoMsg.refresh_interval || 0, 
+        editor_uri_scheme: protoMsg.editor_uri_scheme || '', 
+        todo_states: appTodoStates, 
+        default_append_basename: protoMsg.default_append_basename || '', 
     };
 }
 
@@ -154,7 +183,6 @@ function protoConfigMessageToAppConfig(protoMsg?: any): AppConfig {
 export async function fetchConfig(): Promise<{ config: AppConfig; activeProfileName: string }> {
   try {
     const result = await invoke<any>('get_config_command');
-    // Result is likely a plain object from Tauri, not a ProtoGetConfigResponse instance
     const plainResult = result as any; 
     const appConfig = protoConfigMessageToAppConfig(plainResult.config);
     return { 

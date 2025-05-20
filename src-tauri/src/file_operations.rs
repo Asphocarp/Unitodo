@@ -83,8 +83,8 @@ pub fn add_todo_to_file_grpc(active_profile_config: &Config, category_type: &str
     let sanitized_content = content.replace('\n', " ").trim().to_string();
     if sanitized_content.is_empty() { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Cannot add empty TODO")); } // UNITODO_IGNORE_LINE
     
-    let priority_marker = active_profile_config.todo_done_pairs.get(0)
-        .and_then(|pair| pair.get(0))
+    let todo_marker = active_profile_config.todo_states.get(0)
+        .and_then(|set| set.get(0)) // Get the first state (TODO marker) from the first set
         .map_or("- [ ] ", |marker_str| marker_str.as_str()); // UNITODO_IGNORE_LINE
 
     let (effective_priority_segment, content_segment) = {
@@ -99,7 +99,7 @@ pub fn add_todo_to_file_grpc(active_profile_config: &Config, category_type: &str
         }
     };
 
-    let base_line_to_append = format!("{}{}@{} {}", priority_marker, effective_priority_segment, timestamp_str, content_segment).trim_end().to_string();
+    let base_line_to_append = format!("{}{}{}@{} {}", todo_marker, effective_priority_segment, "", timestamp_str, content_segment).trim_end().to_string(); // Removed space before @, already in effective_priority_segment or content_segment if needed
 
     if let Some(parent_dir) = target_append_file_path.parent() { fs::create_dir_all(parent_dir)?; }
     else { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid target append file path (no parent dir)")); }
@@ -147,10 +147,10 @@ pub fn mark_todo_as_done_in_file_grpc(active_profile_config: &Config, location: 
             return Err(io::Error::new(io::ErrorKind::Other, error_msg)); 
         }
 
-        let todo_done_pairs = if active_profile_config.todo_done_pairs.is_empty() { 
-            crate::config_models::default_todo_done_pairs() 
+        let todo_state_sets = if active_profile_config.todo_states.is_empty() { 
+            crate::config_models::default_todo_states() 
         } else { 
-            active_profile_config.todo_done_pairs.clone() 
+            active_profile_config.todo_states.clone() 
         };
         let mut marker_transformed = false;
         let marker_re = Regex::new(&effective_rg_pattern).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Bad regex for mark_done marker pattern"))?;
@@ -164,9 +164,9 @@ pub fn mark_todo_as_done_in_file_grpc(active_profile_config: &Config, location: 
             let content_after_marker_with_space = &original_line_on_disk[mat.end()..];
             let mut transformed_marker_str = matched_todo_marker.to_string();
 
-            for pair in &todo_done_pairs {
-                if pair.len() == 2 && pair[0] == matched_todo_marker {
-                    transformed_marker_str = pair[1].clone();
+            for state_set in &todo_state_sets {
+                if state_set.len() >= 3 && state_set[0] == matched_todo_marker { // Assuming DONE is the 3rd state (index 2)
+                    transformed_marker_str = state_set[2].clone();
                     marker_transformed = true;
                     break;
                 }

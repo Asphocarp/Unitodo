@@ -318,6 +318,28 @@ export namespace ProjectConfigMessage {
     }
 }
 
+export class TodoStateSet extends jspb.Message { 
+    clearStatesList(): void;
+    getStatesList(): Array<string>;
+    setStatesList(value: Array<string>): TodoStateSet;
+    addStates(value: string, index?: number): string;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TodoStateSet.AsObject;
+    static toObject(includeInstance: boolean, msg: TodoStateSet): TodoStateSet.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TodoStateSet, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TodoStateSet;
+    static deserializeBinaryFromReader(message: TodoStateSet, reader: jspb.BinaryReader): TodoStateSet;
+}
+
+export namespace TodoStateSet {
+    export type AsObject = {
+        statesList: Array<string>,
+    }
+}
+
 export class ConfigMessage extends jspb.Message { 
 
     hasRg(): boolean;
@@ -331,10 +353,10 @@ export class ConfigMessage extends jspb.Message {
     setRefreshInterval(value: number): ConfigMessage;
     getEditorUriScheme(): string;
     setEditorUriScheme(value: string): ConfigMessage;
-    clearTodoDonePairsList(): void;
-    getTodoDonePairsList(): Array<TodoDonePair>;
-    setTodoDonePairsList(value: Array<TodoDonePair>): ConfigMessage;
-    addTodoDonePairs(value?: TodoDonePair, index?: number): TodoDonePair;
+    clearTodoStatesList(): void;
+    getTodoStatesList(): Array<TodoStateSet>;
+    setTodoStatesList(value: Array<TodoStateSet>): ConfigMessage;
+    addTodoStates(value?: TodoStateSet, index?: number): TodoStateSet;
     getDefaultAppendBasename(): string;
     setDefaultAppendBasename(value: string): ConfigMessage;
 
@@ -355,31 +377,8 @@ export namespace ConfigMessage {
         projectsMap: Array<[string, ProjectConfigMessage.AsObject]>,
         refreshInterval: number,
         editorUriScheme: string,
-        todoDonePairsList: Array<TodoDonePair.AsObject>,
+        todoStatesList: Array<TodoStateSet.AsObject>,
         defaultAppendBasename: string,
-    }
-}
-
-export class TodoDonePair extends jspb.Message { 
-    getTodoMarker(): string;
-    setTodoMarker(value: string): TodoDonePair;
-    getDoneMarker(): string;
-    setDoneMarker(value: string): TodoDonePair;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TodoDonePair.AsObject;
-    static toObject(includeInstance: boolean, msg: TodoDonePair): TodoDonePair.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TodoDonePair, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TodoDonePair;
-    static deserializeBinaryFromReader(message: TodoDonePair, reader: jspb.BinaryReader): TodoDonePair;
-}
-
-export namespace TodoDonePair {
-    export type AsObject = {
-        todoMarker: string,
-        doneMarker: string,
     }
 }
 

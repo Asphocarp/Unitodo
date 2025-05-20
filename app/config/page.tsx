@@ -89,14 +89,16 @@ export default function ConfigPage() {
     updateProjectAppendPathForCurrentProfile,
     addProjectToCurrentProfile,
     removeProjectFromCurrentProfile,
-    addTodoDonePairToCurrentProfile,
-    removeTodoDonePairFromCurrentProfile,
+    addTodoStateSetToCurrentProfile,
+    removeTodoStateSetFromCurrentProfile,
   } = useConfigStore();
   
   const { isDarkMode } = useDarkMode();
   const [newProjectName, setNewProjectName] = useState('');
-  const [newTodoPattern, setNewTodoPattern] = useState('');
-  const [newDonePattern, setNewDonePattern] = useState('');
+  const [newState1, setNewState1] = useState('');
+  const [newState2, setNewState2] = useState('');
+  const [newState3, setNewState3] = useState('');
+  const [newState4, setNewState4] = useState('');
   const [newProfileNameField, setNewProfileNameField] = useState('');
   const [copyFromProfile, setCopyFromProfile] = useState<string | undefined>(undefined);
 
@@ -118,11 +120,14 @@ export default function ConfigPage() {
       }
   };
 
-  const handleAddTodoDonePair = () => {
-    if (newTodoPattern.trim() && newDonePattern.trim()) {
-        addTodoDonePairToCurrentProfile([newTodoPattern.trim(), newDonePattern.trim()]);
-        setNewTodoPattern('');
-        setNewDonePattern('');
+  const handleAddTodoStateSet = () => {
+    const states = [newState1, newState2, newState3, newState4];
+    if (states.some(s => s !== '')) {
+        addTodoStateSetToCurrentProfile(states);
+        setNewState1('');
+        setNewState2('');
+        setNewState3('');
+        setNewState4('');
     }
   };
 
@@ -377,57 +382,70 @@ export default function ConfigPage() {
         </section>
 
         <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
-          <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">TODO/DONE Pattern Pairs (Profile: {activeProfileName})</h2>
+          <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">TODO State Sets (Profile: {activeProfileName})</h2>
           <div className="mb-4 p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
               <InputField
-                label="New TODO Pattern"
-                type="text"
-                value={newTodoPattern}
-                onChange={(e) => setNewTodoPattern(e.target.value)}
-                placeholder="e.g., - [ ] or TODO:"
-                className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
-                disabled={isSaving || profilesLoading}
+                  label="State 1 (e.g., TODO, - [ ] )"
+                  type="text"
+                  value={newState1}
+                  onChange={(e) => setNewState1(e.target.value)}
+                  placeholder="e.g., TODO:"
+                  className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
+                  disabled={isSaving || profilesLoading}
               />
               <InputField
-                label="New DONE Pattern"
-                type="text"
-                value={newDonePattern}
-                onChange={(e) => setNewDonePattern(e.target.value)}
-                placeholder="e.g., - [x] or DONE:"
-                className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
-                disabled={isSaving || profilesLoading}
+                  label="State 2 (e.g., DOING, - [-] )"
+                  type="text"
+                  value={newState2}
+                  onChange={(e) => setNewState2(e.target.value)}
+                  placeholder="e.g., DOING:"
+                  className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
+                  disabled={isSaving || profilesLoading}
+              />
+              <InputField
+                  label="State 3 (e.g., DONE, - [x] )"
+                  type="text"
+                  value={newState3}
+                  onChange={(e) => setNewState3(e.target.value)}
+                  placeholder="e.g., DONE:"
+                  className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
+                  disabled={isSaving || profilesLoading}
+              />
+              <InputField
+                  label="State 4 (e.g., CANCELLED, - [/] )"
+                  type="text"
+                  value={newState4}
+                  onChange={(e) => setNewState4(e.target.value)}
+                  placeholder="e.g., CANCELLED:"
+                  className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
+                  disabled={isSaving || profilesLoading}
               />
             </div>
             <button 
               type="button"
-              onClick={handleAddTodoDonePair}
+              onClick={handleAddTodoStateSet}
               className="px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-white rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm disabled:opacity-50"
-              disabled={isSaving || profilesLoading || !newTodoPattern.trim() || !newDonePattern.trim()}
+              disabled={isSaving || profilesLoading || (!newState1 && !newState2 && !newState3 && !newState4)}
             >
-              <span className="mr-1">+</span> Add Pattern Pair
+              <span className="mr-1">+</span> Add State Set
             </button>
           </div>
 
-          {config.todo_done_pairs && config.todo_done_pairs.length > 0 ? (
+          {config.todo_states && config.todo_states.length > 0 ? (
             <div className="space-y-2">
-              {config.todo_done_pairs.map((pair, index) => (
+              {config.todo_states.map((state_set, index) => (
                 <div key={index} className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md flex justify-between items-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-sm">
-                  <div className="flex-grow grid grid-cols-2 gap-4">
-                    <div className="text-xs dark:text-neutral-300">
-                      <span className="font-medium text-neutral-600 dark:text-neutral-400">TODO:</span>
-                      <code className="ml-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{pair[0].replace(/ /g, '\u00A0')}</code>
-                    </div>
-                    <div className="text-xs dark:text-neutral-300">
-                      <span className="font-medium text-neutral-600 dark:text-neutral-400">DONE:</span>
-                      <code className="ml-1 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{pair[1].replace(/ /g, '\u00A0')}</code>
-                    </div>
+                  <div className="flex-grow text-xs dark:text-neutral-300">
+                    {state_set.map((state, stateIndex) => (
+                        <code key={stateIndex} className="mr-1.5 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{state.replace(/ /g, '\u00A0')}</code>
+                    ))}
                   </div>
                   <button 
                     type="button"
-                    onClick={() => removeTodoDonePairFromCurrentProfile(index)}
+                    onClick={() => removeTodoStateSetFromCurrentProfile(index)} 
                     className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-4 flex items-center bg-red-50 dark:bg-red-900/20 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
-                    aria-label="Remove pattern pair"
+                    aria-label="Remove state set"
                     disabled={isSaving || profilesLoading}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -436,7 +454,29 @@ export default function ConfigPage() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">No TODO/DONE pattern pairs defined for this profile. Defaults will be used by the backend if not specified.</p>
+            (() => {
+              const defaultTodoStates: string[][] = [
+                ["- [ ] ", "- [-] ", "- [x] ", "- [/] "],
+                ["TODO:", "DOING:", "DONE:", "CANCELLED:"],
+                ["TODO", "DOING", "DONE", "CANCELLED"]
+              ];
+              return (
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">
+                  <p className="mb-2 not-italic text-neutral-600 dark:text-neutral-300">No TODO state sets defined for this profile. The following defaults will be used by the backend:</p>
+                  <div className="space-y-1 not-italic">
+                    {defaultTodoStates.map((state_set: string[], index: number) => (
+                      <div key={`default-${index}`} className="p-2 border border-neutral-200 dark:border-neutral-600 rounded-md flex bg-white dark:bg-neutral-750 shadow-sm">
+                        <div className="flex-grow text-xs dark:text-neutral-300">
+                          {state_set.map((state: string, stateIndex: number) => (
+                              <code key={`default-${index}-${stateIndex}`} className="mr-1.5 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-sm">{state.replace(/ /g, '\u00A0')}</code>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()
           )}
         </section>
 

@@ -79,18 +79,18 @@ message ProjectConfigMessage {
     optional string append_file_path = 2;
 }
 
+// New message for representing a set of TODO states
+message TodoStateSet {
+    repeated string states = 1;
+}
+
 message ConfigMessage {
     RgConfigMessage rg = 1;
     map<string, ProjectConfigMessage> projects = 2;
     uint32 refresh_interval = 3;
     string editor_uri_scheme = 4;
-    repeated TodoDonePair todo_done_pairs = 5;
+    repeated TodoStateSet todo_states = 5; // Changed from todo_done_pairs
     string default_append_basename = 6;
-}
-
-message TodoDonePair {
-    string todo_marker = 1;
-    string done_marker = 2;
 }
 
 // New messages for profile management

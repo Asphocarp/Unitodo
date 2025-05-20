@@ -3,7 +3,11 @@ active_profile = "default"
 [profiles.default]
 refresh_interval = 5000
 editor_uri_scheme = "cursor://file/"
-todo_done_pairs = [["- [ ] ", "- [x] "], ["TODO:", "DONE:"], ["TODO", "DONE"]]
+todo_states = [
+  ["- [ ] ", "- [-] ", "- [x] ", "- [/] "],
+  ["TODO:", "DOING:", "DONE:", "CANCELLED:"],
+  ["TODO", "DOING", "DONE", "CANCELLED"]
+]
 default_append_basename = "unitodo.append.md"
 
 [profiles.default.rg]

@@ -29,9 +29,9 @@ interface ConfigState {
   updateProjectAppendPathForCurrentProfile: (projectName: string, path: string) => void;
   addProjectToCurrentProfile: (projectName: string) => void;
   removeProjectFromCurrentProfile: (projectName: string) => void;
-  addTodoDonePairToCurrentProfile: (pair: [string, string]) => void;
-  updateTodoDonePairInCurrentProfile: (index: number, pair: [string, string]) => void;
-  removeTodoDonePairFromCurrentProfile: (index: number) => void;
+  addTodoStateSetToCurrentProfile: (set: string[]) => void;
+  updateTodoStateSetInCurrentProfile: (index: number, set: string[]) => void;
+  removeTodoStateSetFromCurrentProfile: (index: number) => void;
 }
 
 const useConfigStore = create<ConfigState>((set, get) => ({
@@ -54,7 +54,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       const { config, activeProfileName } = await fetchConfig(); 
       const validatedConfig = {
         ...config,
-        todo_done_pairs: config.todo_done_pairs || [],
+        todo_states: config.todo_states || [],
       };
       set({
         config: validatedConfig,
@@ -92,7 +92,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       const { config, activeProfileName: newActiveProfileName } = await fetchConfig(); 
       const validatedConfig = {
         ...config,
-        todo_done_pairs: config.todo_done_pairs || [],
+        todo_states: config.todo_states || [],
       };
       set({
         config: validatedConfig,
@@ -143,7 +143,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
     set({ isSaving: true, error: null, saveMessage: null });
     try {
       const response = await updateConfig(currentConfig);
-      set((state) => ({
+      set((state: ConfigState) => ({
         isSaving: false,
         saveMessage: response.message || 'Configuration saved successfully.',
         config: state.config,
@@ -159,7 +159,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   updateConfigFieldForCurrentProfile: (field, value) => {
-    set((state) => {
+    set((state: ConfigState) => {
       if (!state.config) return {};
       return {
         config: { ...state.config, [field]: value },
@@ -168,7 +168,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   updateRgFieldForCurrentProfile: (field, value) => {
-    set((state) => {
+    set((state: ConfigState) => {
       if (!state.config || !state.config.rg) return {};
       return {
         config: {
@@ -180,7 +180,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
   
   updateProjectFieldForCurrentProfile: (projectName, patterns) => {
-      set((state) => {
+      set((state: ConfigState) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
           const updatedProject = { 
@@ -195,7 +195,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   updateProjectAppendPathForCurrentProfile: (projectName, path) => {
-      set((state) => {
+      set((state: ConfigState) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
           const updatedProject = { 
@@ -210,7 +210,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   addProjectToCurrentProfile: (projectName) => {
-      set((state) => {
+      set((state: ConfigState) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
           if (currentProjects[projectName]) return {}; 
@@ -222,7 +222,7 @@ const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   removeProjectFromCurrentProfile: (projectName) => {
-      set((state) => {
+      set((state: ConfigState) => {
           if (!state.config) return {};
           const currentProjects = state.config.projects || {};
           const newProjects = { ...currentProjects };
@@ -233,44 +233,44 @@ const useConfigStore = create<ConfigState>((set, get) => ({
       });
   },
 
-  addTodoDonePairToCurrentProfile: (pair) => {
-    set((state) => {
-      if (!state.config) return {};
-      const currentPairs = state.config.todo_done_pairs || [];
+  addTodoStateSetToCurrentProfile: (setToAdd: string[]) => { 
+    set((state: ConfigState) => {
+      if (!state.config) return { config: null };
+      const currentSets = state.config.todo_states || []; 
       return {
         config: {
           ...state.config,
-          todo_done_pairs: [...currentPairs, pair],
+          todo_states: [...currentSets, setToAdd], 
         },
       };
     });
   },
 
-  updateTodoDonePairInCurrentProfile: (index, pair) => {
-    set((state) => {
-      if (!state.config) return {};
-      const currentPairs = state.config.todo_done_pairs || [];
-      if (index < 0 || index >= currentPairs.length) return {};
-      const newPairs = [...currentPairs];
-      newPairs[index] = pair;
+  updateTodoStateSetInCurrentProfile: (index: number, setToUpdate: string[]) => { 
+    set((state: ConfigState) => {
+      if (!state.config) return { config: null };
+      const currentSets = state.config.todo_states || []; 
+      if (index < 0 || index >= currentSets.length) return { config: state.config };
+      const newSets = [...currentSets];
+      newSets[index] = setToUpdate;
       return {
         config: {
           ...state.config,
-          todo_done_pairs: newPairs,
+          todo_states: newSets, 
         },
       };
     });
   },
 
-  removeTodoDonePairFromCurrentProfile: (index) => {
-    set((state) => {
-      if (!state.config) return {};
-      const currentPairs = state.config.todo_done_pairs || [];
-      if (index < 0 || index >= currentPairs.length) return {};
+  removeTodoStateSetFromCurrentProfile: (index: number) => { 
+    set((state: ConfigState) => {
+      if (!state.config) return { config: null };
+      const currentSets = state.config.todo_states || []; 
+      if (index < 0 || index >= currentSets.length) return { config: state.config };
       return {
         config: {
           ...state.config,
-          todo_done_pairs: currentPairs.filter((_, i) => i !== index),
+          todo_states: currentSets.filter((_, i) => i !== index), 
         },
       };
     });

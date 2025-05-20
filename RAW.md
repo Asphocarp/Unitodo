@@ -76,7 +76,10 @@ T0DO1@fffff@@eeeee content lalalaa
 
 T0DO 1@fffff content lalalaa
 T0DO: 1@fffff content lalalaa
-- [x] 1@AoVs5 content lalalaa
+- [ ] 1@AoVs5 content lalalaa
+- [-] 1@AoVs5 In progress example // UNITODO_IGNORE_LINE
+- [x] 1@AoVs5 Done example // UNITODO_IGNORE_LINE
+- [/] 1@AoVs5 Cancelled example // UNITODO_IGNORE_LINE
 ```
 
 where:
@@ -84,11 +87,12 @@ where:
 - At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list. <!-- UNITODO_IGNORE_LINE -->
   - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
 - `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`. <!-- UNITODO_IGNORE_LINE -->
-  - `@@eeeee` is a timestamp indicating when the TODO was done. <!-- UNITODO_IGNORE_LINE -->
+  - `@@eeeee` is a timestamp indicating when the TODO was done. This timestamp is typically appended when an item is transitioned to a "DONE" state (e.g., the third state in a configured set like `- [x]`). <!-- UNITODO_IGNORE_LINE -->
 - `#Jl_obVmSA7XCwzp7hkT2r` is a unique nanoid of 20 chars.
 - `##12` is a unique incremented number id, assigned by unitodo system.
 - Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
 - We only match all of above stuff in the-first-word of the line, excluding all leading blanks and `:`.
+- The initial part of the line (e.g., `- [ ] `, `TODO:`, `T0DO`) determines the TODO's current state. These state markers are configurable in `todo_states` in `config.toml`, where each sub-array defines a set of states (e.g., Todo, Doing, Done, Cancelled).
 
 ## Best practices
 
@@ -160,8 +164,8 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 1 do not scroll twice (when 5j too low)
 - [x] 1 fix: when i type in search textarea, the focus is immdietely taken by the todo item, making me unable to continue my typing.
 - [x] 1@@ApYJ6 feat: fix hotkeys, toggle-checkbox
-- [x] 1@@ApYQO add feat: `space` to mark the todo item as done via: 1. change `TODO`/`TODO:`/`- [ ]` to `DONE`/`DONE:`/`- [x]` 2. append `@@fffff` (the finished timestamp) to the-first-word // UNITODO_IGNORE_LINE
-  - [x] 2 make it configurable, like pairs of `TODO`&`DONE`/`TODO:`&`DONE:`/`- [ ]`&`- [x]` // UNITODO_IGNORE_LINE
+- [x] 1@@ApYQO add feat: `space` to mark the todo item as done via: 1. change current state marker (e.g. `TODO`/`- [ ]`) to its corresponding "DONE" state marker (e.g. `DONE`/`- [x]`, typically the third item in a state set in `config.toml`) 2. append `@@fffff` (the finished timestamp) to the-first-word // UNITODO_IGNORE_LINE
+  - [x] 2 make it configurable, like sets of `TODO`/`DOING`/`DONE`/`CANCELLED` states in `config.toml` // UNITODO_IGNORE_LINE
 - [x] 1 fix: using "display: flex" or "display: inline-flex" on an element containing content editable, Chrome may have unwanted focusing behavior when clicking outside of it. Consider wrapping the content editable within a non-flex element.
 - [x] 0 add feat: allow for adding todo to a section (git/project currently) (press `o`), by append to `unitodo.append.md` file beside the `.git` folder (if it is a git section). if it is a project section, the user should have assigned a project default file path for appending to it (like the `/path/to/project/unitodo.append.md`). (you need to add config items for this)
 - [x] 0 all a config page for the frontend, where almost anything can be configed, including: 0. project setting in the toml 1. auto-refresh interval 2. vscode/cursor uri 3. ignore glob list. At best replace entire toml config file via more payload for both apis (modify the rust api @main.rs accordingly)
@@ -253,8 +257,10 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
 - [ ] 00 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
 
-- [ ] (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)?
+- [ ] (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
 - [ ] custom sorting? editing like vim (dd move it to dropover/clipboard sec); 
   - say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
   - no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
   - dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
+  - DOING asdasd
+- [ ] use tRPC instead of gRPC

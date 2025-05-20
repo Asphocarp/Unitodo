@@ -37,13 +37,16 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
     configMessage.setRefreshInterval(appConfig.refresh_interval);
     configMessage.setEditorUriScheme(appConfig.editor_uri_scheme);
     
-    const todoDonePairs = appConfig.todo_done_pairs.map(pairArray => {
+    // Adapt appConfig.todo_states to PbTodoDonePair for gRPC
+    const todoDonePairsMessages = (appConfig.todo_states || []).map(state_set => {
         const pairMessage = new PbTodoDonePair();
-        pairMessage.setTodoMarker(pairArray[0] || "");
-        pairMessage.setDoneMarker(pairArray[1] || "");
+        pairMessage.setTodoMarker(state_set[0] || ""); // First element as todo_marker
+        // Third element as done_marker, with fallbacks
+        const doneMarker = state_set.length >= 3 ? state_set[2] : (state_set.length >=2 ? state_set[1] : (state_set[0] || ""));
+        pairMessage.setDoneMarker(doneMarker);
         return pairMessage;
     });
-    configMessage.setTodoDonePairsList(todoDonePairs);
+    configMessage.setTodoDonePairsList(todoDonePairsMessages);
     configMessage.setDefaultAppendBasename(appConfig.default_append_basename);
     
     return configMessage;
@@ -52,13 +55,12 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
 // --- Helper: gRPC ConfigMessage to AppConfig ---
 function grpcConfigMessageToAppConfig(configMessage?: PbConfigMessage): AppConfig {
     if (!configMessage) {
-        // Return a default or empty AppConfig if configMessage is undefined
         return {
             rg: { paths: [], ignore: [], file_types: [] },
             projects: {},
             refresh_interval: 5000,
             editor_uri_scheme: 'vscode://file/',
-            todo_done_pairs: [],
+            todo_states: [], // Changed from todo_done_pairs
             default_append_basename: 'unitodo.append.md'
         };
     }
@@ -70,6 +72,11 @@ function grpcConfigMessageToAppConfig(configMessage?: PbConfigMessage): AppConfi
         };
     });
 
+    // Adapt PbTodoDonePair list from gRPC to AppConfig.todo_states
+    const appTodoStates: string[][] = configMessage.getTodoDonePairsList().map((pair: PbTodoDonePair) => 
+        [pair.getTodoMarker(), pair.getDoneMarker()]
+    );
+
     return {
         rg: {
             paths: configMessage.getRg()?.getPathsList() || [],
@@ -79,7 +86,7 @@ function grpcConfigMessageToAppConfig(configMessage?: PbConfigMessage): AppConfi
         projects: projects,
         refresh_interval: configMessage.getRefreshInterval(),
         editor_uri_scheme: configMessage.getEditorUriScheme(),
-        todo_done_pairs: configMessage.getTodoDonePairsList().map((pair: PbTodoDonePair) => [pair.getTodoMarker(), pair.getDoneMarker()]),
+        todo_states: appTodoStates, // Changed from todo_done_pairs
         default_append_basename: configMessage.getDefaultAppendBasename(),
     };
 }
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
                 projects: {},
                 refresh_interval: 5000,
                 editor_uri_scheme: 'vscode://file/',
-                todo_done_pairs: [],
+                todo_states: [], // Changed from todo_done_pairs
                 default_append_basename: 'unitodo.append.md'
             },
             activeProfileName: 'default'

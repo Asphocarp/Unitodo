@@ -16,7 +16,7 @@ export interface Config {
   projects: Record<string, ProjectConfig>; // Updated: Value is now ProjectConfig
   refresh_interval: number; // u32 -> number
   editor_uri_scheme: string;
-  todo_done_pairs: string[][]; // Added: Array of [todo_pattern, done_pattern] strings
+  todo_states: string[][]; // Changed from todo_done_pairs, type updated to string[][]
   default_append_basename: string; // Default filename for appending todos in git repos
 }
 

@@ -43,9 +43,9 @@ export default function AddTodoModal({
   if (!isOpen) return null;
 
   // Get the appropriate todo pattern from config
-  let todoPattern = '- [ ] '; // UNITODO_IGNORE_LINE
-  if (config?.todo_done_pairs && config.todo_done_pairs.length > 0) {
-    todoPattern = config.todo_done_pairs[0][0];
+  let todoPattern = '- [ ] '; // Default TODO marker
+  if (config?.todo_states && config.todo_states.length > 0 && config.todo_states[0] && config.todo_states[0].length > 0) {
+    todoPattern = config.todo_states[0][0]; // Use first state of first set
     // Add space if pattern doesn't end with one
     if (!todoPattern.endsWith(' ')) {
       todoPattern += ' ';

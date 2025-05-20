@@ -28,7 +28,7 @@ use crate::unitodo_proto::{
     ProjectConfigMessage as ProtoProjectConfigMessage, // Assuming this is how it's named in proto
     RgConfigMessage as ProtoRgConfigMessage,       // Assuming this is how it's named in proto
     TodoCategory as ProtoTodoCategory,
-    TodoDonePair as ProtoTodoDonePair,
+    TodoStateSet as ProtoTodoStateSet, // New type from regenerated proto
     TodoItem as ProtoTodoItem,
     UpdateConfigRequest,
     UpdateConfigResponse,
@@ -70,8 +70,8 @@ fn to_proto_config(config: &Config) -> ProtoConfigMessage {
         })).collect(),
         refresh_interval: config.refresh_interval,
         editor_uri_scheme: config.editor_uri_scheme.clone(),
-        todo_done_pairs: config.todo_done_pairs.iter().filter_map(|p| {
-            if p.len() == 2 { Some(ProtoTodoDonePair { todo_marker: p[0].clone(), done_marker: p[1].clone() }) } else { None }
+        todo_states: config.todo_states.iter().map(|state_set_vec| {
+            ProtoTodoStateSet { states: state_set_vec.clone() }
         }).collect(),
         default_append_basename: config.default_append_basename.clone(),
     }
@@ -91,7 +91,9 @@ fn from_proto_config(proto_config: ProtoConfigMessage) -> Config {
         })).collect(),
         refresh_interval: proto_config.refresh_interval,
         editor_uri_scheme: proto_config.editor_uri_scheme,
-        todo_done_pairs: proto_config.todo_done_pairs.into_iter().map(|p| vec![p.todo_marker, p.done_marker]).collect(),
+        todo_states: proto_config.todo_states.into_iter().map(|proto_state_set| {
+            proto_state_set.states // This is already Vec<String>
+        }).collect(),
         default_append_basename: proto_config.default_append_basename,
     }
 }

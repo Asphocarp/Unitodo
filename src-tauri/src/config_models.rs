@@ -42,21 +42,21 @@ pub struct Config {
     pub refresh_interval: u32,
     #[serde(default = "default_editor_uri_scheme")]
     pub editor_uri_scheme: String,
-    #[serde(default = "default_todo_done_pairs")]
-    pub todo_done_pairs: Vec<Vec<String>>,
+    #[serde(default = "default_todo_states")]
+    pub todo_states: Vec<Vec<String>>,
     #[serde(default = "default_append_basename")]
     pub default_append_basename: String,
 }
 
 impl Config {
     pub fn get_effective_rg_pattern(&self) -> String {
-        if self.todo_done_pairs.is_empty() {
+        if self.todo_states.is_empty() {
             return "^$".to_string(); 
         }
         let patterns: Vec<String> = self
-            .todo_done_pairs
+            .todo_states
             .iter()
-            .filter_map(|pair| pair.get(0)) 
+            .filter_map(|state_set| state_set.get(0))
             .map(|p| regex::escape(p)) 
             .collect();
         patterns.join("|") 
@@ -83,11 +83,11 @@ pub struct ProjectConfig {
 pub fn default_search_paths() -> Vec<String> { vec![".".to_string()] } // Made public
 pub fn default_refresh_interval() -> u32 { 5000 } // Made public
 pub fn default_editor_uri_scheme() -> String { "vscode://file/".to_string() } // Made public
-pub fn default_todo_done_pairs() -> Vec<Vec<String>> { // Made public
+pub fn default_todo_states() -> Vec<Vec<String>> { 
     vec![
-        vec!["- [ ] ".to_string(), "- [x] ".to_string()], // UNITODO_IGNORE_LINE
-        vec!["TODO:".to_string(), "DONE:".to_string()], // UNITODO_IGNORE_LINE
-        vec!["TODO".to_string(), "DONE".to_string()], // UNITODO_IGNORE_LINE
+        vec!["- [ ] ".to_string(), "- [-] ".to_string(), "- [x] ".to_string(), "- [/] ".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO:".to_string(), "DOING:".to_string(), "DONE:".to_string(), "CANCELLED:".to_string()], // UNITODO_IGNORE_LINE
+        vec!["TODO".to_string(), "DOING".to_string(), "DONE".to_string(), "CANCELLED".to_string()], // UNITODO_IGNORE_LINE
     ]
 }
 pub fn default_append_basename() -> String { "unitodo.append.md".to_string() } // Made public 
