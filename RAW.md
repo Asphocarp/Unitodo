@@ -1,34 +1,73 @@
 # Unitodo
-- **Unifying Distributed TODOs** <!-- UNITODO_IGNORE_LINE -->
 
+- **Unifying Distributed TODOs** <!-- UNITODO_IGNORE_LINE -->
 
 ## idea
 
 - give every todo a unique ID while distributing them everywhere
-- collect them in real time at one place 
-    - obsidian (simply a markdown file)?
-    - webview? notion? terminal?
+- collect them in real time at one place
+  - obsidian (simply a markdown file)?
+  - webview? notion? terminal?
 - (impact) so that every Todo is in one place, and all you need to do today is DO things after ranking them.
 
 ## story
 
 pain point:
 - notion: not hign-performance; bi-sync; vim; (intelligent adding)
+- finally, being able to control your own recommendation system (prompts as recommendation algorithm)
+  - When you use any social media, you're not really choosing what you're looking at. You just scroll and the site decides what you're going to look at next.
 
-## related work:
-https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus
+motivation/insight:
+- LLM-friendly, plain-text, vim-able, high-performance, distributed, bi-sync TODO system.
+- LLM has tendency to leave todos/placeholders in codes, like this: 
+```ts
+  // ---- Placeholder for YouTube API fetching logic ----
+  // This would involve: 
+  // 1. Calling YouTube Data API v3 (e.g., search.list or playlistItems.list)
+  //    `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${youtubeChannelApiId}&order=date&maxResults=50&type=video&key=${YOUTUBE_API_KEY}`
+  // 2. Paging through results if necessary.
+  interface ApiVideoItem { 
+    id: { videoId: string }
+    snippet: { 
+      title: string
+      description: string
+      publishedAt: string
+      thumbnails: { high?: { url: string }, medium?: {url: string}, default?: {url: string} }
+      channelId: string // To confirm it matches
+      channelTitle: string // Can be used if our DB stored one is stale
+    }
+  }
+  const fetchedVideosFromApi: ApiVideoItem[] = [] // Replace with actual API call
+  // --- End of Placeholder ---
+
+  if (fetchedVideosFromApi.length === 0) {
+    // Update last fetched time even if no new videos, to indicate an attempt was made
+    await db.update(sourcesTable)
+      .set({ lastFetchedAt: new Date(), updatedAt: new Date() })
+      .where(eq(sourcesTable.sourceId, genericSourceId))
+    console.log("No new videos found or API call placeholder not implemented for channel:", youtubeChannelApiId)
+    return
+  }
+```
+- therefore, it is natural to let it cook, and aggregate todos later. (besides, rg is fast)
+  - ! but: let it register todos after coding is also not that hard...
+
+## related work
+
+<https://marketplace.cursorapi.com/items?itemName=fabiospampinato.vscode-todo-plus>
+<https://www.task-master.dev/>
 
 - key diff:
-    - with key features, but not disturbingly long even in plain text (in code)
-    - focus on so-called `embeded` todos. 
-    - all-in-one experience.
-    - same in: plain-text
-
+  - with key features, but not disturbingly long even in plain text (in code)
+  - focus on so-called `embeded` todos.
+  - all-in-one experience.
+  - same in: plain-text
 
 
 ## format / parsing
 
 EGs:
+
 ```bash
 T0DO1@fffff content lalalaa
 T0DO1#Jl_obVmSA7XCwzp7hkT2r content lalalaa
@@ -39,16 +78,17 @@ T0DO 1@fffff content lalalaa
 T0DO: 1@fffff content lalalaa
 - [x] 1@AoVs5 content lalalaa
 ```
+
 where:
+
 - At the beginning, `1` is any alphanumeric string before `@` or `#`, for user to prioritize the TODO in a alphabetically sorted list. <!-- UNITODO_IGNORE_LINE -->
-    - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
+  - EG, I use `0-3` to indicate the priority tier, `0` being the highest.
 - `@fffff` is a timestamp indicating when the TODO was created, using my timestamp format, 5-char URL-safe base64 unix timestamp, starting from 25.1.1, EG: `AlscR`. <!-- UNITODO_IGNORE_LINE -->
-    - `@@eeeee` is a timestamp indicating when the TODO was done. <!-- UNITODO_IGNORE_LINE -->
+  - `@@eeeee` is a timestamp indicating when the TODO was done. <!-- UNITODO_IGNORE_LINE -->
 - `#Jl_obVmSA7XCwzp7hkT2r` is a unique nanoid of 20 chars.
 - `##12` is a unique incremented number id, assigned by unitodo system.
 - Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
 - We only match all of above stuff in the-first-word of the line, excluding all leading blanks and `:`.
-
 
 ## Best practices
 
@@ -57,7 +97,7 @@ where:
 ## Known issues
 
 - support one-line TODO only <!-- UNITODO_IGNORE_LINE -->
-- to bi-directional sync, for now, we assume that the input todos are edited 
+- to bi-directional sync, for now, we assume that the input todos are edited
 - we assume all created timestamps are unique. (you do not create more than 1 todo within 1 second)
 
 ## Installation
@@ -72,30 +112,30 @@ xattr -cr /Applications/Unitodo.app
 
 The config file is at `~/.config/unitodo/config.toml`.
 
+## NO_RELEASE_UNTIL
 
-## NO_RELEASE_UNTIL:
+- but end up feeling more productive editing markdown.
 
 - [ ] 2@Apt3d (fancy) edit online; api to fetch from notion, slack, etc
 - [ ] 2 support timeline
 - [ ] 1@Aruxf figure out history-edit / bi-sync problem, so that supporting view on phone;
 - [ ] 0@Aq6hD tree-view / dep-chain-view  (table,tab,section,tree)-view
-- [ ] 0@AqTDc polish readme and homepage like https://inputsource.pro/zh-CN, https://github.com/runjuu/InputSourcePro
-
+- [ ] 0@AqTDc polish readme and homepage like <https://inputsource.pro/zh-CN>, <https://github.com/runjuu/InputSourcePro>
 
 ## Todos
 
 - i feel that unitodo goes wrong. the goal was to make any thing i wanna do from anything to a linear list. so that i can keep on doing one by one.
-    - which seem to require a unique id (for sorting)
+  - which seem to require a unique id (for sorting)
 - feature
-    - list mode (In A Row)
-    - tree mode
-        - archive (remember position in tree)
-        - dependency relationship, taxonomy, in a row
-        - 3d? color? just highlight the first in the tree?
-    - vim modal
+  - list mode (In A Row)
+  - tree mode
+    - archive (remember position in tree)
+    - dependency relationship, taxonomy, in a row
+    - 3d? color? just highlight the first in the tree?
+  - vim modal
 
 - [x] 2@@ArSOf unique-id can be fucking doomed! (with checking before applying)
-    - [x] 2@@ArSOR render timestamp (even when not leading) / remove it?
+  - [x] 2@@ArSOR render timestamp (even when not leading) / remove it?
 - [ ] 1 ci: submit to homebrew cask; make doc and everything more user-friendly
 
 - [x] 2@@ArSOC move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
@@ -131,7 +171,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 1 X store entire line in the json, to future-proof when writing back to the file? no need, we only change the todo content
 - [x] X 1 make it `2@AoVtC:` instead of `2@AoVtC`
 - [x] 0 check if the todo item is changed between aggregation and editing, if so, abort. (lock the file during editing)
-    - [x] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
+  - [x] 0 wait, wtf, when you add id you are assuming the todo item did not change place between aggregation and editing, FUCK. (maybe add checkLayer in rust to check exact existence of the todo item in the file, and if not, abort. And, rust needs to lock the file during checking and applying editing)
 - [x] 1 button/hotkey to add append " // UNITODO_IGNORE_LINE" to the current line, if the line from a `.c/rs/md/ts` file
 - [x] 1 fix that `d` and `?` triggers hotkey even while i am typing in the text-editor
 - [x] 0 copy-sync-file is awkward. let the frontend invoke the backend rust program every 5 second to aggregate the latest (distributed) todos
@@ -153,7 +193,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 0@ApdyT@@Apqkg add feat: convert this entire app to a Electron app (e.g. for macos)
 - [x] 0@Apdzo@@ApqxA fix: when appending via `o`, do not ignore my leading prior 0/1/2/3;
 - [x] 1@@Apqxs X fancy: make it a native app? (rn/swift?) - Electron now
-- [x] 1 polish UI: more rounded corners for buttons and everything, fancier&elegant, minimalistic style; just remove the header inside the webpage, move the updated time info to the header besides the buttons; 
+- [x] 1 polish UI: more rounded corners for buttons and everything, fancier&elegant, minimalistic style; just remove the header inside the webpage, move the updated time info to the header besides the buttons;
 - [x] 1@@ArSIH polish dark mode UI
 - [x] 1@@ArSLR why is my macos electron .app file so huge (500MB)? any idea to make the electron app package size smaller? - Tauri now
 - [x] 1@@ArSIq X remember the state of last focused tab and item index for each tab, restore it when the app is reopened / switching between tabs; - using table now
@@ -172,14 +212,14 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
-- [x] 0@AqoNf@@AqpXT add updater https://v2.tauri.app/plugin/updater/
+- [x] 0@AqoNf@@AqpXT add updater <https://v2.tauri.app/plugin/updater/>
 - [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
 - [x] 000@Aq2kC@@Aq24r update config
 - [x] 1@Aq2qH@@Aq6c- fix dark mode titlebar color
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
-- [x] 00 table-view; show file git repo (if available) or project name (not if in tab-mode); 
+- [x] 00 table-view; show file git repo (if available) or project name (not if in tab-mode);
   - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finishe    d(time), est(duration).
     - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
   - x find a way to quick debug the frontend ui without re-run the entire app
@@ -187,9 +227,9 @@ The config file is at `~/.config/unitodo/config.toml`.
   - D contain corresponding nerd icon in the source col;
   - D show only basename in file col;
 - D usable: show only cols of checkbox/zone/content/file, for now; frontend sorting;
-  - [x] 1@ArCCd@@ArSHm add feat: profiles of configs, meaning user can switch between different config profiles. 
+  - [x] 1@ArCCd@@ArSHm add feat: profiles of configs, meaning user can switch between different config profiles.
     - @app  @src @tauri.conf.json @unitodo.proto @Cargo.toml @package.json
-    - add feat: profiles of configs, meaning user can switch between different config profiles. 
+    - add feat: profiles of configs, meaning user can switch between different config profiles.
     - let each profile contain all of current config items.
     - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile); use shadcn if you want.
     - continue to save all profiles in `~/.config/unitodo/config.toml`, the default profile is `default` (which can not be deleted).
@@ -204,9 +244,17 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 000@Arnrm@@Arv8T fix: whenever i am editing the table content cell and typing in the middle of the content, it always got my cursor back to the end of the content (i guess it keeps on triggering setting editedContent and rerendering and resetting the cursor to the end of the content)
 - [x] 001@AroT3@@ArwnW fix: too much margin at the right of icon;
 - [x] 000@@Arwm9 time format
-- [x] 000@@Aruxo rounded highlight whole item; 
+- [x] 000@@Aruxo rounded highlight whole item;
 - [x] 000@@Aruxu make 000 prior a chip (render using lexcial in table-view)
 - [x] fix other mode content should not be original
 - [ ] 1@Aron2 allow for switch profile in main page
 - [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause)
 - [ ] 2@Ar4YD UI: align buttons
+- [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
+- [ ] 00 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
+
+- [ ] (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)?
+- [ ] custom sorting? editing like vim (dd move it to dropover/clipboard sec); 
+  - say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
+  - no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
+  - dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
