@@ -18,13 +18,13 @@ import {
 export async function fetchTodoData(): Promise<AppTodoCategory[]> {
   try {
     // The Rust command get_todos_command returns GetTodosResponse structure
-    const response = await invoke<ProtoGetTodosResponse>('get_todos_command');
+    const response = await invoke<any>('get_todos_command'); // Tauri returns plain objects
     
     // If response.getCategoriesList is not available because 'response' is a plain object:
     // const categoriesList = response.categories || []; (assuming field name from Rust struct is 'categories')
     // For protobuf.js generated types, if it's an instance, getCategoriesList() would be correct.
     // Given Tauri returns plain JSON objects, direct property access is more likely.
-    const categoriesList = (response as any).categories || [];
+    const categoriesList = response.categories || [];
 
     return categoriesList.map((cat: any /* ProtoTodoCategory as plain object */) => ({
         name: cat.name,
@@ -34,7 +34,7 @@ export async function fetchTodoData(): Promise<AppTodoCategory[]> {
         todos: (cat.todos || []).map((item: any /* ProtoTodoItem as plain object */) => ({
             content: item.content,
             location: item.location,
-            completed: item.completed,
+            status: item.status, // Changed from completed to status
         })),
     }));
   } catch (error) {
@@ -48,13 +48,16 @@ interface EditTodoPayload {
   location: string;
   new_content: string;
   original_content: string; 
-  completed: boolean;
+  // completed: boolean; // Removed: Backend logic ignores it / proto EditTodoRequest might change
 }
 
 export async function editTodoItem(payload: EditTodoPayload): Promise<ProtoEditTodoResponse> {
   try {
-    // Payload structure matches ProtoEditTodoRequest, pass it directly as named argument
-    return await invoke<ProtoEditTodoResponse>('edit_todo_command', { payload });
+    // If ProtoEditTodoRequest in gRPC Stubs still has `completed`, 
+    // and it's not optional, this might error if Rust command expects it.
+    // However, core Rust logic was ignoring it.
+    const commandPayload = { ...payload }; // Send payload as is (without completed)
+    return await invoke<ProtoEditTodoResponse>('edit_todo_command', { payload: commandPayload });
   } catch (error) {
     console.error('Error invoking edit_todo_command:', error);
     throw error; // Or return a custom error object: Promise.reject({ status: 'error', message: ...});
@@ -83,7 +86,8 @@ export interface MarkDonePayload {
   original_content: string;
 }
 
-// Using ProtoMarkDoneResponse directly as the return type from invoke
+// ProtoMarkDoneResponse still contains `completed: boolean` (reflecting if status changed to done-like)
+// and `new_content: string` (which includes the new status marker).
 export async function markTodoAsDone(payload: MarkDonePayload): Promise<ProtoMarkDoneResponse> { 
   try {
     // Payload structure matches ProtoMarkDoneRequest

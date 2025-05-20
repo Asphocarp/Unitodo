@@ -32,13 +32,15 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
     } 
     // If line starts with TODO, - [ ], or contains a todo item pattern // UNITODO_IGNORE_LINE
     else if (currentCategory && (line.startsWith('TODO') || line.startsWith('- [') || line.match(/^[^-]*?TODO/))) { // UNITODO_IGNORE_LINE
-      // Default to incomplete
-      let completed = false;
+      // Default to incomplete status string
+      let currentStatus = "- [ ] "; // Default status
       
       // Check if it's marked as completed
       if (line.includes('- [x]') || line.includes('- [X]')) {
-        completed = true;
+        currentStatus = "- [x] "; // Common done status
       }
+      // TODO: Add more sophisticated status parsing here if needed, to match various 
+      // patterns from todo_states config, e.g., by checking line.startsWith(configured_marker)
       
       // Extract the content and location parts
       let content = line;
@@ -52,21 +54,26 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
       }
       
       // Clean up the content based on different formats
-      if (content.startsWith('- [ ] ')) { // UNITODO_IGNORE_LINE
+      // This part needs to be careful not to remove actual content if status markers are complex
+      if (content.startsWith('- [ ] ')) { 
         content = content.substring(6);
       } else if (content.startsWith('- [x] ') || content.startsWith('- [X] ')) {
         content = content.substring(6);
-      } else if (content.startsWith('TODO ')) { // UNITODO_IGNORE_LINE
+      } else if (content.startsWith('TODO ')) { 
+        content = content.substring(5);
+      } else if (content.startsWith('DONE ')) { // Assuming DONE might be a marker
         content = content.substring(5);
       }
+      // Add more specific marker removal if other default states are common, e.g. DOING, CANCELLED
       
-      // Further cleanup: remove any remaining dashes or markers
-      content = content.replace(/^[-*]\s+/, '').trim();
+      // Further cleanup: remove any remaining dashes or markers - this is very generic
+      // content = content.replace(/^[-*]\s+/, '').trim(); // This might be too aggressive now
+      content = content.trim(); // Simple trim after specific markers are removed
       
       const todoItem: TodoItem = {
         content,
         location,
-        completed
+        status: currentStatus, // Use determined status string
       };
       
       currentCategory.todos.push(todoItem);

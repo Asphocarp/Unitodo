@@ -7,7 +7,7 @@ import { parseTodoContent, generateTimestamp } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
-import { useTodoStore } from '../store/todoStore';
+import { useTodoStore, isStatusDoneLike } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener'
 
@@ -29,6 +29,7 @@ export default function TodoItem({
   role
 }: TodoItemProps) {
   // Use Zustand actions
+  const storeLoadData = useTodoStore(state => state.loadData);
   const updateTodo = useTodoStore(state => state.updateTodo);
   const navigateTodos = useTodoStore(state => state.navigateTodos);
   const { config: appConfig } = useConfigStore();
@@ -116,7 +117,6 @@ export default function TodoItem({
         location: todo.location,
         new_content: newContent,
         original_content: todo.content, // Add original content for verification
-        completed: todo.completed,
       });
       
       // Update store
@@ -153,14 +153,12 @@ export default function TodoItem({
         location: todo.location,
         new_content: editedContent,
         original_content: todo.content, // Add original content for verification
-        completed: todo.completed,
       });
       
       // Update store
       updateTodo({
         ...todo,
         content: editedContent,
-        completed: todo.completed,
       });
       
       setIsEditing(false);
@@ -210,16 +208,12 @@ export default function TodoItem({
     setError(null);
     setIsSaving(true);
     try {
-      const response = await markTodoAsDone({
+      await markTodoAsDone({
         location: todo.location,
         original_content: todo.content, 
       });
-      // // disable this for now, since the todo item is actually removed
-      //   updateTodo({
-      //     ...todo,
-      //     content: response.getNewContent(),
-      //     completed: response.getCompleted(),
-      //   });
+      // Instead of optimistic update, reload data to get the new status from backend
+      storeLoadData(); 
     } catch (err: any) {
       console.error('Error toggling completion status via API:', err);
       if (err.message && err.message.startsWith('CONFLICT_ERROR:')) {
@@ -227,8 +221,6 @@ export default function TodoItem({
       } else {
         setError(err.message || 'Failed to update completion status.');
       }
-      // Optionally, if we had an optimistic update, revert it here.
-      // For now, we wait for backend so no optimistic update to revert.
     } finally {
       setIsSaving(false);
     }
@@ -269,7 +261,6 @@ export default function TodoItem({
         location: todo.location,
         new_content: newContent,
         original_content: todo.content, // Add original content for verification
-        completed: todo.completed,
       });
       
       // Update store
@@ -424,6 +415,8 @@ export default function TodoItem({
     }
   };
 
+  const isDone = isStatusDoneLike(todo.status, appConfig);
+
   return (
     <div
       className={`hn-todo-item flex items-center h-6 ${
@@ -461,7 +454,7 @@ export default function TodoItem({
       >
         <input
           type="checkbox"
-          checked={todo.completed}
+          checked={isDone}
           onChange={(e) => {
             // This onChange is mostly for visual feedback now, the actual logic is in onClick of parent div
             // or could directly call handleToggleDoneViaAPI if preferred, but might cause double calls with parent div's onClick
@@ -471,7 +464,7 @@ export default function TodoItem({
           }}
           disabled={isReadOnly || isSaving}
           className={`hn-checkbox ${isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'} ${isSaving ? 'opacity-50' : ''}`}
-          aria-label={`Mark todo as ${todo.completed ? 'incomplete' : 'complete'}`}
+          aria-label={`Mark todo as ${isDone ? 'not done' : 'done'}`}
           tabIndex={-1}
         />
       </div>
@@ -487,7 +480,7 @@ export default function TodoItem({
         ref={editorContainerRef}
       >
         <div
-          className={`${todo.completed && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''} overflow-hidden text-ellipsis flex-grow flex items-center`}
+          className={`${isDone && !isEditing ? 'hn-completed' : ''} ${!isEditing && !isReadOnly ? 'cursor-text' : ''} overflow-hidden text-ellipsis flex-grow flex items-center`}
         >
           <LexicalTodoEditor
             initialFullContent={editedContent}

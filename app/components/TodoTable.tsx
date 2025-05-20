@@ -19,7 +19,7 @@ import { parseTodoContent, decodeTimestampId, abbreviateTimeDistanceString } fro
 import { formatDistanceStrict } from 'date-fns';
 import TodoItem from './TodoItem';
 import { markTodoAsDone, editTodoItem } from '../services/todoService';
-import { useTodoStore, getGloballySortedAndFilteredTodos } from '../store/todoStore';
+import { useTodoStore, isStatusDoneLike } from '../store/todoStore';
 import NerdFontIcon from './NerdFontIcon';
 import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -148,7 +148,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
             type="checkbox"
             className="hn-checkbox h-3.5 w-3.5"
             {...{
-              checked: row.original.originalTodo.completed, // Reflect actual completion
+              checked: isStatusDoneLike(row.original.originalTodo.status, appConfig),
               disabled: false,
               onChange: async () => {
                 const todo = row.original.originalTodo;
@@ -158,7 +158,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     location: todo.location,
                     original_content: todo.content,
                   });
-                  store.loadData(); 
+                  store.loadData();
                 } catch (error) {
                   console.error("Failed to mark todo as done from table:", error);
                 }
@@ -224,7 +224,6 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                       location: row.original.originalTodo.location,
                       new_content: text,
                       original_content: row.original.originalTodo.content,
-                      completed: row.original.originalTodo.completed,
                     });
                     // Optimistic update
                     useTodoStore.getState().updateTodo({
@@ -468,7 +467,6 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               location: todo.location,
               new_content: newContent,
               original_content: todo.content,
-              completed: todo.completed,
             });
             useTodoStore.getState().updateTodo({
               ...todo,
@@ -572,7 +570,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
             <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualRows.map(virtualRow => {
                 const row = table.getRowModel().rows[virtualRow.index];
-                const isCompleted = row.original.originalTodo.completed;
+                const isDoneLike = isStatusDoneLike(row.original.originalTodo.status, appConfig);
                 return (
                   <tr 
                     key={row.id} 
@@ -584,7 +582,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                       width: '100%',
                     }}
                     className={`h-6 cursor-pointer transition-colors
-                      ${isCompleted ? 'opacity-70' : ''}
+                      ${isDoneLike ? 'opacity-70' : ''}
                       ${focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex 
                         ? 'bg-neutral-50 dark:bg-neutral-800 focused' 
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'
@@ -614,7 +612,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                           }}
                         >
                           <div className={`h-full flex items-center ${
-                            isCompleted && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
+                            isDoneLike && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
                             'line-through text-neutral-500 dark:text-neutral-400' : ''
                           }`}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}

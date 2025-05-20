@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { useTodoStore, getFilteredCategories, useTodoSelectors, getGloballySortedAndFilteredTodos } from '../store/todoStore';
+import { useTodoStore, useTodoSelectors, isStatusDoneLike } from '../store/todoStore';
 import useConfigStore from '../store/configStore';
 import TodoCategory from './TodoCategory';
 import TodoCategoryHeader from './TodoCategoryHeader';
@@ -42,7 +42,7 @@ export default function Todo() {
   const error = useTodoStore(state => state.error);
   const filter = useTodoStore(state => state.filter);
   const searchQuery = useTodoStore(state => state.searchQuery);
-  const lastUpdated = useTodoStore(state => state.lastUpdated);
+  const lastUpdated = useTodoStore(state => state.lastFetched);
   const displayMode = useTodoStore(state => state.displayMode);
   const activeTabIndex = useTodoStore(state => state.activeTabIndex);
   const focusedItem = useTodoStore(state => state.focusedItem);
@@ -66,9 +66,11 @@ export default function Todo() {
   const submitAddTodo = useTodoStore(state => state.submitAddTodo);
   
   const todoStoreState = useTodoStore.getState();
-  const { totalTodos, completedTodos, activeTodos } = useTodoSelectors.getTotalCounts(todoStoreState);
+  const showCompleted = filter === 'all' || filter === 'completed';
+  const selectors = useTodoSelectors(showCompleted);
+  const { active: activeTodos, done: completedTodos, total: totalTodos } = selectors.getTotalCounts;
   
-  const filteredCategories = getFilteredCategories(todoStoreState);
+  const filteredCategories = selectors.filteredCategories;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,14 +88,14 @@ export default function Todo() {
 
     const flatList: FlatListItem[] = [];
     let currentFlatIndex = 0;
-    filteredCategories.forEach((category, catIndex) => {
+    filteredCategories.forEach((category: TodoCategoryType, catIndex: number) => {
       flatList.push({
         type: 'header',
         category: category,
         categoryIndex: catIndex,
         flatIndex: currentFlatIndex++
       });
-      category.todos.forEach((todo, itemIndex) => {
+      category.todos.forEach((todo: TodoItemType, itemIndex: number) => {
         flatList.push({
           type: 'item',
           todo: todo,
@@ -108,19 +110,19 @@ export default function Todo() {
 
   const tableDisplayData = useMemo((): TodoTableRow[] => {
     if (displayMode !== 'table') return [];
-    const sortedItems = getGloballySortedAndFilteredTodos(todoStoreState);
-    const originalStoreCategories = todoStoreState.categories;
+    const sortedItems = selectors.globallySortedAndFilteredTodos;
+    const originalStoreCategories = categories;
 
     return sortedItems.map(item => {
-      const { originalTodo, categoryIndex, itemIndex } = item; 
-      const parsed = parseTodoContent(originalTodo.content);
+      const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
+      const parsed = parseTodoContent(content);
       
-      let fullPath = originalTodo.location || '';
+      let fullPath = location || '';
       let lineNumberStr = '';
-      const lineMatch = originalTodo.location?.match(/\:(\d+)$/);
+      const lineMatch = location?.match(/\:(\d+)$/);
       if (lineMatch) {
         lineNumberStr = lineMatch[1];
-        fullPath = originalTodo.location.replace(/\:\d+$/, '');
+        fullPath = location.replace(/\:\d+$/, '');
       }
       const basename = fullPath.split(/[\/\\]/).pop() || fullPath || 'N/A';
       
@@ -137,21 +139,21 @@ export default function Todo() {
       }
 
       return {
-        id: (originalTodo.location || 'loc') + (parsed.idPart || 'id') + categoryIndex + '-' + itemIndex,
-        content: originalTodo.content, 
+        id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
+        content: content,
         parsedContent: parsed,
-        zone: originalStoreCategories[categoryIndex]?.name || 'Unknown',
+        zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
         filePath: basename,
         lineNumber: lineNumberStr,
         created: createdTimestamp,
         finished: completedTimestamp,
         estDuration: null,
-        originalTodo: originalTodo,
-        categoryIndex: categoryIndex, 
-        itemIndex: itemIndex,       
+        originalTodo: item,
+        categoryIndex: originalCategoryIndex,
+        itemIndex: originalItemIndex,
       };
     });
-  }, [displayMode, todoStoreState.categories, todoStoreState.filter, todoStoreState.searchQuery]);
+  }, [displayMode, categories, selectors.globallySortedAndFilteredTodos, filter, searchQuery]);
 
   const getItemSize = (index: number): number => {
     const item = flattenedList[index];
@@ -218,7 +220,7 @@ export default function Todo() {
           e.preventDefault();
           searchInputRef.current?.blur();
           const { focusedItem: currentFocusedItem, displayMode: currentDisplayMode, activeTabIndex: currentActiveTabIndex } = useTodoStore.getState();
-          const currentFilteredCategories = getFilteredCategories(useTodoStore.getState());
+          const currentFilteredCategories = selectors.filteredCategories;
 
           let newFocusCategoryIndex = -1;
           let newFocusItemIndex = -1;
@@ -339,7 +341,7 @@ export default function Todo() {
           if (!isEditingContext) {
             e.preventDefault();
             const currentFocusedItem = useTodoStore.getState().focusedItem;
-            const currentCategories = getFilteredCategories(useTodoStore.getState());
+            const currentCategories = selectors.filteredCategories;
             const currentDisplayMode = useTodoStore.getState().displayMode;
             const currentActiveTabIndex = useTodoStore.getState().activeTabIndex;
 
@@ -447,7 +449,7 @@ export default function Todo() {
       
       if (!tabName || !itemId) return;
       
-      const categoryIndex = filteredCategories.findIndex(c => c.name === tabName);
+      const categoryIndex = filteredCategories.findIndex((c: TodoCategoryType) => c.name === tabName);
       if (categoryIndex === -1) return;
       
       let itemIndex = -1;
@@ -458,7 +460,7 @@ export default function Todo() {
         const indexStr = itemIdString.replace('index=', '');
         itemIndex = parseInt(indexStr, 10);
       } else {
-        itemIndex = filteredCategories[categoryIndex].todos.findIndex(todo => {
+        itemIndex = filteredCategories[categoryIndex].todos.findIndex((todo: TodoItemType) => {
           const parsed = parseTodoContent(todo.content);
           return parsed.idPart === itemIdString;
         });
@@ -529,7 +531,7 @@ export default function Todo() {
                 />
                 {category.name}
                 <span className="ml-1 text-subtle-color dark:text-neutral-500">
-                  ({category.todos.filter(todo => todo.completed).length}/{category.todos.length})
+                  ({category.todos.filter(todo => isStatusDoneLike(todo.status, appConfig)).length}/{category.todos.length})
                 </span>
               </button>
             ))}
@@ -595,14 +597,6 @@ export default function Todo() {
     return null;
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-24">
-        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-accent-color"></div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="bg-red-50 dark:bg-red-900 p-2 text-xs dark:text-red-100">
@@ -619,6 +613,12 @@ export default function Todo() {
       role="application"
       aria-label="Todo Application"
     >
+      {loading && (
+        <div className="fixed bottom-4 right-4 z-50 p-2 bg-neutral-100 dark:bg-neutral-700 rounded-full shadow-lg">
+          <div className="animate-spin h-5 w-5 border-2 border-t-transparent border-accent-color rounded-full"></div>
+        </div>
+      )}
+
       <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between" data-tauri-drag-region="">
         <div className="flex items-center">
           <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
@@ -712,11 +712,7 @@ export default function Todo() {
       </div>
       
       <div className="flex-grow min-h-0 flex flex-col">
-        {loading ? (
-          <div className="flex justify-center items-center flex-grow">
-            <div className="animate-spin h-5 w-5 border-2 border-t-transparent border-accent-color rounded-full"></div>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
             <strong>Error:</strong> {error}
           </div>
@@ -819,7 +815,13 @@ export default function Todo() {
         <AddTodoModal
           isOpen={showAddTodoModal}
           onClose={closeAddTodoModal}
-          onSubmit={submitAddTodo}
+          onSubmit={(todoText: string, categoryType: "git" | "project", categoryName: string) => {
+            submitAddTodo({ 
+              content: todoText, 
+              categoryName, 
+              categoryType, 
+            });
+          }}
           categoryName={addTodoModalData.categoryName}
           categoryType={addTodoModalData.categoryType}
         />
