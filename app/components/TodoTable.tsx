@@ -99,7 +99,6 @@ interface TodoTableProps {
 // Wrap TodoTable with observer to make it reactive to MobX store changes
 const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, focusedItem, height, width }) => {
   const appConfig = configStore.config;
-  const todoStoreCategories = todoStore.categories;
   
   // Access editing state and action from MobX todoStore
   const tableEditingCell = todoStore.tableEditingCell;
@@ -153,10 +152,9 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       header: 'Zone',
       size: 100,
       cell: ({ row }) => {
-        const categoryIcon = todoStoreCategories[row.original.categoryIndex]?.icon || ''; 
         return (
           <div className="flex items-center truncate">
-            <NerdFontIcon icon={categoryIcon} category={row.original.zone} className="mr-0.5 text-sm" />
+            <NerdFontIcon icon={row.original.zoneIcon} category={row.original.zone} className="mr-0.5 text-sm" />
             <span className="truncate" title={row.original.zone}>{row.original.zone}</span>
           </div>
         );
@@ -312,11 +310,9 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [appConfig, todoStoreCategories, tableEditingCell, setTableEditingCell]);
+  ], [appConfig, tableEditingCell, setTableEditingCell]);
 
-  const data = useMemo((): TodoTableRow[] => {
-    return tableRows;
-  }, [tableRows]);
+  const data = tableRows;
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
     columns.map(column => column.id || (column as any).accessorKey)

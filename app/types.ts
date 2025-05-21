@@ -65,6 +65,7 @@ export interface TodoTableRow {
   content: string;
   parsedContent: any; // ReturnType<typeof parseTodoContent>; Adjust if parseTodoContent is moved/typed
   zone: string; // Category name (git-repo or project-name)
+  zoneIcon: string; // Added for category icon
   filePath: string;
   lineNumber: string;
   created: string | null; // Will be extracted from parsedContent.idPart

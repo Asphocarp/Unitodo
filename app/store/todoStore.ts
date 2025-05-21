@@ -506,12 +506,13 @@ class TodoStoreImpl {
   // Computed property for table display data (replaces useMemo in Todo.tsx)
   get computedTableDisplayData(): TodoTableRow[] {
     if (this.displayMode !== 'table') return [];
-    const sortedItems = this.globallySortedAndFilteredTodos; // Relies on another computed
-    const originalStoreCategories = this.categories; // Direct access to original categories
+    const sortedItems = this.globallySortedAndFilteredTodos;
+    const originalStoreCategories = this.categories;
 
     return sortedItems.map(item => {
       const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
       const parsed = parseTodoContent(content);
+      const categoryIcon = originalStoreCategories[originalCategoryIndex]?.icon || ''; // Get icon
       
       let fullPath = location || '';
       let lineNumberStr = '';
@@ -539,6 +540,7 @@ class TodoStoreImpl {
         content: content,
         parsedContent: parsed,
         zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
+        zoneIcon: categoryIcon,
         filePath: basename,
         lineNumber: lineNumberStr,
         created: createdTimestamp,
