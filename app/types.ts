@@ -12,12 +12,20 @@ export interface TodoCategory {
 
 // Corresponds to the Rust Config struct
 export interface Config {
-  rg: RgConfig;
-  projects: Record<string, ProjectConfig>; // Updated: Value is now ProjectConfig
-  refresh_interval: number; // u32 -> number
-  editor_uri_scheme: string;
-  todo_states: string[][]; // Changed from todo_done_pairs, type updated to string[][]
-  default_append_basename: string; // Default filename for appending todos in git repos
+  editor_scheme?: string;
+  refresh_interval?: number;
+  todo_states?: string[][];
+  editor_uri_scheme?: string;
+  default_priority?: string;
+  default_project_priority?: string;
+  default_git_project_priority?: string;
+  file_scan_depth?: number;
+  auto_scan_interval?: number;
+  always_show_project_root_todo?: boolean;
+  auto_create_project_root_todo?: boolean;
+  default_append_basename?: string;
+  ignore?: string[];
+  file_types?: string[];
 }
 
 // Added: Corresponds to the Rust ProjectConfig struct
@@ -31,4 +39,38 @@ export interface RgConfig {
   paths: string[];
   ignore?: string[]; // Option<Vec<String>> -> string[] | undefined
   file_types?: string[]; // Option<Vec<String>> -> string[] | undefined
+}
+
+// Added type definitions for Todo component's flattened list
+export interface FlatHeaderItem {
+  type: 'header';
+  category: TodoCategory;
+  categoryIndex: number; // Original index in todoStore.categories
+  flatIndex: number;
+}
+
+export interface FlatTodoItem {
+  type: 'item';
+  todo: TodoItem;
+  categoryIndex: number; // Original index in todoStore.categories
+  itemIndex: number;    // Original index in todoStore.categories[categoryIndex].todos
+  flatIndex: number;
+}
+
+export type FlatListItem = FlatHeaderItem | FlatTodoItem;
+
+// Added type definition for TodoTable component's row data
+export interface TodoTableRow {
+  id: string; // Unique ID for the row (e.g., todo.location + todo.content hash)
+  content: string;
+  parsedContent: any; // ReturnType<typeof parseTodoContent>; Adjust if parseTodoContent is moved/typed
+  zone: string; // Category name (git-repo or project-name)
+  filePath: string;
+  lineNumber: string;
+  created: string | null; // Will be extracted from parsedContent.idPart
+  finished: string | null; // Will be extracted from parsedContent.donePart
+  estDuration: string | null; // Placeholder
+  originalTodo: TodoItem; // Keep original todo for actions
+  categoryIndex: number;
+  itemIndex: number;
 } 

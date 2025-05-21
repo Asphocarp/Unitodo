@@ -14,7 +14,7 @@ import { DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, us
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers';
 import { arrayMove, SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
+import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType, TodoTableRow } from '../types';
 import { parseTodoContent, decodeTimestampId, abbreviateTimeDistanceString } from '../utils';
 import { formatDistanceStrict } from 'date-fns';
 import { markTodoAsDone as apiMarkTodoAsDone, editTodoItem as apiEditTodoItem } from '../services/todoService';
@@ -30,22 +30,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 // Import Lexical editor and related types
 import LexicalTodoEditor from '../components/LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
-
-// Define a type for our table row data
-export interface TodoTableRow {
-  id: string; // Unique ID for the row (e.g., todo.location + todo.content hash)
-  content: string;
-  parsedContent: ReturnType<typeof parseTodoContent>; // Keep parsed content for rich display
-  zone: string; // Category name (git-repo or project-name)
-  filePath: string;
-  lineNumber: string;
-  created: string | null; // Will be extracted from parsedContent.idPart
-  finished: string | null; // Will be extracted from parsedContent.donePart
-  estDuration: string | null; // Placeholder
-  originalTodo: TodoItemType; // Keep original todo for actions
-  categoryIndex: number;
-  itemIndex: number;
-}
 
 interface DraggableHeaderProps {
   header: any; // Type for header is complex, using any for now

@@ -12,31 +12,14 @@ import { darkModeStore } from '../utils/darkMode';
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
-import TodoTable, { TodoTableRow } from './TodoTable';
-import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
+import TodoTable from './TodoTable';
+import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType, FlatListItem, FlatHeaderItem, FlatTodoItem, TodoTableRow } from '../types';
 import { parseTodoContent, decodeTimestampId } from '../utils';
 import Link from 'next/link';
 import AddTodoModal from './AddTodoModal';
 
 const ITEM_HEIGHT = 24;
 const CATEGORY_HEADER_HEIGHT = 30;
-
-interface FlatHeaderItem {
-  type: 'header';
-  category: TodoCategoryType;
-  categoryIndex: number;
-  flatIndex: number;
-}
-
-interface FlatTodoItem {
-  type: 'item';
-  todo: TodoItemType;
-  categoryIndex: number;
-  itemIndex: number;
-  flatIndex: number;
-}
-
-type FlatListItem = FlatHeaderItem | FlatTodoItem;
 
 const Todo: React.FC = observer(() => {
   const {
@@ -63,6 +46,8 @@ const Todo: React.FC = observer(() => {
     openAddTodoModal,
     closeAddTodoModal,
     submitAddTodo,
+    computedFlattenedList,
+    computedTableDisplayData,
   } = todoStore;
 
   const { 
@@ -83,84 +68,8 @@ const Todo: React.FC = observer(() => {
   const tabListRef = useRef<FixedSizeList>(null);
   const sectionListRef = useRef<VariableSizeList>(null);
 
-  const flattenedList = useMemo((): FlatListItem[] => {
-    if (displayMode !== 'section') return [];
-    const flatList: FlatListItem[] = [];
-    let currentFlatIndex = 0;
-    todoStore.filteredCategories.forEach((category: TodoCategoryType) => {
-      const originalCategoryIndex = todoStore.categories.findIndex(c => c.name === category.name);
-      if(originalCategoryIndex === -1) return;
-
-      flatList.push({
-        type: 'header',
-        category: category,
-        categoryIndex: originalCategoryIndex,
-        flatIndex: currentFlatIndex++
-      });
-      category.todos.forEach((todo: TodoItemType, itemIndexInFilteredCategory: number) => {
-        const originalItemIndex = todoStore.categories[originalCategoryIndex]?.todos.findIndex(t => t.location === todo.location && t.content === todo.content);
-        if (originalItemIndex === -1 && category.todos.length > 0) {
-            
-        }
-
-        flatList.push({
-          type: 'item',
-          todo: todo,
-          categoryIndex: originalCategoryIndex,
-          itemIndex: originalItemIndex !== -1 ? originalItemIndex : 0,
-          flatIndex: currentFlatIndex++
-        });
-      });
-    });
-    return flatList;
-  }, [todoStore.filteredCategories, displayMode, todoStore.categories]);
-
-  const tableDisplayData = useMemo((): TodoTableRow[] => {
-    if (displayMode !== 'table') return [];
-    const sortedItems = todoStore.globallySortedAndFilteredTodos;
-    const originalStoreCategories = todoStore.categories;
-
-    return sortedItems.map(item => {
-      const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
-      const parsed = parseTodoContent(content);
-      
-      let fullPath = location || '';
-      let lineNumberStr = '';
-      const lineMatch = location?.match(/\:(\d+)$/);
-      if (lineMatch) {
-        lineNumberStr = lineMatch[1];
-        fullPath = location.replace(/\:\d+$/, '');
-      }
-      const basename = fullPath.split(/[\/\\]/).pop() || fullPath || 'N/A';
-      
-      let createdTimestamp: string | null = null;
-      if (parsed.idPart && parsed.idPart.startsWith('@')) {
-        const dateObj = decodeTimestampId(parsed.idPart.substring(1));
-        createdTimestamp = dateObj ? dateObj.toISOString() : null;
-      }
-      
-      let completedTimestamp: string | null = null;
-      if (parsed.donePart && parsed.donePart.startsWith('@@')) {
-        const dateObj = decodeTimestampId(parsed.donePart.substring(2));
-        completedTimestamp = dateObj ? dateObj.toISOString() : null;
-      }
-
-      return {
-        id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
-        content: content,
-        parsedContent: parsed,
-        zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
-        filePath: basename,
-        lineNumber: lineNumberStr,
-        created: createdTimestamp,
-        finished: completedTimestamp,
-        estDuration: null,
-        originalTodo: item,
-        categoryIndex: originalCategoryIndex,
-        itemIndex: originalItemIndex,
-      };
-    });
-  }, [displayMode, todoStore.globallySortedAndFilteredTodos, todoStore.categories]);
+  const flattenedList = computedFlattenedList;
+  const tableDisplayData = computedTableDisplayData;
 
   const getItemSize = (index: number): number => {
     const item = flattenedList[index];
@@ -596,7 +505,7 @@ const Todo: React.FC = observer(() => {
       </div>
       
       <div className="flex-grow min-h-0 flex flex-col">
-        {!loading && error && (
+        {error && (
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
             <strong>Error:</strong> {error}
           </div>
@@ -614,7 +523,7 @@ const Todo: React.FC = observer(() => {
             )}
           </AutoSizer>
         )}
-        {!loading && !error && (displayMode === 'section' || displayMode === 'tab') && 
+        {!error && (displayMode === 'section' || displayMode === 'tab') && 
           ( (displayMode === 'section' && flattenedList.length > 0) || (displayMode === 'tab' && todoStore.filteredCategoryInfo.filter(info => info.isVisible).length > 0) ) ? (
           displayMode === 'section' ? (
             <AutoSizer>
@@ -635,7 +544,7 @@ const Todo: React.FC = observer(() => {
             renderTabs()
           )
         ) : (
-          !loading && !error && (displayMode === 'section' || displayMode === 'tab') && (
+          !error && (displayMode === 'section' || displayMode === 'tab') && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="24" height="24" rx="4" fill="currentColor" fillOpacity="0.1"/>

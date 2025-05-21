@@ -1,7 +1,7 @@
 import { makeObservable, observable, action, computed, runInAction, reaction } from 'mobx';
-import { TodoCategory, TodoItem, Config as AppConfig } from '../types';
+import { TodoCategory, TodoItem, Config as AppConfig, FlatListItem, TodoTableRow } from '../types';
 import { fetchTodoData, addTodoItem as apiAddTodoItem } from '../services/todoService'; // Assuming addTodoItem is for the new modal
-import { parseTodoContent } from '../utils';
+import { parseTodoContent, decodeTimestampId } from '../utils';
 import configStore from './configStore'; // Import the MobX config store instance
 
 // Helper function (can remain outside or be part of the store if preferred)
@@ -73,6 +73,8 @@ class TodoStoreImpl {
       globallySortedAndFilteredTodos: computed,
       totalCounts: computed,
       showCompleted: computed,
+      computedFlattenedList: computed,
+      computedTableDisplayData: computed,
     });
 
     // Example of a reaction if needed, e.g., reacting to configStore.config changes
@@ -467,6 +469,86 @@ class TodoStoreImpl {
     } finally {
         this.closeAddTodoModal();
     }
+  }
+
+  // Computed property for flattened list (replaces useMemo in Todo.tsx)
+  get computedFlattenedList(): FlatListItem[] {
+    if (this.displayMode !== 'section') return [];
+    const flatList: FlatListItem[] = [];
+    let currentFlatIndex = 0;
+    this.filteredCategories.forEach((category: TodoCategory) => {
+      const originalCategoryIndex = this.categories.findIndex(c => c.name === category.name);
+      if (originalCategoryIndex === -1) return;
+
+      flatList.push({
+        type: 'header',
+        category: category,
+        categoryIndex: originalCategoryIndex,
+        flatIndex: currentFlatIndex++
+      });
+      category.todos.forEach((todo: TodoItem) => {
+        // Find original item index carefully. If duplicates exist, this might need a more robust ID.
+        // For now, assuming location+content is unique enough within its original category.
+        const originalItemIndex = this.categories[originalCategoryIndex]?.todos.findIndex(t => t.location === todo.location && t.content === todo.content) ?? -1;
+        
+        flatList.push({
+          type: 'item',
+          todo: todo,
+          categoryIndex: originalCategoryIndex,
+          itemIndex: originalItemIndex !== -1 ? originalItemIndex : 0, // Fallback for safety, though should always be found
+          flatIndex: currentFlatIndex++
+        });
+      });
+    });
+    return flatList;
+  }
+
+  // Computed property for table display data (replaces useMemo in Todo.tsx)
+  get computedTableDisplayData(): TodoTableRow[] {
+    if (this.displayMode !== 'table') return [];
+    const sortedItems = this.globallySortedAndFilteredTodos; // Relies on another computed
+    const originalStoreCategories = this.categories; // Direct access to original categories
+
+    return sortedItems.map(item => {
+      const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
+      const parsed = parseTodoContent(content);
+      
+      let fullPath = location || '';
+      let lineNumberStr = '';
+      const lineMatch = location?.match(/\:(\d+)$/);
+      if (lineMatch) {
+        lineNumberStr = lineMatch[1];
+        fullPath = location.replace(/\:\d+$/, '');
+      }
+      const basename = fullPath.split(/[/\\]/).pop() || fullPath || 'N/A';
+      
+      let createdTimestamp: string | null = null;
+      if (parsed.idPart && parsed.idPart.startsWith('@')) {
+        const dateObj = decodeTimestampId(parsed.idPart.substring(1));
+        createdTimestamp = dateObj ? dateObj.toISOString() : null;
+      }
+      
+      let completedTimestamp: string | null = null;
+      if (parsed.donePart && parsed.donePart.startsWith('@@')) {
+        const dateObj = decodeTimestampId(parsed.donePart.substring(2));
+        completedTimestamp = dateObj ? dateObj.toISOString() : null;
+      }
+
+      return {
+        id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
+        content: content,
+        parsedContent: parsed,
+        zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
+        filePath: basename,
+        lineNumber: lineNumberStr,
+        created: createdTimestamp,
+        finished: completedTimestamp,
+        estDuration: null, // Placeholder, logic to derive this can be added if available
+        originalTodo: item, // The GlobalTodoItem
+        categoryIndex: originalCategoryIndex,
+        itemIndex: originalItemIndex,
+      };
+    });
   }
 }
 
