@@ -12,6 +12,7 @@ interface ITodoServiceService extends grpc.ServiceDefinition<grpc.UntypedService
     editTodo: ITodoServiceService_IEditTodo;
     addTodo: ITodoServiceService_IAddTodo;
     markDone: ITodoServiceService_IMarkDone;
+    cycleTodoState: ITodoServiceService_ICycleTodoState;
 }
 
 interface ITodoServiceService_IGetTodos extends grpc.MethodDefinition<unitodo_pb.GetTodosRequest, unitodo_pb.GetTodosResponse> {
@@ -50,6 +51,15 @@ interface ITodoServiceService_IMarkDone extends grpc.MethodDefinition<unitodo_pb
     responseSerialize: grpc.serialize<unitodo_pb.MarkDoneResponse>;
     responseDeserialize: grpc.deserialize<unitodo_pb.MarkDoneResponse>;
 }
+interface ITodoServiceService_ICycleTodoState extends grpc.MethodDefinition<unitodo_pb.CycleTodoStateRequest, unitodo_pb.CycleTodoStateResponse> {
+    path: "/unitodo.TodoService/CycleTodoState";
+    requestStream: false;
+    responseStream: false;
+    requestSerialize: grpc.serialize<unitodo_pb.CycleTodoStateRequest>;
+    requestDeserialize: grpc.deserialize<unitodo_pb.CycleTodoStateRequest>;
+    responseSerialize: grpc.serialize<unitodo_pb.CycleTodoStateResponse>;
+    responseDeserialize: grpc.deserialize<unitodo_pb.CycleTodoStateResponse>;
+}
 
 export const TodoServiceService: ITodoServiceService;
 
@@ -58,6 +68,7 @@ export interface ITodoServiceServer extends grpc.UntypedServiceImplementation {
     editTodo: grpc.handleUnaryCall<unitodo_pb.EditTodoRequest, unitodo_pb.EditTodoResponse>;
     addTodo: grpc.handleUnaryCall<unitodo_pb.AddTodoRequest, unitodo_pb.AddTodoResponse>;
     markDone: grpc.handleUnaryCall<unitodo_pb.MarkDoneRequest, unitodo_pb.MarkDoneResponse>;
+    cycleTodoState: grpc.handleUnaryCall<unitodo_pb.CycleTodoStateRequest, unitodo_pb.CycleTodoStateResponse>;
 }
 
 export interface ITodoServiceClient {
@@ -73,6 +84,9 @@ export interface ITodoServiceClient {
     markDone(request: unitodo_pb.MarkDoneRequest, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
     markDone(request: unitodo_pb.MarkDoneRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
     markDone(request: unitodo_pb.MarkDoneRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
+    cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
+    cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
+    cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
 }
 
 export class TodoServiceClient extends grpc.Client implements ITodoServiceClient {
@@ -89,6 +103,9 @@ export class TodoServiceClient extends grpc.Client implements ITodoServiceClient
     public markDone(request: unitodo_pb.MarkDoneRequest, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
     public markDone(request: unitodo_pb.MarkDoneRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
     public markDone(request: unitodo_pb.MarkDoneRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: unitodo_pb.MarkDoneResponse) => void): grpc.ClientUnaryCall;
+    public cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
+    public cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
+    public cycleTodoState(request: unitodo_pb.CycleTodoStateRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: unitodo_pb.CycleTodoStateResponse) => void): grpc.ClientUnaryCall;
 }
 
 interface IConfigServiceService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {

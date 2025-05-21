@@ -2,7 +2,7 @@
 use crate::config_models::{AppConfiguration, Config, RgConfig, ProjectConfig as ModelProjectConfig}; // Added RgConfig, aliased ProjectConfig to avoid conflict
 use crate::todo_models::{TodoItem as InternalTodoItem, TodoCategoryData as InternalTodoCategoryData}; // Aliased internal models
 use crate::todo_processing::find_and_process_todos;
-use crate::file_operations::{edit_todo_in_file_grpc, add_todo_to_file_grpc, mark_todo_as_done_in_file_grpc};
+use crate::file_operations::{edit_todo_in_file_grpc, add_todo_to_file_grpc, mark_todo_as_done_in_file_grpc, cycle_todo_state_in_file_grpc};
 use crate::config_io::{write_config_to_path_internal, get_primary_config_path, CONFIG_FILE_MUTEX}; // Corrected imports
 
 use std::sync::Arc;
@@ -10,8 +10,8 @@ use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 use std::io;
 
-// Import gRPC generated types (assuming they are in crate::unitodo_proto)
-use crate::unitodo_proto::{
+// Import gRPC generated types (assuming they are in crate::unitodo)
+use crate::unitodo::{
     config_service_server::ConfigService,
     todo_service_server::TodoService,
     AddTodoRequest,
@@ -37,6 +37,7 @@ use crate::unitodo_proto::{
     SetActiveProfileRequest, SetActiveProfileResponse,
     AddProfileRequest, AddProfileResponse,
     DeleteProfileRequest, DeleteProfileResponse,
+    CycleTodoStateRequest, CycleTodoStateResponse, // Added for the new RPC
 };
 
 // --- Mapping Functions (Internal Models <-> Proto Models) ---
@@ -181,6 +182,34 @@ impl TodoService for MyTodoService {
                 }
             }
         } else { Err(Status::not_found("Active profile configuration not found for mark_done.")) }
+    }
+
+    async fn cycle_todo_state(&self, request: Request<CycleTodoStateRequest>) -> Result<Response<CycleTodoStateResponse>, Status> {
+        let payload = request.into_inner();
+        let app_config_guard = self.config_state.read().await;
+        if let Some(active_config) = app_config_guard.get_active_config() {
+            match cycle_todo_state_in_file_grpc(active_config, &payload.location, &payload.original_content) {
+                Ok((new_content_part, new_marker)) => Ok(Response::new(CycleTodoStateResponse {
+                    status: "success".to_string(),
+                    message: "Todo state cycled successfully".to_string(),
+                    new_content: new_content_part,
+                    new_marker,
+                })),
+                Err(e) => { 
+                     let (code, msg) = match e.kind() {
+                        io::ErrorKind::NotFound => (tonic::Code::NotFound, e.to_string()),
+                        io::ErrorKind::InvalidInput => (tonic::Code::InvalidArgument, e.to_string()),
+                        io::ErrorKind::InvalidData => (tonic::Code::InvalidArgument, e.to_string()), // For bad config or cycle definition
+                        io::ErrorKind::PermissionDenied => (tonic::Code::PermissionDenied, e.to_string()),
+                        io::ErrorKind::Other if e.to_string().contains("Content modified") => (tonic::Code::Aborted, e.to_string()),
+                        _ => (tonic::Code::Internal, format!("Failed to cycle todo state: {}", e)),
+                    };
+                    Err(Status::new(code, msg))
+                }
+            }
+        } else { 
+            Err(Status::not_found("Active profile configuration not found for cycle_todo_state.")) 
+        }
     }
 }
 

@@ -48,6 +48,28 @@ function deserialize_unitodo_AddTodoResponse(buffer_arg) {
   return unitodo_pb.AddTodoResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_unitodo_CycleTodoStateRequest(arg) {
+  if (!(arg instanceof unitodo_pb.CycleTodoStateRequest)) {
+    throw new Error('Expected argument of type unitodo.CycleTodoStateRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_CycleTodoStateRequest(buffer_arg) {
+  return unitodo_pb.CycleTodoStateRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_unitodo_CycleTodoStateResponse(arg) {
+  if (!(arg instanceof unitodo_pb.CycleTodoStateResponse)) {
+    throw new Error('Expected argument of type unitodo.CycleTodoStateResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_unitodo_CycleTodoStateResponse(buffer_arg) {
+  return unitodo_pb.CycleTodoStateResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_unitodo_DeleteProfileRequest(arg) {
   if (!(arg instanceof unitodo_pb.DeleteProfileRequest)) {
     throw new Error('Expected argument of type unitodo.DeleteProfileRequest');
@@ -291,6 +313,17 @@ var TodoServiceService = exports.TodoServiceService = {
     requestDeserialize: deserialize_unitodo_MarkDoneRequest,
     responseSerialize: serialize_unitodo_MarkDoneResponse,
     responseDeserialize: deserialize_unitodo_MarkDoneResponse,
+  },
+  cycleTodoState: {
+    path: '/unitodo.TodoService/CycleTodoState',
+    requestStream: false,
+    responseStream: false,
+    requestType: unitodo_pb.CycleTodoStateRequest,
+    responseType: unitodo_pb.CycleTodoStateResponse,
+    requestSerialize: serialize_unitodo_CycleTodoStateRequest,
+    requestDeserialize: deserialize_unitodo_CycleTodoStateRequest,
+    responseSerialize: serialize_unitodo_CycleTodoStateResponse,
+    responseDeserialize: deserialize_unitodo_CycleTodoStateResponse,
   },
 };
 

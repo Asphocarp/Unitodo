@@ -99,3 +99,29 @@ export async function markTodoAsDone(payload: MarkDonePayload): Promise<ProtoMar
     throw error;
   }
 } 
+
+// Payload for cycling todo state
+export interface CycleTodoStatePayload {
+  location: string;
+  original_content: string;
+}
+
+// Expected response structure from the backend for cycling state
+// Matches the CycleTodoStateResponse proto message
+export interface CycleTodoStateResponse {
+  status: string; // "success" or "error"
+  message: string;
+  new_content: string; // The content part of the todo after the marker
+  new_marker: string; // The new todo state marker (e.g., "- [x]", "- [/]")
+}
+
+export async function cycleTodoState(payload: CycleTodoStatePayload): Promise<CycleTodoStateResponse> {
+  try {
+    // This assumes a Tauri command named 'cycle_todo_state_command' is defined in Rust,
+    // which in turn calls the gRPC cycle_todo_state method.
+    return await invoke<CycleTodoStateResponse>('cycle_todo_state_command', { payload });
+  } catch (error) {
+    console.error('Error invoking cycle_todo_state_command:', error);
+    throw error;
+  }
+} 

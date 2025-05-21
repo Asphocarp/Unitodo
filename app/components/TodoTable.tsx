@@ -17,7 +17,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType, TodoTableRow } from '../types';
 import { parseTodoContent, decodeTimestampId, abbreviateTimeDistanceString } from '../utils';
 import { formatDistanceStrict } from 'date-fns';
-import { markTodoAsDone as apiMarkTodoAsDone, editTodoItem as apiEditTodoItem } from '../services/todoService';
+import { markTodoAsDone as apiMarkTodoAsDone, editTodoItem as apiEditTodoItem, cycleTodoState as apiCycleTodoState } from '../services/todoService';
 import todoStore, { isStatusDoneLike } from '../store/todoStore';
 import configStore from '../store/configStore';
 import NerdFontIcon from './NerdFontIcon';
@@ -472,14 +472,19 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       case ' ':
       case 'Spacebar':
         e.preventDefault();
-        const todoForDone = row.original.originalTodo!;
-        apiMarkTodoAsDone({
-          location: todoForDone.location,
-          original_content: todoForDone.content,
-        }).then(() => {
+        const todoForCycle = row.original.originalTodo!;
+        apiCycleTodoState({
+          location: todoForCycle.location,
+          original_content: todoForCycle.content,
+        }).then((response) => {
+          // Optionally, you could update the specific todo item in the store directly
+          // using response.new_content and response.new_marker if the backend provides them
+          // and they are sufficient to update the UI without a full reload.
+          // For now, a full reload ensures consistency.
           todoStore.loadData();
         }).catch(error => {
-          console.error("Failed to mark todo as done from table:", error);
+          console.error("Failed to cycle todo state from table:", error);
+          // Optionally, show an error message to the user
         });
         break;
       case 'ArrowUp':

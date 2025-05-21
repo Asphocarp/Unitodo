@@ -234,7 +234,7 @@ export interface ParsedTodo {
  * ASSUMES input string starts optionally with whitespace, then the first word (priority/id/timestamp).
  * Handles different ID formats (@timestamp, #nanoid, ##incremented) and optional priority/done markers.
  */
-// TODO: 1 refine parser here, just get first occured (@[a-zA-Z0-9_\-]{5})[@\#\s] which is ts5 (\#[a-zA-Z0-9_\-]{23})[@#\s] which is nanoid as the idpart, the rest is matched as text_parts, parse into a json object.
+// TODO: refine parser here, just get first occured anywhere (@[a-zA-Z0-9_\-]{5})[@\#\s] which is ts5 (\#[a-zA-Z0-9_\-]{23})[@#\s] which is nanoid as the idpart, the rest is matched as text_parts, parse into a json object.
 export function parseTodoContent(content: string): ParsedTodo {
   const match = content.match(TODO_REGEX); // UNITODO_IGNORE_LINE
 

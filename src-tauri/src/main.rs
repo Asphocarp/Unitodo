@@ -2,7 +2,7 @@
 #![allow(non_snake_case)]
 
 // Define the gRPC proto module directly in the crate root (main.rs)
-pub mod unitodo_proto {
+pub mod unitodo {
     tonic::include_proto!("unitodo");
 }
 
@@ -32,8 +32,8 @@ use tauri::{Emitter, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 use tonic::transport::Server;
 
 // Server traits for gRPC services
-use crate::unitodo_proto::config_service_server::ConfigServiceServer;
-use crate::unitodo_proto::todo_service_server::TodoServiceServer;
+use crate::unitodo::config_service_server::ConfigServiceServer;
+use crate::unitodo::todo_service_server::TodoServiceServer;
 
 #[derive(Debug)]
 pub struct AppState {
@@ -128,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             crate::tauri_commands::edit_todo_command,
             crate::tauri_commands::add_todo_command,
             crate::tauri_commands::mark_done_command,
+            crate::tauri_commands::cycle_todo_state_command,
             crate::tauri_commands::get_grpc_port_command,
             crate::tauri_commands::get_active_profile_command,
             crate::tauri_commands::set_active_profile_command,

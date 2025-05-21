@@ -2,9 +2,9 @@
 use crate::config_models::AppConfiguration;
 use crate::grpc_services::{MyTodoService, MyConfigService};
 // Import the gRPC service traits for the command functions that call service methods
-use crate::unitodo_proto::todo_service_server::TodoService;
-use crate::unitodo_proto::config_service_server::ConfigService;
-use crate::unitodo_proto::{
+use crate::unitodo::todo_service_server::TodoService;
+use crate::unitodo::config_service_server::ConfigService;
+use crate::unitodo::{ // Corrected path to unitodo
     // Import all necessary request/response types for commands
     GetTodosRequest, GetTodosResponse,
     EditTodoRequest, EditTodoResponse,
@@ -18,6 +18,7 @@ use crate::unitodo_proto::{
     AddProfileRequest, AddProfileResponse,
     DeleteProfileRequest, DeleteProfileResponse,
     ConfigMessage as ProtoConfigMessage, // For update_config_command
+    CycleTodoStateRequest, CycleTodoStateResponse, // Added for the new command
 };
 use crate::AppState; // Assuming AppState is defined in main.rs or another accessible module
 
@@ -107,6 +108,20 @@ pub async fn mark_done_command(
         config_state: app_config_state.inner().clone(),
     };
     match service.mark_done(Request::new(payload)).await {
+        Ok(response) => Ok(response.into_inner()),
+        Err(status) => Err(status.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn cycle_todo_state_command(
+    payload: CycleTodoStateRequest,
+    app_config_state: tauri::State<'_, Arc<RwLock<AppConfiguration>>>,
+) -> Result<CycleTodoStateResponse, String> {
+    let service = MyTodoService {
+        config_state: app_config_state.inner().clone(),
+    };
+    match service.cycle_todo_state(Request::new(payload)).await {
         Ok(response) => Ok(response.into_inner()),
         Err(status) => Err(status.to_string()),
     }
@@ -229,5 +244,6 @@ pub mod app_updates {
         } else {
             return Err("No pending update to install.".to_string());
         }
+        Ok(())
     }
-} 
+}

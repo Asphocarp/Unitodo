@@ -258,6 +258,58 @@ export namespace MarkDoneResponse {
     }
 }
 
+export class CycleTodoStateRequest extends jspb.Message { 
+    getLocation(): string;
+    setLocation(value: string): CycleTodoStateRequest;
+    getOriginalContent(): string;
+    setOriginalContent(value: string): CycleTodoStateRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CycleTodoStateRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: CycleTodoStateRequest): CycleTodoStateRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CycleTodoStateRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CycleTodoStateRequest;
+    static deserializeBinaryFromReader(message: CycleTodoStateRequest, reader: jspb.BinaryReader): CycleTodoStateRequest;
+}
+
+export namespace CycleTodoStateRequest {
+    export type AsObject = {
+        location: string,
+        originalContent: string,
+    }
+}
+
+export class CycleTodoStateResponse extends jspb.Message { 
+    getStatus(): string;
+    setStatus(value: string): CycleTodoStateResponse;
+    getMessage(): string;
+    setMessage(value: string): CycleTodoStateResponse;
+    getNewContent(): string;
+    setNewContent(value: string): CycleTodoStateResponse;
+    getNewMarker(): string;
+    setNewMarker(value: string): CycleTodoStateResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): CycleTodoStateResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: CycleTodoStateResponse): CycleTodoStateResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: CycleTodoStateResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): CycleTodoStateResponse;
+    static deserializeBinaryFromReader(message: CycleTodoStateResponse, reader: jspb.BinaryReader): CycleTodoStateResponse;
+}
+
+export namespace CycleTodoStateResponse {
+    export type AsObject = {
+        status: string,
+        message: string,
+        newContent: string,
+        newMarker: string,
+    }
+}
+
 export class RgConfigMessage extends jspb.Message { 
     clearPathsList(): void;
     getPathsList(): Array<string>;

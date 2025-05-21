@@ -59,11 +59,24 @@ message MarkDoneResponse {
     bool completed = 4;
 }
 
+message CycleTodoStateRequest {
+    string location = 1;
+    string original_content = 2;
+}
+
+message CycleTodoStateResponse {
+    string status = 1; // "success" or "error"
+    string message = 2; // Detailed message
+    string new_content = 3; // The content part of the todo after the marker
+    string new_marker = 4; // The new todo state marker (e.g., "- [x]", "- [/]")
+}
+
 service TodoService {
     rpc GetTodos (GetTodosRequest) returns (GetTodosResponse);
     rpc EditTodo (EditTodoRequest) returns (EditTodoResponse);
     rpc AddTodo (AddTodoRequest) returns (AddTodoResponse);
     rpc MarkDone (MarkDoneRequest) returns (MarkDoneResponse);
+    rpc CycleTodoState (CycleTodoStateRequest) returns (CycleTodoStateResponse);
 }
 
 // --------------- Config Service ---------------
