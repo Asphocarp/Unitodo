@@ -40,7 +40,6 @@ type FlatListItem = FlatHeaderItem | FlatTodoItem;
 
 const Todo: React.FC = observer(() => {
   const {
-    categories,
     loading,
     error,
     filter,
@@ -75,7 +74,6 @@ const Todo: React.FC = observer(() => {
   const { isDarkMode, toggleDarkMode } = darkModeStore;
 
   const { active: activeTodos, done: completedTodos, total: totalTodos } = todoStore.totalCounts;
-  const filteredCategories = todoStore.filteredCategories;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
