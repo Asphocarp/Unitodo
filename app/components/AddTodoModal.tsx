@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import useConfigStore from '../store/configStore';
+import { observer } from 'mobx-react-lite';
+import configStore from '../store/configStore';
 
 interface AddTodoModalProps {
   isOpen: boolean;
@@ -11,23 +12,21 @@ interface AddTodoModalProps {
   categoryType: 'git' | 'project';
 }
 
-export default function AddTodoModal({ 
+const AddTodoModal: React.FC<AddTodoModalProps> = observer(({ 
   isOpen, 
   onClose, 
   onSubmit, 
   categoryName, 
   categoryType 
-}: AddTodoModalProps) {
+}) => {
   const [todoText, setTodoText] = useState('');
-  const { config } = useConfigStore();
+  const { config } = configStore;
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      // Focus the input when modal opens
       inputRef.current.focus();
     }
-    // Reset content when modal is opened
     if (isOpen) {
       setTodoText('');
     }
@@ -36,21 +35,19 @@ export default function AddTodoModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (todoText.trim()) {
-      onSubmit(todoText.trim(), categoryType, categoryName);
+      let fullTodoText = todoText.trim();
+      if (config?.todo_states && config.todo_states.length > 0 && config.todo_states[0] && config.todo_states[0][0]) {
+        let pattern = config.todo_states[0][0];
+        if (!pattern.endsWith(' ')) pattern += ' ';
+        if (!fullTodoText.startsWith(pattern.trim().split(' ')[0])){
+            fullTodoText = pattern + fullTodoText;
+        }
+      }
+      onSubmit(fullTodoText, categoryType, categoryName);
     }
   };
   
   if (!isOpen) return null;
-
-  // Get the appropriate todo pattern from config
-  let todoPattern = '- [ ] '; // Default TODO marker
-  if (config?.todo_states && config.todo_states.length > 0 && config.todo_states[0] && config.todo_states[0].length > 0) {
-    todoPattern = config.todo_states[0][0]; // Use first state of first set
-    // Add space if pattern doesn't end with one
-    if (!todoPattern.endsWith(' ')) {
-      todoPattern += ' ';
-    }
-  }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -59,10 +56,10 @@ export default function AddTodoModal({
   };
   
   return (
-    <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop" onClick={() => onClose()}>
+    <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop" onClick={onClose}>
       <div className="bg-white dark:bg-neutral-800 p-5 rounded-lg shadow-lg max-w-lg w-full mx-4 modal-content dark:text-neutral-200" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base font-medium">Add Todo to {categoryName}</h3>
+          <h3 className="text-base font-medium">Add Todo to {categoryName} ({categoryType})</h3>
           <button 
             onClick={onClose}
             className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
@@ -76,24 +73,22 @@ export default function AddTodoModal({
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            {/* <label htmlFor="todoText" className="block text-sm font-medium mb-1 text-neutral-700 dark:text-neutral-300">
-              Todo text
-            </label> */}
             <input
                 id="todoText"
                 ref={inputRef}
                 value={todoText}
                 onChange={(e) => setTodoText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Enter your todo here..."
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-notion-green focus:border-notion-green dark:bg-neutral-800 dark:text-neutral-200"
+                placeholder="Enter your todo here... (e.g., Fix the login bug)"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-700 rounded-md focus:outline-none focus:ring-1 focus:ring-accent-color focus:border-accent-color dark:bg-neutral-800 dark:text-neutral-200"
                 autoFocus
                 type="text"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               {categoryType === 'git' 
-                ? 'This todo will be added to your git repository'
-                : 'This todo will be added to your project file'}
+                ? 'This todo will be added to a file in your git repository.'
+                : 'This todo will be added to your project file.'}
+                 Standard TODO pattern will be prepended if not typed.
             </p>
           </div>
           
@@ -117,4 +112,6 @@ export default function AddTodoModal({
       </div>
     </div>
   );
-} 
+});
+
+export default AddTodoModal; 

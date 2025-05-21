@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import useConfigStore from '../store/configStore';
-import { useDarkMode } from '../utils/darkMode';
+import { observer } from 'mobx-react-lite'; // Import observer
+import configStore from '../store/configStore'; // Import MobX store instance
+import { darkModeStore } from '../utils/darkMode'; // Import MobX darkModeStore
 import { Config, ProjectConfig } from '../types';
 import Link from 'next/link';
 
-// Reusable Input Component with more compact, stylish design
+// Reusable Input Component (remains the same)
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   description?: string;
@@ -25,7 +26,7 @@ const InputField: React.FC<InputProps> = ({ label, description, ...props }) => (
   </div>
 );
 
-// Reusable Textarea Component with more compact, stylish design
+// Reusable Textarea Component (remains the same)
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
   description?: string;
@@ -45,7 +46,7 @@ const TextareaField: React.FC<TextareaProps> = ({ label, description, ...props }
   </div>
 );
 
-// Select Component for Profiles
+// Select Component for Profiles (remains the same)
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label: string;
   description?: string;
@@ -66,7 +67,8 @@ const SelectField: React.FC<SelectProps> = ({ label, description, children, ...p
   </div>
 );
 
-export default function ConfigPage() {
+const ConfigPage: React.FC = observer(() => { // Wrap component with observer
+  // Directly use MobX store instance
   const {
     config,
     loading,
@@ -90,10 +92,11 @@ export default function ConfigPage() {
     addProjectToCurrentProfile,
     removeProjectFromCurrentProfile,
     addTodoStateSetToCurrentProfile,
+    updateTodoStateSetInCurrentProfile, // Make sure this is defined in store if used
     removeTodoStateSetFromCurrentProfile,
-  } = useConfigStore();
+  } = configStore;
   
-  const { isDarkMode } = useDarkMode();
+  const { isDarkMode } = darkModeStore; // Use MobX darkModeStore
   const [newProjectName, setNewProjectName] = useState('');
   const [newState1, setNewState1] = useState('');
   const [newState2, setNewState2] = useState('');
@@ -106,10 +109,10 @@ export default function ConfigPage() {
     if (!initialConfigLoaded && !loading) {
       loadActiveProfileAndConfig();
     }
-  }, [loadActiveProfileAndConfig, initialConfigLoaded, loading]);
+  }, [initialConfigLoaded, loading, loadActiveProfileAndConfig]);
 
   const handleProjectPatternChange = (projectName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const patterns = e.target.value.split('\n').map(p => p.trim()).filter(Boolean);
+    const patterns = e.target.value.split('\\n').map(p => p.trim()).filter(Boolean);
     updateProjectFieldForCurrentProfile(projectName, patterns);
   };
   
@@ -121,8 +124,8 @@ export default function ConfigPage() {
   };
 
   const handleAddTodoStateSet = () => {
-    const states = [newState1, newState2, newState3, newState4];
-    if (states.some(s => s !== '')) {
+    const states = [newState1, newState2, newState3, newState4].filter(s => s.trim() !== '');
+    if (states.length > 0) { // Ensure at least one state is provided
         addTodoStateSetToCurrentProfile(states);
         setNewState1('');
         setNewState2('');
@@ -130,6 +133,16 @@ export default function ConfigPage() {
         setNewState4('');
     }
   };
+  
+  const handleUpdateTodoStateSet = (index: number, existingStates: string[], stateIndexInSet: number, newValue: string) => {
+    const newSet = [...existingStates];
+    newSet[stateIndexInSet] = newValue;
+    // Filter out empty strings at the end, but keep placeholders if user is editing
+    const cleanedNewSet = newSet.map(s => s.trim());
+    // Call a method like updateTodoStateSetInCurrentProfile if you implement it
+     configStore.updateTodoStateSetInCurrentProfile(index, cleanedNewSet);
+  };
+
 
   const handleAddProfile = async () => {
     if (newProfileNameField.trim()) {
@@ -141,7 +154,7 @@ export default function ConfigPage() {
 
   const handleDeleteProfile = async () => {
     if (activeProfileName && activeProfileName !== 'default') {
-      if (window.confirm(`Are you sure you want to delete profile "${activeProfileName}"?`)) {
+      if (window.confirm(`Are you sure you want to delete profile \"${activeProfileName}\"?`)) {
         await deleteCurrentProfile(activeProfileName);
       }
     }
@@ -159,7 +172,8 @@ export default function ConfigPage() {
     return <div className="text-xs flex items-center justify-center h-screen">Configuration not available. Attempting to load...</div>;
   }
 
-  const projects: Record<string, ProjectConfig> = config.projects as Record<string, ProjectConfig>;
+  // Ensure projects is always an object
+  const projects: Record<string, ProjectConfig> = config.projects || {};
 
   return (
     <div className={`max-w-4xl mx-auto p-4 ${isDarkMode ? 'dark' : ''}`}>
@@ -172,7 +186,6 @@ export default function ConfigPage() {
         </div>
         <span className="text-xs text-neutral-500 dark:text-neutral-400">Profile: <strong className="text-neutral-700 dark:text-neutral-200">{activeProfileName}</strong></span>
       </div>
-      {/* Notifications for general errors and save messages */}
       {error && (
          <div className="mb-3 py-2 px-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs border border-red-200 dark:border-red-800/50">
             Error: {error}
@@ -183,13 +196,11 @@ export default function ConfigPage() {
           {saveMessage}
         </div>
       )}
-      {/* Notifications for profile-specific errors */}
       {profileError && (
          <div className="mb-3 py-2 px-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs border border-red-200 dark:border-red-800/50">
             Profile Error: {profileError}
          </div>
       )}
-      {/* Profile Management Section */}
       <section className="mb-6 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
         <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Profiles</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
@@ -242,18 +253,17 @@ export default function ConfigPage() {
           </button>
         </div>
       </section>
-      {/* Form for the active profile's settings */}
+      
       <form onSubmit={(e) => { e.preventDefault(); saveCurrentProfileConfig(); }} className="text-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Frontend Settings */}
           <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
             <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Display & Behavior (Profile: {activeProfileName})</h2>
             <InputField
               label="Auto-Refresh Interval (ms)"
-              description="Refresh frequency for TODO list" // UNITODO_IGNORE_LINE
+              description="Refresh frequency for TODO list"
               type="number"
               id="refresh_interval"
-              value={config.refresh_interval}
+              value={config.refresh_interval || 0}
               onChange={(e) => updateConfigFieldForCurrentProfile('refresh_interval', parseInt(e.target.value, 10) || 0)}
               disabled={isSaving || profilesLoading}
             />
@@ -262,53 +272,42 @@ export default function ConfigPage() {
               description="URI to open files (e.g., vscode://file/, cursor://file/)"
               type="text"
               id="editor_uri_scheme"
-              value={config.editor_uri_scheme}
+              value={config.editor_uri_scheme || ''}
               onChange={(e) => updateConfigFieldForCurrentProfile('editor_uri_scheme', e.target.value)}
               disabled={isSaving || profilesLoading}
             />
             <InputField
               label="Default Append File Basename (for Git)"
-              description="Default filename for new TODOs in git repos (e.g., unitodo.append.md)" // UNITODO_IGNORE_LINE
+              description="Default filename for new TODOs in git repos (e.g., unitodo.append.md)"
               type="text"
               id="default_append_basename"
-              value={config.default_append_basename}
+              value={config.default_append_basename || ''}
               onChange={(e) => updateConfigFieldForCurrentProfile('default_append_basename', e.target.value)}
               disabled={isSaving || profilesLoading}
             />
           </section>
           
-          {/* Backend Settings (rg) */}
           <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
               <h2 className="text-sm font-semibold mb-3 text-neutral-700 dark:text-neutral-300 pb-2 border-b border-neutral-200 dark:border-neutral-700">Search Settings (Profile: {activeProfileName})</h2>
               <TextareaField
                   label="Search Paths"
                   description="Locations to scan (one per line)"
                   id="rg_paths"
-                  value={(config.rg && config.rg.paths) ? config.rg.paths.join('\n') : ''}
-                  onChange={(e) => updateRgFieldForCurrentProfile('paths', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
+                  value={(config.rg && config.rg.paths) ? config.rg.paths.join('\\n') : ''}
+                  onChange={(e) => updateRgFieldForCurrentProfile('paths', e.target.value.split('\\n').map(p => p.trim()).filter(Boolean))}
                   disabled={isSaving || profilesLoading}
               />
               <TextareaField
                   label="Ignore Patterns (Globs)"
                   description="Files/dirs to ignore (one per line)"
                   id="rg_ignore"
-                  value={(config.rg && config.rg.ignore) ? config.rg.ignore.join('\n') : ''}
-                  onChange={(e) => updateRgFieldForCurrentProfile('ignore', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
+                  value={(config.rg && config.rg.ignore) ? config.rg.ignore.join('\\n') : ''}
+                  onChange={(e) => updateRgFieldForCurrentProfile('ignore', e.target.value.split('\\n').map(p => p.trim()).filter(Boolean))}
                   disabled={isSaving || profilesLoading}
               />
-               {/* File types input - if you re-add support later */}
-              {/* <TextareaField
-                  label="Include File Types (Globs)"
-                  description="Only search these file types (e.g., *.rs, *.md). Leave empty to search all non-ignored/binary files."
-                  id="rg_file_types"
-                  value={(config.rg && config.rg.file_types) ? config.rg.file_types.join('\n') : ''}
-                  onChange={(e) => updateRgFieldForCurrentProfile('file_types', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
-                  disabled={isSaving || profilesLoading}
-              /> */}
           </section>
         </div>
 
-        {/* Backend Settings (Projects) */}
         <section className="mb-5 p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-white dark:bg-neutral-800/50">
             <div className="flex justify-between items-center mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
               <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Project Definitions (Profile: {activeProfileName})</h2>
@@ -359,14 +358,14 @@ export default function ConfigPage() {
                                         dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-accent-color transition-all duration-150"
                               rows={2}
                               placeholder="Path glob patterns (one per line, e.g., src/**/*.js)"
-                              value={projectConfig.patterns.join('\n')}
+                              value={(projectConfig.patterns || []).join('\\n')}
                               onChange={(e) => handleProjectPatternChange(projectName, e)}
                               disabled={isSaving || profilesLoading}
                           />
                         </div>
                         <InputField
-                          label="Append TODO File Path" // UNITODO_IGNORE_LINE
-                          description="Path where new TODOs for this project will be added" // UNITODO_IGNORE_LINE
+                          label="Append TODO File Path"
+                          description="Path where new TODOs for this project will be added"
                           type="text"
                           id={`project_append_path_${projectName}`}
                           name={`project_append_path_${projectName}`}
@@ -386,101 +385,74 @@ export default function ConfigPage() {
           <div className="mb-4 p-3 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
               <InputField
-                  label="State 1 (e.g., TODO, - [ ] )"
-                  type="text"
-                  value={newState1}
-                  onChange={(e) => setNewState1(e.target.value)}
-                  placeholder="e.g., TODO:"
+                  label="State 1 (e.g., TODO, - [ ] )" type="text" value={newState1} onChange={(e) => setNewState1(e.target.value)} placeholder="e.g., TODO:"
                   className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
                   disabled={isSaving || profilesLoading}
               />
               <InputField
-                  label="State 2 (e.g., DOING, - [-] )"
-                  type="text"
-                  value={newState2}
-                  onChange={(e) => setNewState2(e.target.value)}
-                  placeholder="e.g., DOING:"
+                  label="State 2 (e.g., DOING, - [-] )" type="text" value={newState2} onChange={(e) => setNewState2(e.target.value)} placeholder="e.g., DOING:"
                   className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
                   disabled={isSaving || profilesLoading}
               />
               <InputField
-                  label="State 3 (e.g., DONE, - [x] )"
-                  type="text"
-                  value={newState3}
-                  onChange={(e) => setNewState3(e.target.value)}
-                  placeholder="e.g., DONE:"
+                  label="State 3 (e.g., DONE, - [x] )" type="text" value={newState3} onChange={(e) => setNewState3(e.target.value)} placeholder="e.g., DONE:"
                   className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
                   disabled={isSaving || profilesLoading}
               />
               <InputField
-                  label="State 4 (e.g., CANCELLED, - [/] )"
-                  type="text"
-                  value={newState4}
-                  onChange={(e) => setNewState4(e.target.value)}
-                  placeholder="e.g., CANCELLED:"
+                  label="State 4 (e.g., CANCELLED, - [/] )" type="text" value={newState4} onChange={(e) => setNewState4(e.target.value)} placeholder="e.g., CANCELLED:"
                   className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 mb-3"
                   disabled={isSaving || profilesLoading}
               />
             </div>
             <button 
-              type="button"
-              onClick={handleAddTodoStateSet}
+              type="button" onClick={handleAddTodoStateSet}
               className="px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-white rounded-md text-xs border border-accent-color transition-all flex items-center shadow-sm disabled:opacity-50"
-              disabled={isSaving || profilesLoading || (!newState1 && !newState2 && !newState3 && !newState4)}
+              disabled={isSaving || profilesLoading || (!newState1.trim() && !newState2.trim() && !newState3.trim() && !newState4.trim())}
             >
               <span className="mr-1">+</span> Add State Set
             </button>
           </div>
 
-          {config.todo_states && config.todo_states.length > 0 ? (
+          {(config.todo_states || []).length > 0 ? (
             <div className="space-y-2">
-              {config.todo_states.map((state_set, index) => (
-                <div key={index} className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md flex justify-between items-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-sm">
-                  <div className="flex-grow text-xs dark:text-neutral-300">
-                    {state_set.map((state, stateIndex) => (
-                        <code key={stateIndex} className="mr-1.5 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-md">{state.replace(/ /g, '\u00A0')}</code>
+              {(config.todo_states || []).map((state_set, index) => (
+                <div key={index} className="p-3 border border-neutral-200 dark:border-neutral-700 rounded-md flex flex-col space-y-2 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-750 transition-colors shadow-sm">
+                  <div className="flex justify-end">
+                    <button 
+                      type="button"
+                      onClick={() => removeTodoStateSetFromCurrentProfile(index)} 
+                      className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center bg-red-50 dark:bg-red-900/20 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                      aria-label="Remove state set"
+                      disabled={isSaving || profilesLoading}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Array.from({ length: 4 }).map((_, stateIndexInSet) => (
+                      <InputField
+                        key={stateIndexInSet}
+                        label={`State ${stateIndexInSet + 1}`}
+                        type="text"
+                        value={state_set[stateIndexInSet] || ''}
+                        onChange={(e) => handleUpdateTodoStateSet(index, state_set, stateIndexInSet, e.target.value)}
+                        placeholder={`e.g., ${stateIndexInSet === 0 ? 'TODO' : stateIndexInSet === 1 ? 'DOING' : stateIndexInSet === 2 ? 'DONE' : 'CANCEL'}`}
+                        className="focus:z-10 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5"
+                        disabled={isSaving || profilesLoading}
+                      />
                     ))}
                   </div>
-                  <button 
-                    type="button"
-                    onClick={() => removeTodoStateSetFromCurrentProfile(index)} 
-                    className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-4 flex items-center bg-red-50 dark:bg-red-900/20 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
-                    aria-label="Remove state set"
-                    disabled={isSaving || profilesLoading}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
                 </div>
               ))}
             </div>
           ) : (
-            (() => {
-              const defaultTodoStates: string[][] = [
-                ["- [ ] ", "- [-] ", "- [x] ", "- [/] "],
-                ["TODO:", "DOING:", "DONE:", "CANCELLED:"],
-                ["TODO", "DOING", "DONE", "CANCELLED"]
-              ];
-              return (
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">
-                  <p className="mb-2 not-italic text-neutral-600 dark:text-neutral-300">No TODO state sets defined for this profile. The following defaults will be used by the backend:</p>
-                  <div className="space-y-1 not-italic">
-                    {defaultTodoStates.map((state_set: string[], index: number) => (
-                      <div key={`default-${index}`} className="p-2 border border-neutral-200 dark:border-neutral-600 rounded-md flex bg-white dark:bg-neutral-750 shadow-sm">
-                        <div className="flex-grow text-xs dark:text-neutral-300">
-                          {state_set.map((state: string, stateIndex: number) => (
-                              <code key={`default-${index}-${stateIndex}`} className="mr-1.5 px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-700 rounded-sm">{state.replace(/ /g, '\u00A0')}</code>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()
+             <div className="text-xs text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 dark:bg-neutral-800 p-3 rounded-md border border-neutral-200 dark:border-neutral-700">
+                  <p className="mb-2 not-italic text-neutral-600 dark:text-neutral-300">No TODO state sets defined for this profile. Default sets will be used by the backend if this is empty.</p>
+             </div>
           )}
         </section>
 
-        {/* Save Button for the active profile's config */}
         <div className="flex justify-end mt-6">
           <button 
             type="submit" 
@@ -503,4 +475,6 @@ export default function ConfigPage() {
       </form>
     </div>
   );
-} 
+});
+
+export default ConfigPage;

@@ -17,12 +17,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
 import { parseTodoContent, decodeTimestampId, abbreviateTimeDistanceString } from '../utils';
 import { formatDistanceStrict } from 'date-fns';
-import TodoItem from './TodoItem';
-import { markTodoAsDone, editTodoItem } from '../services/todoService';
-import { useTodoStore, isStatusDoneLike } from '../store/todoStore';
+import { markTodoAsDone as apiMarkTodoAsDone, editTodoItem as apiEditTodoItem } from '../services/todoService';
+import todoStore, { isStatusDoneLike } from '../store/todoStore';
+import configStore from '../store/configStore';
 import NerdFontIcon from './NerdFontIcon';
-import useConfigStore from '../store/configStore';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { observer } from 'mobx-react-lite';
 
 // Import for virtualization
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -105,7 +105,6 @@ const DraggableHeader: React.FC<DraggableHeaderProps> = React.memo(({ header, ch
 
 
 interface TodoTableProps {
-  // categories: TodoCategoryType[]; // No longer needed, data comes via tableRows
   tableRows: TodoTableRow[];
   onRowClick: (categoryIndex: number, itemIndex: number) => void;
   focusedItem: { categoryIndex: number; itemIndex: number; };
@@ -113,23 +112,20 @@ interface TodoTableProps {
   width: number;
 }
 
-export default function TodoTable({ tableRows, onRowClick, focusedItem, height, width }: TodoTableProps) {
-  const { config: appConfig } = useConfigStore();
-  const todoStoreCategories = useTodoStore(state => state.categories); // For icons
-  // Access editing state and action from Zustand store
-  const tableEditingCell = useTodoStore(state => state.tableEditingCell);
-  const setTableEditingCell = useTodoStore(state => state.setTableEditingCell);
+// Wrap TodoTable with observer to make it reactive to MobX store changes
+const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, focusedItem, height, width }) => {
+  const appConfig = configStore.config;
+  const todoStoreCategories = todoStore.categories;
+  
+  // Access editing state and action from MobX todoStore
+  const tableEditingCell = todoStore.tableEditingCell;
+  const setTableEditingCell = todoStore.setTableEditingCell;
   const [editedContent, setEditedContent] = useState<string>('');
 
-  // Ref for the scrolling container
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  // Ref for the editor wrapper to handle blur and escape
   const editorWrapperRef = useRef<HTMLDivElement>(null);
-
-  // Track column sizing state
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
-  // Helper to refocus the row after editing
   const focusRowElement = (catIdx: number, itmIdx: number) => {
     setTimeout(() => {
       const selector = `tr[data-category-index="${catIdx}"][data-item-index="${itmIdx}"]`;
@@ -152,13 +148,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               disabled: false,
               onChange: async () => {
                 const todo = row.original.originalTodo;
-                const store = useTodoStore.getState();
                 try {
-                  await markTodoAsDone({
+                  await apiMarkTodoAsDone({
                     location: todo.location,
                     original_content: todo.content,
                   });
-                  store.loadData();
+                  todoStore.loadData();
                 } catch (error) {
                   console.error("Failed to mark todo as done from table:", error);
                 }
@@ -172,9 +167,8 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     {
       accessorKey: 'zone',
       header: 'Zone',
-      size: 100, // Adjusted size slightly for icon
+      size: 100,
       cell: ({ row }) => {
-        // Use original categoryIndex to get icon from the main store categories
         const categoryIcon = todoStoreCategories[row.original.categoryIndex]?.icon || ''; 
         return (
           <div className="flex items-center truncate">
@@ -194,8 +188,8 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
           return (
             <div
               ref={editorWrapperRef}
-              className="w-full h-full flex items-center" // Ensure wrapper takes space and aligns editor
-              onKeyDown={async (e) => { // Handles Escape
+              className="w-full h-full flex items-center"
+              onKeyDown={async (e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault();
                   e.stopPropagation();
@@ -203,9 +197,9 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                   focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                 }
               }}
-              onBlur={(e) => { // Handles losing focus from the editor
+              onBlur={(e) => {
                 if (editorWrapperRef.current && !editorWrapperRef.current.contains(e.relatedTarget as Node | null)) {
-                  if (useTodoStore.getState().tableEditingCell) {
+                  if (todoStore.tableEditingCell) {
                     setTableEditingCell(null);
                     focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                   }
@@ -215,44 +209,45 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               <LexicalTodoEditor
                 initialFullContent={editedContent}
                 isReadOnly={false}
-                onSubmit={async () => { // This is for Enter key
-                  if (!useTodoStore.getState().tableEditingCell) return;
+                onSubmit={async () => {
+                  if (!todoStore.tableEditingCell) return;
                   const root = $getRoot();
                   const text = root.getTextContent();
                   try {
-                    await editTodoItem({
+                    await apiEditTodoItem({
                       location: row.original.originalTodo.location,
                       new_content: text,
                       original_content: row.original.originalTodo.content,
                     });
-                    // Optimistic update
-                    useTodoStore.getState().updateTodo({
-                      ...row.original.originalTodo,
-                      content: text,
-                    });
-                    useTodoStore.getState().loadData();
+                    todoStore.updateTodo(
+                      {
+                        ...row.original.originalTodo,
+                        content: text,
+                      },
+                      row.original.originalTodo.content
+                    );
+                    todoStore.loadData();
                   } catch (err) {
                     console.error('Failed to save todo in table:', err);
-                    // Optionally, display an error message to the user here
                   } finally {
-                    if (useTodoStore.getState().tableEditingCell) {
+                    if (todoStore.tableEditingCell) {
                         setTableEditingCell(null);
                         focusRowElement(row.original.categoryIndex, row.original.itemIndex);
                     }
                   }
                 }}
-                initialFocus={tableEditingCell?.initialFocus} // Pass the focus hint
+                initialFocus={tableEditingCell?.initialFocus}
               />
             </div>
           );
         }
         return (
           <div 
-            className="truncate text-sm h-full flex items-center" // Ensure div takes full height for editor alignment
+            className="truncate text-sm h-full flex items-center"
             title={row.original.content}
           >
             <LexicalTodoEditor
-                key={row.original.id + '-display'} // Unique key for re-initialization
+                key={row.original.id + '-display'}
                 initialFullContent={row.original.content}
                 isReadOnly={true}
                 displayMode='table-view'
@@ -264,7 +259,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     {
       accessorKey: 'filePath',
       header: 'File',
-      size: 180, // Adjusted size
+      size: 180,
       cell: ({ row }) => (
         <div className="truncate text-xs text-neutral-500">
           <a 
@@ -275,11 +270,10 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
               e.preventDefault();
               e.stopPropagation();
               const url = getEditorUrl(row.original.originalTodo.location);
-              if (url) {
+              if (url && appConfig) {
                 try {
                   openUrl(url).catch(error => {
                     console.error('[TodoTable] Error opening URL with Tauri:', error);
-                    // Fallback to window.open
                     try {
                       window.open(url, '_blank');
                     } catch (secondError) {
@@ -300,7 +294,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     {
       accessorKey: 'created',
       header: 'Created',
-      size: 150, // Adjusted size
+      size: 150,
       cell: info => {
         const createdVal = info.getValue() as string | null;
         if (!createdVal) return <div className="truncate" title="-"> - </div>;
@@ -309,14 +303,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         const abbreviated = abbreviateTimeDistanceString(strictDistance);
         const displayDate = `[${abbreviated} ago]`;
         return <div className="truncate" title={decodedDate.toLocaleString()}>{displayDate}</div>;
-        // const displayDate = createdVal ? new Date(createdVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
-        // return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
       accessorKey: 'finished',
       header: 'Finished',
-      size: 150, // Adjusted size
+      size: 150,
       cell: info => {
         const finishedVal = info.getValue() as string | null;
         if (!finishedVal) return <div className="truncate" title="-"> - </div>;
@@ -325,32 +317,30 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         const abbreviated = abbreviateTimeDistanceString(strictDistance);
         const displayDate = `[${abbreviated} ago]`;
         return <div className="truncate" title={decodedDate.toLocaleString()}>{displayDate}</div>;
-        // const displayDate = finishedVal ? new Date(finishedVal).toLocaleDateString(undefined, { year: '2-digit', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A';
-        // return <div className="truncate" title={displayDate}>{displayDate}</div>;
       },
     },
     {
       accessorKey: 'estDuration',
-      header: 'Est. Dur', // Shortened header
-      size: 80, // Adjusted size
+      header: 'Est. Dur',
+      size: 80,
       cell: info => {
         const estDurVal = info.getValue() as string | null || 'N/A';
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
     },
-  ], [todoStoreCategories, tableEditingCell, setTableEditingCell]); // Depend on todoStoreCategories for icons
+  ], [appConfig, todoStoreCategories, tableEditingCell, setTableEditingCell]);
 
   const data = useMemo((): TodoTableRow[] => {
     return tableRows;
   }, [tableRows]);
 
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
-    columns.map(column => column.id || (column as any).accessorKey) // Use dynamic columns for initial order
+    columns.map(column => column.id || (column as any).accessorKey)
   );
 
   const table = useReactTable({
     data,
-    columns, // Use dynamic columns
+    columns,
     state: {
       columnOrder,
       columnSizing,
@@ -379,21 +369,17 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
     }
   };
   
-  // Helper to get column IDs for SortableContext
   const columnIds = useMemo(() => table.getFlatHeaders().map(header => header.id),[table.getFlatHeaders()])
 
-  // Row virtualization
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 24, // Estimate row height (h-6 class means 1.5rem = 24px)
-    overscan: 10, // Render some extra items for smoother scrolling
+    estimateSize: () => 24,
+    overscan: 10,
   });
 
-  // Get virtual items
   const virtualRows = rowVirtualizer.getVirtualItems();
 
-  // Add this effect to focus the row when focusedItem changes
   useEffect(() => {
     if (focusedItem && table.getRowModel().rows.length > 0) {
       const targetRowIndex = table.getRowModel().rows.findIndex(
@@ -402,40 +388,30 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       );
       if (targetRowIndex !== -1) {
         rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto' });
-        // DONE: 2@@ArSNo maybe optimize this `querySelector` - X dont seem to be needed anymore
         const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
         rowElement?.focus({ preventScroll: true }); 
       }
     }
   }, [focusedItem, rowVirtualizer, table.getRowModel().rows]);
 
-  // Function to get the editor URL for a todo item
   const getEditorUrl = (location: string) => {
-    if (!location) return null;
-    
+    if (!location || !appConfig) return null;
     let fullPath = location;
     let lineNumber = '';
     const lineMatch = location.match(/\:(\d+)$/);
-    
     if (lineMatch) {
       lineNumber = lineMatch[1];
       fullPath = location.replace(/\:\d+$/, '');
     }
-    
-    // Use editor URI scheme from config, fallback to default
-    const editorScheme = appConfig?.editor_uri_scheme || 'vscode://file/';
+    const editorScheme = appConfig.editor_uri_scheme || 'vscode://file/';
     let url = `${editorScheme}${fullPath}`;
-    
     if (lineNumber) {
       url += `:${lineNumber}`;
     }
-    
     return url;
   };
   
-  // Update keyboard handler to use the Tauri openUrl
   const handleRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: Row<TodoTableRow>) => {
-    // Do not handle row shortcuts when an inline edit is active
     if (tableEditingCell) {
       return;
     }
@@ -445,33 +421,35 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       case 'i':
         e.preventDefault();
         e.stopPropagation();
-        setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'end' });
         setEditedContent(originalTodo.content);
+        setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'end' });
         return;
-      case 'I': // Shift + i
+      case 'I':
         if (e.shiftKey) {
           e.preventDefault();
           e.stopPropagation();
-          setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'afterPriority' });
           setEditedContent(originalTodo.content);
+          setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'afterPriority' });
         }
         return;
       case 'x':
         e.preventDefault();
-        // add ignore comment " // UNITODO_IGNORE_LINE"
         ;(async () => {
           const todo = originalTodo;
           const newContent = `${todo.content} // UNITODO_IGNORE_LINE`;
           try {
-            await editTodoItem({
+            await apiEditTodoItem({
               location: todo.location,
               new_content: newContent,
               original_content: todo.content,
             });
-            useTodoStore.getState().updateTodo({
-              ...todo,
-              content: newContent,
-            });
+            todoStore.updateTodo(
+              {
+                ...todo,
+                content: newContent,
+              },
+              todo.content
+            );
           } catch (err) {
             console.error('[TodoTable] Failed to add ignore comment:', err);
           } finally {
@@ -481,14 +459,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
         return;
       case 'Enter':
         e.preventDefault();
-        // Open file at location if possible
-        if (originalTodo.location) {
+        if (originalTodo.location && appConfig) {
           const url = getEditorUrl(originalTodo.location);
           if (url) {
             try {
               openUrl(url).catch(error => {
                 console.error('[TodoTable] Error opening URL with Tauri:', error);
-                // Fallback to window.open
                 try {
                   window.open(url, '_blank');
                 } catch (secondError) {
@@ -504,13 +480,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       case ' ':
       case 'Spacebar':
         e.preventDefault();
-        const todo = row.original.originalTodo;
-        const store = useTodoStore.getState();
-        markTodoAsDone({
-          location: todo.location,
-          original_content: todo.content,
+        const todoForDone = row.original.originalTodo;
+        apiMarkTodoAsDone({
+          location: todoForDone.location,
+          original_content: todoForDone.content,
         }).then(() => {
-          store.loadData();
+          todoStore.loadData();
         }).catch(error => {
           console.error("Failed to mark todo as done from table:", error);
         });
@@ -518,20 +493,20 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       case 'ArrowUp':
       case 'k':
         e.preventDefault();
-        useTodoStore.getState().navigateTodos('up', e.shiftKey ? 5 : 1);
+        todoStore.navigateTodos('up', e.shiftKey ? 5 : 1);
         break;
       case 'ArrowDown':
       case 'j':
         e.preventDefault();
-        useTodoStore.getState().navigateTodos('down', e.shiftKey ? 5 : 1);
+        todoStore.navigateTodos('down', e.shiftKey ? 5 : 1);
         break;
       case 'K':
         e.preventDefault();
-        useTodoStore.getState().navigateTodos('up', 5);
+        todoStore.navigateTodos('up', 5);
         break;
       case 'J':
         e.preventDefault();
-        useTodoStore.getState().navigateTodos('down', 5);
+        todoStore.navigateTodos('down', 5);
         break;
     }
   };
@@ -570,7 +545,7 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
             <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualRows.map(virtualRow => {
                 const row = table.getRowModel().rows[virtualRow.index];
-                const isDoneLike = isStatusDoneLike(row.original.originalTodo.status, appConfig);
+                const isDoneLike = appConfig ? isStatusDoneLike(row.original.originalTodo.status, appConfig) : false;
                 return (
                   <tr 
                     key={row.id} 
@@ -587,7 +562,10 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                         ? 'bg-neutral-50 dark:bg-neutral-800 focused' 
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'
                       }`}
-                    onClick={() => onRowClick(row.original.categoryIndex, row.original.itemIndex)}
+                    onClick={() => {
+                        onRowClick(row.original.categoryIndex, row.original.itemIndex);
+                        todoStore.setFocusedItem({ categoryIndex: row.original.categoryIndex, itemIndex: row.original.itemIndex });
+                    }}
                     onKeyDown={(e) => handleRowKeyDown(e, row)}
                     tabIndex={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 0 : -1}
                     data-location={row.original.originalTodo.location}
@@ -597,7 +575,6 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                     aria-current={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 'true' : undefined}
                   >
                     {row.getVisibleCells().map(cell => {
-                      // Get the column size from the table's current state
                       const width = cell.column.getSize();
                       return (
                         <td 
@@ -609,6 +586,12 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
                             width: `${width}px`,
                             minWidth: `${width}px`,
                             maxWidth: `${width}px`
+                          }}
+                          onDoubleClick={() => {
+                            if (cell.column.id === 'content' && !tableEditingCell) {
+                                setEditedContent(row.original.content);
+                                setTableEditingCell({ categoryIndex: row.original.categoryIndex, itemIndex: row.original.itemIndex, initialFocus: 'end' });
+                            }
                           }}
                         >
                           <div className={`h-full flex items-center ${
@@ -629,4 +612,6 @@ export default function TodoTable({ tableRows, onRowClick, focusedItem, height, 
       </div>
     </DndContext>
   );
-} 
+});
+
+export default TodoTable; 

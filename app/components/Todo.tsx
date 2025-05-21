@@ -3,15 +3,17 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { useTodoStore, useTodoSelectors, isStatusDoneLike } from '../store/todoStore';
-import useConfigStore from '../store/configStore';
-import TodoCategory from './TodoCategory';
+import { observer } from 'mobx-react-lite';
+
+import todoStore, { isStatusDoneLike } from '../store/todoStore';
+import configStore from '../store/configStore';
+import { darkModeStore } from '../utils/darkMode';
+
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
 import TodoTable, { TodoTableRow } from './TodoTable';
 import { TodoItem as TodoItemType, TodoCategory as TodoCategoryType } from '../types';
-import { useDarkMode } from '../utils/darkMode';
 import { parseTodoContent, decodeTimestampId } from '../utils';
 import Link from 'next/link';
 import AddTodoModal from './AddTodoModal';
@@ -36,82 +38,89 @@ interface FlatTodoItem {
 
 type FlatListItem = FlatHeaderItem | FlatTodoItem;
 
-export default function Todo() {
-  const categories = useTodoStore(state => state.categories);
-  const loading = useTodoStore(state => state.loading);
-  const error = useTodoStore(state => state.error);
-  const filter = useTodoStore(state => state.filter);
-  const searchQuery = useTodoStore(state => state.searchQuery);
-  const lastUpdated = useTodoStore(state => state.lastFetched);
-  const displayMode = useTodoStore(state => state.displayMode);
-  const activeTabIndex = useTodoStore(state => state.activeTabIndex);
-  const focusedItem = useTodoStore(state => state.focusedItem);
-  const showKeyboardHelp = useTodoStore(state => state.showKeyboardHelp);
-  const showAddTodoModal = useTodoStore(state => state.showAddTodoModal);
-  const addTodoModalData = useTodoStore(state => state.addTodoModalData);
+const Todo: React.FC = observer(() => {
+  const {
+    categories,
+    loading,
+    error,
+    filter,
+    searchQuery,
+    lastFetched: lastUpdated,
+    displayMode,
+    activeTabIndex,
+    focusedItem,
+    showKeyboardHelp,
+    showAddTodoModal,
+    addTodoModalData,
+    loadData,
+    setFilter,
+    setSearchQuery,
+    toggleDisplayMode,
+    setActiveTabIndex,
+    setFocusedItem,
+    toggleKeyboardHelp,
+    navigateTodos,
+    navigateTabs,
+    openAddTodoModal,
+    closeAddTodoModal,
+    submitAddTodo,
+  } = todoStore;
+
+  const { 
+    config: appConfig, 
+    loadActiveProfileAndConfig: loadAppConfig, 
+    initialConfigLoaded 
+  } = configStore;
   
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
-  
-  const loadData = useTodoStore(state => state.loadData);
-  const setFilter = useTodoStore(state => state.setFilter);
-  const setSearchQuery = useTodoStore(state => state.setSearchQuery);
-  const toggleDisplayMode = useTodoStore(state => state.toggleDisplayMode);
-  const setActiveTabIndex = useTodoStore(state => state.setActiveTabIndex);
-  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
-  const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
-  const navigateTodos = useTodoStore(state => state.navigateTodos);
-  const navigateTabs = useTodoStore(state => state.navigateTabs);
-  const openAddTodoModal = useTodoStore(state => state.openAddTodoModal);
-  const closeAddTodoModal = useTodoStore(state => state.closeAddTodoModal);
-  const submitAddTodo = useTodoStore(state => state.submitAddTodo);
-  
-  const todoStoreState = useTodoStore.getState();
-  const showCompleted = filter === 'all' || filter === 'closed';
-  const selectors = useTodoSelectors(showCompleted);
-  const { active: activeTodos, done: completedTodos, total: totalTodos } = selectors.getTotalCounts;
-  
-  const filteredCategories = selectors.filteredCategories;
+  const { isDarkMode, toggleDarkMode } = darkModeStore;
+
+  const { active: activeTodos, done: completedTodos, total: totalTodos } = todoStore.totalCounts;
+  const filteredCategories = todoStore.filteredCategories;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tabHeaderRef = useRef<HTMLDivElement>(null);
-  const urlUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const tabListRef = useRef<FixedSizeList>(null);
   const sectionListRef = useRef<VariableSizeList>(null);
 
-  const { config: appConfig, loadActiveProfileAndConfig: loadAppConfig, initialConfigLoaded } = useConfigStore();
-
   const flattenedList = useMemo((): FlatListItem[] => {
     if (displayMode !== 'section') return [];
-
     const flatList: FlatListItem[] = [];
     let currentFlatIndex = 0;
-    filteredCategories.forEach((category: TodoCategoryType, catIndex: number) => {
+    todoStore.filteredCategories.forEach((category: TodoCategoryType) => {
+      const originalCategoryIndex = todoStore.categories.findIndex(c => c.name === category.name);
+      if(originalCategoryIndex === -1) return;
+
       flatList.push({
         type: 'header',
         category: category,
-        categoryIndex: catIndex,
+        categoryIndex: originalCategoryIndex,
         flatIndex: currentFlatIndex++
       });
-      category.todos.forEach((todo: TodoItemType, itemIndex: number) => {
+      category.todos.forEach((todo: TodoItemType, itemIndexInFilteredCategory: number) => {
+        const originalItemIndex = todoStore.categories[originalCategoryIndex]?.todos.findIndex(t => t.location === todo.location && t.content === todo.content);
+        if (originalItemIndex === -1 && category.todos.length > 0) {
+            
+        }
+
         flatList.push({
           type: 'item',
           todo: todo,
-          categoryIndex: catIndex,
-          itemIndex: itemIndex,
+          categoryIndex: originalCategoryIndex,
+          itemIndex: originalItemIndex !== -1 ? originalItemIndex : 0,
           flatIndex: currentFlatIndex++
         });
       });
     });
     return flatList;
-  }, [filteredCategories, displayMode]);
+  }, [todoStore.filteredCategories, displayMode, todoStore.categories]);
 
   const tableDisplayData = useMemo((): TodoTableRow[] => {
     if (displayMode !== 'table') return [];
-    const sortedItems = selectors.globallySortedAndFilteredTodos;
-    const originalStoreCategories = categories;
+    const sortedItems = todoStore.globallySortedAndFilteredTodos;
+    const originalStoreCategories = todoStore.categories;
 
     return sortedItems.map(item => {
       const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
@@ -153,7 +162,7 @@ export default function Todo() {
         itemIndex: originalItemIndex,
       };
     });
-  }, [displayMode, categories, selectors.globallySortedAndFilteredTodos, filter, searchQuery]);
+  }, [displayMode, todoStore.globallySortedAndFilteredTodos, todoStore.categories]);
 
   const getItemSize = (index: number): number => {
     const item = flattenedList[index];
@@ -174,21 +183,14 @@ export default function Todo() {
       const updateScrollPadding = () => {
         const tabHeaderHeight = tabHeaderRef.current?.offsetHeight || 0;
         document.documentElement.style.setProperty('--tab-header-height', `${tabHeaderHeight + 10}px`);
-        document.documentElement.style.scrollPaddingTop = `${tabHeaderHeight + 10}px`;
       };
-      
       updateScrollPadding();
-      
       window.addEventListener('resize', updateScrollPadding);
-      
-      return () => {
-        window.removeEventListener('resize', updateScrollPadding);
-      };
+      return () => window.removeEventListener('resize', updateScrollPadding);
     } else {
       document.documentElement.style.removeProperty('--tab-header-height');
-      document.documentElement.style.scrollPaddingTop = '';
     }
-  }, [displayMode, categories.length, activeTabIndex, filter]);
+  }, [displayMode, todoStore.categories.length, activeTabIndex, filter]);
 
   useEffect(() => {
     loadData();
@@ -196,15 +198,11 @@ export default function Todo() {
         loadAppConfig();
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    if (intervalRef.current) clearInterval(intervalRef.current);
 
     if (appConfig?.refresh_interval && appConfig.refresh_interval > 0) {
-        console.log(`Setting refresh interval to ${appConfig.refresh_interval}ms`);
         intervalRef.current = setInterval(loadData, appConfig.refresh_interval);
     } else {
-        console.log("Refresh interval not set or invalid, disabling auto-refresh.");
     }
 
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -219,175 +217,89 @@ export default function Todo() {
         if (e.key === 'Enter') {
           e.preventDefault();
           searchInputRef.current?.blur();
-          const { focusedItem: currentFocusedItem, displayMode: currentDisplayMode, activeTabIndex: currentActiveTabIndex } = useTodoStore.getState();
-          const currentFilteredCategories = selectors.filteredCategories;
-
-          let newFocusCategoryIndex = -1;
-          let newFocusItemIndex = -1;
-
-          if (currentDisplayMode === 'tab') {
-            if (currentFilteredCategories[currentActiveTabIndex]?.todos.length > 0) {
-              newFocusCategoryIndex = currentActiveTabIndex;
-              newFocusItemIndex = 0;
-            }
-          } else {
-            if (flattenedList.length > 0) {
-              const firstItem = flattenedList.find(item => item.type === 'item') as FlatTodoItem | undefined;
-              if (firstItem) {
-                newFocusCategoryIndex = firstItem.categoryIndex;
-                newFocusItemIndex = firstItem.itemIndex;
-              }
-            }
-          }
-
-          if (newFocusCategoryIndex !== -1 && newFocusItemIndex !== -1) {
-            setFocusedItem({ categoryIndex: newFocusCategoryIndex, itemIndex: newFocusItemIndex });
-            setTimeout(() => {
-              const itemSelector = `[data-category-index="${newFocusCategoryIndex}"][data-item-index="${newFocusItemIndex}"] .todo-item-main-content`;
+          todoStore._adjustFocusAfterModeOrFilterChange();
+          setTimeout(() => {
+            const { categoryIndex: ci, itemIndex: ii } = todoStore.focusedItem;
+            if (ci !== -1 && ii !== -1) {
+              const itemSelector = displayMode === 'table' ? `tr[data-category-index="${ci}"][data-item-index="${ii}"]` : `[data-category-index="${ci}"][data-item-index="${ii}"] .todo-item-main-content`;
               const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
               focusedElement?.focus();
-            }, 0);
-          } else {
-            containerRef.current?.focus();
-          }
+            } else {
+              containerRef.current?.focus();
+            }
+          }, 0);
           return;
         }
         return;
       }
       
-      if (isEditingContext && e.key !== '?' && !(e.ctrlKey || e.metaKey)) {
-        return;
-      }
-      
-      if (e.ctrlKey || e.metaKey || e.altKey) {
-        if (!(e.ctrlKey && e.key === '/')) {
-          return;
-        }
-      }
+      if (isEditingContext && e.key !== '?' && !(e.ctrlKey || e.metaKey)) return;
+      if ((e.ctrlKey || e.metaKey || e.altKey) && !(e.ctrlKey && e.key === '/')) return;
 
       switch (e.key) {
-        case 'h':
+        case 'h': if (!isEditingContext) { e.preventDefault(); navigateTabs('left'); } break;
+        case 'l': if (!isEditingContext) { e.preventDefault(); navigateTabs('right'); } break;
+        case 'd': 
           if (!isEditingContext) {
-            e.preventDefault();
-            navigateTabs('left');
-          }
-          break;
-        case 'l':
-          if (!isEditingContext) {
-            e.preventDefault();
-            navigateTabs('right');
-          }
-          break;
-        case 'd':
-          if (!isEditingContext) {
-            e.preventDefault();
+            e.preventDefault(); 
             toggleDarkMode();
-            if (containerRef.current) {
-              setTimeout(() => {
-                containerRef.current?.focus();
-                const { categoryIndex, itemIndex } = useTodoStore.getState().focusedItem;
-                if (categoryIndex !== -1 && itemIndex !== -1) {
-                  const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
-                  const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
-                  focusedElement?.focus();
+             setTimeout(() => {
+              const { categoryIndex: ci, itemIndex: ii } = todoStore.focusedItem;
+              const activeEl = document.activeElement;
+              if (containerRef.current && (!activeEl || activeEl === document.body || activeEl === containerRef.current)) {
+                if (ci !== -1 && ii !== -1) {
+                    const itemSelector = displayMode === 'table' ? `tr[data-category-index="${ci}"][data-item-index="${ii}"]` : `[data-category-index="${ci}"][data-item-index="${ii}"]`;
+                    const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
+                    focusedElement?.focus();
+                } else {
+                   containerRef.current?.focus();
                 }
-              }, 0);
-            }
-          }
+              }
+            }, 0);
+          } 
           break;
-        case '?':
-          if (!isEditingContext) {
-            e.preventDefault();
-            toggleKeyboardHelp();
-          }
+        case '?': if (!isEditingContext) { e.preventDefault(); toggleKeyboardHelp(); } break;
+        case '1': if (!isEditingContext) setFilter('all'); break;
+        case '2': if (!isEditingContext) setFilter('active'); break;
+        case '3': if (!isEditingContext) setFilter('closed'); break;
+        case '/': 
+          if (e.ctrlKey || !isEditingContext) { 
+            e.preventDefault(); 
+            searchInputRef.current?.focus(); 
+          } 
           break;
-        case '1':
-          if (!isEditingContext) {
-            setFilter('all');
-          }
-          break;
-        case '2':
-          if (!isEditingContext) {
-            setFilter('active');
-          }
-          break;
-        case '3':
-          if (!isEditingContext) {
-            setFilter('closed');
-          }
-          break;
-        case '/':
-          if (e.ctrlKey) {
-            e.preventDefault();
-            searchInputRef.current?.focus();
-          } else if (!isEditingContext) {
-            e.preventDefault();
-            searchInputRef.current?.focus();
-          }
-          break;
-        case 'r':
-          if (e.ctrlKey) {
-            e.preventDefault();
-            loadData();
-          }
-          break;
-        case 'm':
-           if (!isEditingContext) {
-             e.preventDefault();
-             toggleDisplayMode();
-           }
-           break;
+        case 'r': if (e.ctrlKey) { e.preventDefault(); loadData(); } break;
+        case 'm': if (!isEditingContext) { e.preventDefault(); toggleDisplayMode(); } break;
         case 'o':
           if (!isEditingContext) {
             e.preventDefault();
-            const currentFocusedItem = useTodoStore.getState().focusedItem;
-            const currentCategories = selectors.filteredCategories;
-            const currentDisplayMode = useTodoStore.getState().displayMode;
-            const currentActiveTabIndex = useTodoStore.getState().activeTabIndex;
-
             let categoryType: 'git' | 'project';
             let categoryName: string;
             let exampleItemLocation: string | undefined = undefined;
+            const currentCategories = todoStore.filteredCategories;
+            const currentFocusedOriginalCatIndex = todoStore.focusedItem.categoryIndex;
+            const currentFocusedOriginalItemIndex = todoStore.focusedItem.itemIndex;
 
-            if (currentDisplayMode === 'tab') {
-                if (currentActiveTabIndex >= 0 && currentActiveTabIndex < currentCategories.length) {
-                    const activeCategory = currentCategories[currentActiveTabIndex];
+            if (displayMode === 'tab') {
+                const activeOriginalCatIndex = todoStore.activeTabIndex;
+                const activeCategory = todoStore.categories[activeOriginalCatIndex];
+                if (activeCategory) {
                     categoryName = activeCategory.name;
-                    if (activeCategory.icon === "󰊢") {
-                        categoryType = 'git';
-                        if (activeCategory.todos.length > 0) {
-                            exampleItemLocation = activeCategory.todos[0].location;
-                        }
-                    } else if (activeCategory.icon === "") {
-                        categoryType = 'project';
-                    } else {
-                        alert('Cannot add TODO to "Other" category directly. Please define it as a project or add to a git repo file.'); // UNITODO_IGNORE_LINE
-                        return;
-                    }
-                } else {
-                    alert('No active tab selected to add TODO to.'); // UNITODO_IGNORE_LINE
-                    return;
-                }
+                    if (activeCategory.icon === "󰊢") categoryType = 'git';
+                    else if (activeCategory.icon === "") categoryType = 'project';
+                    else { alert('Cannot add TODO here.'); return; }
+                    if (activeCategory.todos.length > 0) exampleItemLocation = activeCategory.todos[0].location;
+                } else { alert('No active tab.'); return; }
             } else {
-                if (currentFocusedItem.categoryIndex !== -1 && currentFocusedItem.categoryIndex < currentCategories.length) {
-                    const focusedCategory = currentCategories[currentFocusedItem.categoryIndex];
-                    categoryName = focusedCategory.name;
-                    if (focusedCategory.icon === "󰊢") {
-                        categoryType = 'git';
-                        if (focusedCategory.todos.length > 0) {
-                            const itemToUse = focusedCategory.todos[currentFocusedItem.itemIndex] || focusedCategory.todos[0];
-                            exampleItemLocation = itemToUse?.location;
-                        }
-                    } else if (focusedCategory.icon === "") {
-                        categoryType = 'project';
-                    } else {
-                        alert('Cannot add TODO to "Other" category directly.'); // UNITODO_IGNORE_LINE
-                        return;
-                    }
-                } else {
-                    alert('No section/item focused to determine where to add TODO.'); // UNITODO_IGNORE_LINE
-                    return;
-                }
+                const focusedCat = todoStore.categories[currentFocusedOriginalCatIndex];
+                if (focusedCat) {
+                    categoryName = focusedCat.name;
+                    if (focusedCat.icon === "󰊢") categoryType = 'git';
+                    else if (focusedCat.icon === "") categoryType = 'project';
+                    else { alert('Cannot add TODO here.'); return; }
+                    const itemToUse = focusedCat.todos[currentFocusedOriginalItemIndex] || focusedCat.todos[0];
+                    exampleItemLocation = itemToUse?.location;
+                } else { alert('No item/section focused.'); return; }
             }
             openAddTodoModal(categoryType, categoryName, exampleItemLocation);
           }
@@ -396,100 +308,84 @@ export default function Todo() {
     };
     
     document.addEventListener('keydown', handleKeyDown);
-    
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal, displayMode, navigateTodos, setFilter, setSearchQuery]);
 
   useEffect(() => {
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
-      const currentFocusedItem = useTodoStore.getState().focusedItem;
-      const currentDisplayMode = useTodoStore.getState().displayMode;
-      const { categoryIndex, itemIndex } = currentFocusedItem;
+      const { categoryIndex, itemIndex } = todoStore.focusedItem;
+      if (categoryIndex === -1 && itemIndex === -1) return;
+      if (searchInputRef.current && document.activeElement === searchInputRef.current) return;
 
-      if (categoryIndex === -1 || itemIndex === -1) return;
-
-      if (searchInputRef.current && document.activeElement === searchInputRef.current) {
-        return;
-      }
-
-      if (currentDisplayMode === 'tab' && tabListRef.current) {
-        tabListRef.current.scrollToItem(itemIndex, 'smart');
-      } else if (currentDisplayMode === 'section' && sectionListRef.current) {
-        const flatIndex = getFlatIndex(categoryIndex, itemIndex);
-        if (flatIndex !== -1) {
-          sectionListRef.current.scrollToItem(flatIndex, 'smart');
+      if (displayMode === 'tab' && tabListRef.current) {
+        const activeOriginalCatIndex = todoStore.activeTabIndex;
+        if (categoryIndex === activeOriginalCatIndex && itemIndex !== -1) {
+          const activeCatInFiltered = todoStore.filteredCategories.find(cat => todoStore.categories[activeOriginalCatIndex]?.name === cat.name);
+          if(activeCatInFiltered) {
+            const focusedTodo = todoStore.categories[activeOriginalCatIndex]?.todos[itemIndex];
+            const itemIndexInFiltered = activeCatInFiltered.todos.findIndex(t => t.location === focusedTodo?.location && t.content === focusedTodo?.content);
+            if(itemIndexInFiltered !== -1) tabListRef.current.scrollToItem(itemIndexInFiltered, 'smart');
+          }
         }
+      } else if (displayMode === 'section' && sectionListRef.current) {
+        const flatIndex = getFlatIndex(categoryIndex, itemIndex);
+        if (flatIndex !== -1) sectionListRef.current.scrollToItem(flatIndex, 'smart');
       }
     }, 50);
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [focusedItem, displayMode, flattenedList]);
+    return () => { if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current); };
+  }, [todoStore.focusedItem, displayMode, flattenedList, getFlatIndex, todoStore.activeTabIndex, todoStore.filteredCategories, todoStore.categories]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || filteredCategories.length === 0) return;
-    
+    if (typeof window === 'undefined' || todoStore.filteredCategories.length === 0) return;
     try {
       const hash = window.location.hash.substring(1);
       if (!hash) return;
-      
       const params = new URLSearchParams(hash);
       const tabName = params.get('tab');
-      const itemId = params.get('item');
+      const itemIdQuery = params.get('item');
+      if (!tabName || !itemIdQuery) return;
+
+      const targetOriginalCatIndex = todoStore.categories.findIndex((c: TodoCategoryType) => c.name === tabName);
+      if (targetOriginalCatIndex === -1) return;
       
-      if (!tabName || !itemId) return;
-      
-      const categoryIndex = filteredCategories.findIndex((c: TodoCategoryType) => c.name === tabName);
-      if (categoryIndex === -1) return;
-      
-      let itemIndex = -1;
-      
-      const itemIdString = itemId as string;
-      
-      if (itemIdString.includes('index=')) {
-        const indexStr = itemIdString.replace('index=', '');
-        itemIndex = parseInt(indexStr, 10);
+      let targetOriginalItemIndex = -1;
+      if (itemIdQuery.includes('index=')) {
+        targetOriginalItemIndex = parseInt(itemIdQuery.replace('index=', ''), 10);
       } else {
-        itemIndex = filteredCategories[categoryIndex].todos.findIndex((todo: TodoItemType) => {
-          const parsed = parseTodoContent(todo.content);
-          return parsed.idPart === itemIdString;
-        });
+        targetOriginalItemIndex = todoStore.categories[targetOriginalCatIndex].todos.findIndex((todo: TodoItemType) => parseTodoContent(todo.content).idPart === itemIdQuery);
       }
       
-      if (itemIndex === -1 || itemIndex >= filteredCategories[categoryIndex].todos.length) return;
+      if (targetOriginalItemIndex === -1 || targetOriginalItemIndex >= todoStore.categories[targetOriginalCatIndex].todos.length) return;
       
-      setActiveTabIndex(categoryIndex);
-      setFocusedItem({ categoryIndex, itemIndex });
+      const isTabVisible = todoStore.filteredCategoryInfo.find(fci => fci.name === tabName)?.isVisible;
+      if (isTabVisible) {
+        setActiveTabIndex(targetOriginalCatIndex);
+        setFocusedItem({ categoryIndex: targetOriginalCatIndex, itemIndex: targetOriginalItemIndex });
+      }
       
     } catch (err) {
       console.error('Error handling URL hash:', err);
     }
-  }, [filteredCategories, setActiveTabIndex, setFocusedItem]);
-
-  const getOriginalCategoryIndex = (categoryName: string) => {
-    return categories.findIndex(cat => cat.name === categoryName);
-  };
+  }, [todoStore.filteredCategories, todoStore.categories, setActiveTabIndex, setFocusedItem, todoStore.filteredCategoryInfo]);
 
   const renderTabs = () => {
-    const activeCategoryData = filteredCategories[activeTabIndex];
-    const itemCount = activeCategoryData?.todos.length || 0;
+    const activeOriginalCategory = todoStore.categories[activeTabIndex];
+    const activeCategoryDataInFiltered = todoStore.filteredCategories.find(cat => cat.name === activeOriginalCategory?.name);
+    const itemCount = activeCategoryDataInFiltered?.todos.length || 0;
 
     const TabRow = ({ index, style }: { index: number, style: React.CSSProperties }) => {
-      if (!activeCategoryData) return null;
-      const todo = activeCategoryData.todos[index];
+      if (!activeCategoryDataInFiltered) return null;
+      const todo = activeCategoryDataInFiltered.todos[index];
       
+      const originalCatIdx = activeTabIndex;
+      const originalItemIdx = todoStore.categories[originalCatIdx]?.todos.findIndex(t => t.location === todo.location && t.content === todo.content) ?? -1;
+
       const searchInputIsActive = !!(searchInputRef.current && document.activeElement === searchInputRef.current);
-      const isFocused = !searchInputIsActive && focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === index;
+      const isFocused = !searchInputIsActive && focusedItem.categoryIndex === originalCatIdx && focusedItem.itemIndex === originalItemIdx;
 
       return (
         <div style={style}>
@@ -497,9 +393,9 @@ export default function Todo() {
             key={`${todo.location}-${index}`}
             todo={todo}
             isFocused={isFocused}
-            onClick={() => setFocusedItem({ categoryIndex: activeTabIndex, itemIndex: index })}
-            categoryIndex={activeTabIndex}
-            itemIndex={index}
+            onClick={() => setFocusedItem({ categoryIndex: originalCatIdx, itemIndex: originalItemIdx })}
+            categoryIndex={originalCatIdx}
+            itemIndex={originalItemIdx}
           />
         </div>
       );
@@ -509,37 +405,34 @@ export default function Todo() {
       <div className="relative flex flex-col flex-grow min-h-0">
         <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-neutral-900 shadow-sm flex-shrink-0">
           <div className="flex flex-wrap border-b border-border-color dark:border-neutral-700 text-xs overflow-visible">
-            {categories.map((category, index) => (
+            {todoStore.filteredCategoryInfo.filter(info => info.isVisible).map((categoryInfo, visibleTabIndex) => {
+              const originalCatIdx = todoStore.categories.findIndex(c => c.name === categoryInfo.name);
+              return (
               <button
-                key={index}
-                className={`px-2 py-1 my-1 mr-1 font-medium ${
-                  activeTabIndex === index
+                key={categoryInfo.name}
+                className={`px-2 py-1 my-1 mr-1 font-medium ${ 
+                  activeTabIndex === originalCatIdx
                   ? 'border-b-2 border-accent-color font-bold dark:text-neutral-200'
                   : 'text-subtle-color dark:text-neutral-400'
                 }`}
                 onClick={() => {
-                  setActiveTabIndex(index);
-                  if (tabListRef.current) {
-                    tabListRef.current.scrollToItem(0);
-                  }
+                  setActiveTabIndex(originalCatIdx);
+                  if (tabListRef.current) tabListRef.current.scrollToItem(0);
                 }}
               >
-                <NerdFontIcon
-                  icon={category.icon}
-                  category={category.name}
-                  className="text-sm"
-                />
-                {category.name}
+                <NerdFontIcon icon={categoryInfo.icon} category={categoryInfo.name} className="text-sm" />
+                {categoryInfo.name}
                 <span className="ml-1 text-subtle-color dark:text-neutral-500">
-                  ({category.todos.filter(todo => isStatusDoneLike(todo.status, appConfig)).length}/{category.todos.length})
+                  ({todoStore.categories[originalCatIdx]?.todos.filter(t => isStatusDoneLike(t.status, appConfig)).length || 0}/
+                  {categoryInfo.totalCount})
                 </span>
               </button>
-            ))}
+            )})}
           </div>
         </div>
 
         <div className="flex-grow min-h-0">
-          {itemCount > 0 ? (
+          {itemCount > 0 && activeCategoryDataInFiltered ? (
             <AutoSizer>
               {({ height, width }) => (
                 <FixedSizeList
@@ -557,7 +450,7 @@ export default function Todo() {
             </AutoSizer>
           ) : (
             <div className="p-2 text-center text-subtle-color dark:text-neutral-500 text-xs">
-              No todos in this category
+              No todos in this category or category not found
             </div>
           )}
         </div>
@@ -583,7 +476,7 @@ export default function Todo() {
         return (
             <div style={style}>
                 <TodoItem
-                    key={`${item.todo.location}-${item.itemIndex}`}
+                    key={`${item.todo.location}-${item.flatIndex}`}
                     todo={item.todo}
                     isFocused={isFocused}
                     onClick={() => setFocusedItem({ categoryIndex: item.categoryIndex, itemIndex: item.itemIndex })}
@@ -593,11 +486,10 @@ export default function Todo() {
             </div>
         );
     }
-
     return null;
   };
 
-  if (error) {
+  if (error && !loading) {
     return (
       <div className="bg-red-50 dark:bg-red-900 p-2 text-xs dark:text-red-100">
         <strong>Error:</strong> {error}
@@ -613,12 +505,6 @@ export default function Todo() {
       role="application"
       aria-label="Todo Application"
     >
-      {/* {loading && (
-        <div className="fixed bottom-4 right-4 z-50 p-2 bg-neutral-100 dark:bg-neutral-700 rounded-full shadow-lg">
-          <div className="animate-spin h-5 w-5 border-2 border-t-transparent border-accent-color rounded-full"></div>
-        </div>
-      )} */}
-
       <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between" data-tauri-drag-region="">
         <div className="flex items-center">
           <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
@@ -632,7 +518,7 @@ export default function Todo() {
         <div className="flex items-center gap-2">
           <button
             className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300"
-            onClick={loadData}
+            onClick={() => loadData()}
             title="Refresh data (Ctrl+R)"
           >
             <span className="inline-block">↻</span>
@@ -640,7 +526,7 @@ export default function Todo() {
           
           <button
             className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
-            onClick={toggleDisplayMode}
+            onClick={() => toggleDisplayMode()}
             title={`Switch to ${displayMode === 'section' ? 'tab' : displayMode === 'tab' ? 'table' : 'section'} mode (m)`}
           >
             {displayMode === 'section' ? '≡' : displayMode === 'tab' ? '▦' : '⊞'}
@@ -650,7 +536,7 @@ export default function Todo() {
             className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
             title="Toggle dark mode"
             aria-label="Toggle dark mode"
-            onClick={toggleDarkMode}
+            onClick={() => toggleDarkMode()}
           >
             {isDarkMode ? '☀️' : '🌙'}
           </button>
@@ -659,7 +545,7 @@ export default function Todo() {
             className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
             title="Keyboard shortcuts (?)"
             aria-label="Show keyboard shortcuts"
-            onClick={toggleKeyboardHelp}
+            onClick={() => toggleKeyboardHelp()}
           >
             ⌨️
           </button>
@@ -692,31 +578,41 @@ export default function Todo() {
             onClick={() => setFilter('all')}
             title="All todos (1)"
           >
-            All
+            All ({totalTodos})
           </button>
           <button 
             className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
             onClick={() => setFilter('active')}
             title="Active todos (2)"
           >
-            Active
+            Active ({activeTodos})
           </button>
           <button 
             className={`hn-filter-button ${filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
             onClick={() => setFilter('closed')}
             title="Closed todos (3)"
           >
-            Closed
+            Closed ({completedTodos})
           </button>
         </div>
       </div>
       
       <div className="flex-grow min-h-0 flex flex-col">
-        {error ? (
+        {loading && (
+             <div className="flex items-center justify-center h-full text-xs text-neutral-500">
+                <svg className="animate-spin h-5 w-5 mr-3 text-accent-color" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading todos...
+            </div>
+        )}
+        {!loading && error && (
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
             <strong>Error:</strong> {error}
           </div>
-        ) : displayMode === 'table' ? (
+        )}
+        {!loading && !error && displayMode === 'table' && (
            <AutoSizer>
             {({ height, width }) => (
               <TodoTable 
@@ -728,7 +624,9 @@ export default function Todo() {
               />
             )}
           </AutoSizer>
-        ) : filteredCategories.length > 0 || (displayMode === 'section' && flattenedList.length > 0) ? (
+        )}
+        {!loading && !error && (displayMode === 'section' || displayMode === 'tab') && 
+          ( (displayMode === 'section' && flattenedList.length > 0) || (displayMode === 'tab' && todoStore.filteredCategoryInfo.filter(info => info.isVisible).length > 0) ) ? (
           displayMode === 'section' ? (
             <AutoSizer>
               {({ height, width }) => (
@@ -748,18 +646,19 @@ export default function Todo() {
             renderTabs()
           )
         ) : (
+          !loading && !error && (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="24" height="24" rx="4" fill="currentColor" fillOpacity="0.1"/>
               <path d="M5 14L8.23309 16.4248C8.66178 16.7463 9.26772 16.6728 9.60705 16.2581L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
             <h3>No todos found</h3>
-            <p>Try changing your search or filter settings</p>
+            <p>Try changing your search or filter settings, or check your configuration.</p>
           </div>
+          )
         )}
       </div>
       
-      {/* Keyboard shortcuts modal with improved styling */}
       {showKeyboardHelp && (
         <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop">
           <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-4 max-w-md w-full mx-4 text-xs modal-content dark:text-neutral-200 border dark:border-neutral-700">
@@ -776,50 +675,50 @@ export default function Todo() {
               </button>
             </div>
             <div className="italic text-neutral-500 dark:text-neutral-400 mb-3 text-xs">
-              Note: Shortcuts only work when not editing text
+              Note: Shortcuts only work when not editing text (or in search bar for some keys)
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
               <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Navigation</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">↑</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">k</kbd> Navigate up</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">↓</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">j</kbd> Navigate down</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">k</kbd> Navigate up 5 items</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">j</kbd> Navigate down 5 items</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">←</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">h</kbd> Previous tab</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">→</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">l</kbd> Next tab</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Esc</kbd> Exit edit mode</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">↑/k</kbd> Navigate up 5</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">↓/j</kbd> Navigate down 5</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">←</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">h</kbd> Previous tab (Tab mode)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">→</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">l</kbd> Next tab (Tab mode)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Esc</kbd> Exit edit mode / Close modal</div>
               
-              <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Todo actions</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">a</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">i</kbd> Edit todo (cursor at end)</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">I</kbd> Edit todo (cursor after priority)</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">o</kbd> Add todo to current section</div>
+              <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Todo actions (on focused item)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">a</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">i</kbd> Edit (cursor at end)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">I</kbd> Edit (cursor after priority)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">o</kbd> Add todo to current context</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">x</kbd> Append ignore comment</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Space</kbd> Toggle completion</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Enter</kbd> Open in editor</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Enter</kbd> Open in editor / Submit edit</div>
               
               <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Global</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">?</kbd> Toggle this shortcut help</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">d</kbd> Toggle dark mode</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">/</kbd> Focus search</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">/</kbd> or <kbd className="dark:bg-neutral-700 dark:border-neutral-600">Ctrl</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">/</kbd> Focus search</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">m</kbd> Switch view mode</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Ctrl</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">R</kbd> Refresh data</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">1</kbd> Show all todos</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">2</kbd> Show active todos</div>
-              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">3</kbd> Show completed todos</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">1</kbd> Filter: All</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">2</kbd> Filter: Active</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">3</kbd> Filter: Closed</div>
             </div>
           </div>
         </div>
       )}
       
-      {/* Add Todo Modal */}
       {showAddTodoModal && addTodoModalData && (
         <AddTodoModal
           isOpen={showAddTodoModal}
-          onClose={closeAddTodoModal}
+          onClose={() => closeAddTodoModal()}
           onSubmit={(todoText: string, categoryType: "git" | "project", categoryName: string) => {
-            submitAddTodo({ 
+            submitAddTodo({
               content: todoText, 
               categoryName, 
               categoryType, 
+              exampleItemLocation: addTodoModalData.exampleItemLocation
             });
           }}
           categoryName={addTodoModalData.categoryName}
@@ -828,4 +727,6 @@ export default function Todo() {
       )}
     </div>
   );
-} 
+});
+
+export default Todo; 

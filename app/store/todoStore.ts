@@ -1,384 +1,210 @@
-import { create } from 'zustand';
+import { makeObservable, observable, action, computed, runInAction, reaction } from 'mobx';
 import { TodoCategory, TodoItem, Config as AppConfig } from '../types';
-import { fetchTodoData } from '../services/todoService';
+import { fetchTodoData, addTodoItem as apiAddTodoItem } from '../services/todoService'; // Assuming addTodoItem is for the new modal
 import { parseTodoContent } from '../utils';
-import useConfigStore from './configStore'; // Import to get appConfig
-import { useMemo } from 'react'; // Import useMemo
+import configStore from './configStore'; // Import the MobX config store instance
 
-// Helper function to determine if a status is considered "done-like"
-export const isStatusDoneLike = (status: string, appConfig: AppConfig | null): boolean => {
+// Helper function (can remain outside or be part of the store if preferred)
+export function isStatusDoneLike(status: string, appConfig: AppConfig | null): boolean {
   if (!appConfig || !appConfig.todo_states || appConfig.todo_states.length === 0) return false;
   for (const stateSet of appConfig.todo_states) {
     if (stateSet.length >= 3 && status === stateSet[2]) return true; // 3rd state is DONE
-    if (stateSet.length >= 4 && status === stateSet[3]) return true; // 4th state is CANCELLED (also done-like for filtering)
+    if (stateSet.length >= 4 && status === stateSet[3]) return true; // 4th state is CANCELLED
   }
   return false;
-};
-
-export interface TodoState {
-  categories: TodoCategory[];
-  loading: boolean;
-  error: string | null;
-  lastFetched: Date | null;
-  focusedItem: { categoryIndex: number; itemIndex: number };
-  tableEditingCell: { categoryIndex: number; itemIndex: number; initialFocus?: 'end' | 'afterPriority' } | null; 
-  setTableEditingCell: (cell: { categoryIndex: number; itemIndex: number; initialFocus?: 'end' | 'afterPriority' } | null) => void;
-  loadData: () => Promise<void>; 
-  updateTodo: (updatedTodo: TodoItem) => void;
-  setFocusedItem: (focus: { categoryIndex: number; itemIndex: number }) => void;
-  navigateTodos: (direction: 'up' | 'down', step?: number) => void;
-  displayMode: 'section' | 'tab' | 'table';
-  activeTabIndex: number; 
-  toggleDisplayMode: () => void;
-  setActiveTabIndex: (index: number) => void;
-  navigateTabs: (direction: 'left' | 'right') => void;
-  filter: 'all' | 'active' | 'closed';
-  setFilter: (filterValue: 'all' | 'active' | 'closed') => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  showKeyboardHelp: boolean;
-  toggleKeyboardHelp: () => void;
-  showAddTodoModal: boolean;
-  addTodoModalData: { categoryType: 'git' | 'project'; categoryName: string; exampleItemLocation?: string } | null;
-  openAddTodoModal: (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => void;
-  closeAddTodoModal: () => void;
-  submitAddTodo: (formData: { content: string; categoryName: string; categoryType: 'git' | 'project'; filePath?: string; projectKey?: string }) => Promise<void>;
 }
 
-// Define selectors outside the create call so they can be used by other selectors or within actions if needed
-const getFilteredCategoriesInternal = (categories: TodoCategory[], showCompleted: boolean, appConfig: AppConfig | null): TodoCategory[] => {
-  if (showCompleted) return categories; 
-  return categories.map(category => ({
-    ...category,
-    todos: category.todos.filter(todo => !isStatusDoneLike(todo.status, appConfig)),
-  })).filter(category => category.todos.length > 0);
-};
-
-const getFilteredCategoryInfoInternal = (categories: TodoCategory[], appConfig: AppConfig | null) => {
-    return categories.map(category => ({
-      name: category.name,
-      icon: category.icon,
-      count: category.todos.filter(todo => !isStatusDoneLike(todo.status, appConfig)).length,
-      totalCount: category.todos.length,
-    }));
-};
-
-// This version of getGloballySortedAndFilteredTodos returns TodoItems *with* their original category/item indices
-// This is a common pattern if you need to map back from a globally sorted list to original positions.
 interface GlobalTodoItem extends TodoItem {
   originalCategoryIndex: number;
   originalItemIndex: number;
 }
-const getGloballySortedAndFilteredTodosInternal = (categories: TodoCategory[], showCompleted: boolean, appConfig: AppConfig | null): GlobalTodoItem[] => {
-  let allTodos: GlobalTodoItem[] = [];
-  categories.forEach((category, catIdx) => {
-    category.todos.forEach((todo, itemIdx) => {
-      allTodos.push({
-        ...todo,
-        originalCategoryIndex: catIdx,
-        originalItemIndex: itemIdx,
+
+class TodoStoreImpl {
+  categories: TodoCategory[] = [];
+  loading: boolean = false;
+  error: string | null = null;
+  lastFetched: Date | null = null;
+  
+  focusedItem: { categoryIndex: number; itemIndex: number } = { categoryIndex: 0, itemIndex: 0 };
+  tableEditingCell: { categoryIndex: number; itemIndex: number; initialFocus?: 'end' | 'afterPriority' } | null = null;
+  
+  displayMode: 'section' | 'tab' | 'table' = 'table';
+  activeTabIndex: number = 0;
+  filter: 'all' | 'active' | 'closed' = 'active';
+  searchQuery: string = '';
+  
+  showKeyboardHelp: boolean = false;
+  showAddTodoModal: boolean = false;
+  addTodoModalData: { categoryType: 'git' | 'project'; categoryName: string; exampleItemLocation?: string } | null = null;
+
+  constructor() {
+    makeObservable(this, {
+      categories: observable.deep, // Use deep for arrays of objects
+      loading: observable,
+      error: observable,
+      lastFetched: observable,
+      focusedItem: observable.deep,
+      tableEditingCell: observable.deep,
+      displayMode: observable,
+      activeTabIndex: observable,
+      filter: observable,
+      searchQuery: observable,
+      showKeyboardHelp: observable,
+      showAddTodoModal: observable,
+      addTodoModalData: observable.deep,
+
+      loadData: action,
+      updateTodo: action,
+      setFocusedItem: action,
+      setTableEditingCell: action,
+      navigateTodos: action,
+      toggleDisplayMode: action,
+      setActiveTabIndex: action,
+      navigateTabs: action,
+      setFilter: action,
+      setSearchQuery: action,
+      toggleKeyboardHelp: action,
+      openAddTodoModal: action,
+      closeAddTodoModal: action,
+      submitAddTodo: action,
+
+      filteredCategories: computed,
+      filteredCategoryInfo: computed,
+      globallySortedAndFilteredTodos: computed,
+      totalCounts: computed,
+      showCompleted: computed,
+    });
+
+    // Example of a reaction if needed, e.g., reacting to configStore.config changes
+    // reaction(
+    //   () => configStore.config,
+    //   (newConfig) => {
+    //     // console.log('TodoStore detected config change:', newConfig);
+    //     // Potentially re-filter or re-sort todos if config impacts that
+    //     // This might be complex if filters depend heavily on config that changes rarely
+    //   }
+    // );
+  }
+
+  get showCompleted(): boolean {
+    return this.filter !== 'active';
+  }
+
+  loadData = async () => {
+    if (this.loading) return;
+    runInAction(() => {
+      this.loading = true;
+      this.error = null;
+    });
+    try {
+      const data = await fetchTodoData();
+      runInAction(() => {
+        this.categories = data;
+        this.loading = false;
+        this.lastFetched = new Date();
+      });
+    } catch (err: any) {
+      runInAction(() => {
+        this.error = err.message || 'Failed to load todos';
+        this.loading = false;
+      });
+    }
+  }
+
+  updateTodo = (updatedTodo: TodoItem, originalContent?: string) => {
+    this.categories = this.categories.map(category => ({
+      ...category,
+      todos: category.todos.map(todo =>
+        todo.location === updatedTodo.location && todo.content === (originalContent ?? updatedTodo.content) // Use originalContent for matching if provided
+          ? { ...todo, ...updatedTodo } // Merge existing todo with updates
+          : todo
+      ),
+    }));
+  }
+  
+  setTableEditingCell = (cell: { categoryIndex: number; itemIndex: number; initialFocus?: 'end' | 'afterPriority' } | null) => {
+    this.tableEditingCell = cell;
+  }
+
+  setFilter = (filterValue: 'all' | 'active' | 'closed') => {
+    this.filter = filterValue;
+    // Potentially reset focus or adjust navigation based on new filter
+    // For simplicity, current navigation logic handles disappearing items.
+    this._adjustFocusAfterModeOrFilterChange();
+  }
+
+  setFocusedItem = (focus: { categoryIndex: number; itemIndex: number }) => {
+     // Basic validation, can be enhanced based on current view (filtered/sorted lists)
+    if (this.categories[focus.categoryIndex]?.todos[focus.itemIndex] || 
+        (this.categories[focus.categoryIndex] && focus.itemIndex === -1) || // Allow focusing category itself
+        focus.categoryIndex === -1 && focus.itemIndex === -1 // Allow clearing focus
+    ) {
+        this.focusedItem = focus;
+    } else if (this.globallySortedAndFilteredTodos.length > 0 && this.displayMode === 'table') {
+        // If focus is invalid but table has items, try focusing the first
+        const firstItem = this.globallySortedAndFilteredTodos[0];
+        this.focusedItem = { categoryIndex: firstItem.originalCategoryIndex, itemIndex: firstItem.originalItemIndex };
+    }
+  }
+  
+  // Computed property for filtered categories
+  get filteredCategories(): TodoCategory[] {
+    const appConfig = configStore.config; // Access MobX configStore
+    if (this.showCompleted) return this.categories;
+    return this.categories
+      .map(category => ({
+        ...category,
+        todos: category.todos.filter(todo => !isStatusDoneLike(todo.status, appConfig)),
+      }))
+      .filter(category => category.todos.length > 0);
+  }
+
+  // Computed property for category information (name, icon, counts)
+  get filteredCategoryInfo() {
+    const appConfig = configStore.config;
+    // Use this.categories directly for counts, then filter visibility based on filteredCategories
+    // This ensures counts reflect the true total even if a category is filtered out
+    return this.categories.map(category => {
+      const filteredCat = this.filteredCategories.find(fc => fc.name === category.name);
+      return {
+        name: category.name,
+        icon: category.icon,
+        count: category.todos.filter(todo => !isStatusDoneLike(todo.status, appConfig)).length,
+        totalCount: category.todos.length,
+        isVisible: !!filteredCat, // Is the category visible after filtering its items
+      };
+    });
+  }
+  
+  get globallySortedAndFilteredTodos(): GlobalTodoItem[] {
+    const appConfig = configStore.config;
+    let allTodos: GlobalTodoItem[] = [];
+    this.categories.forEach((category, catIdx) => {
+      category.todos.forEach((todo, itemIdx) => {
+        allTodos.push({
+          ...todo,
+          originalCategoryIndex: catIdx,
+          originalItemIndex: itemIdx,
+        });
       });
     });
-  });
 
-  const filteredTodos = showCompleted 
-    ? allTodos 
-    : allTodos.filter(todo => !isStatusDoneLike(todo.status, appConfig));
+    const filtered = this.showCompleted
+      ? allTodos
+      : allTodos.filter(todo => !isStatusDoneLike(todo.status, appConfig));
 
-  return filteredTodos.sort((a, b) => {
-    const aParsed = parseTodoContent(a.content);
-    const bParsed = parseTodoContent(b.content);
-    // Corrected to use .priority instead of .priorityPart
-    return (aParsed.priority ?? '').localeCompare(bParsed.priority ?? ''); 
-  });
-};
-
-export const useTodoStore = create<TodoState>((set, get) => ({
-  categories: [],
-  loading: false,
-  error: null,
-  lastFetched: null,
-  focusedItem: { categoryIndex: 0, itemIndex: 0 },
-  tableEditingCell: null,
-  displayMode: 'table', // Default display mode
-  activeTabIndex: 0,    // Default active tab
-  filter: 'active', // Default filter state
-  setTableEditingCell: (cell) => set({ tableEditingCell: cell }),
-  searchQuery: '',
-  showKeyboardHelp: false,
-  showAddTodoModal: false,
-  addTodoModalData: null,
-
-  loadData: async () => {
-    if (get().loading) return;
-    set({ loading: true, error: null });
-    try {
-      const data = await fetchTodoData(); 
-      set({ categories: data, loading: false, lastFetched: new Date() });
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to load todos', loading: false });
-    }
-  },
-
-  updateTodo: (updatedTodo) =>
-    set((state) => ({
-      categories: state.categories.map(category => ({
-        ...category,
-        todos: category.todos.map(todo =>
-          todo.location === updatedTodo.location ? updatedTodo : todo
-        ),
-      })),
-    })),
-  
-  setFilter: (filterValue) => set({ filter: filterValue }),
-
-  setFocusedItem: (focus) => {
-    const { categories } = get();
-    if (categories && categories[focus.categoryIndex] && categories[focus.categoryIndex].todos && categories[focus.categoryIndex].todos[focus.itemIndex]) {
-      set({ focusedItem: focus });
-    } else if (categories && categories[focus.categoryIndex] && focus.itemIndex === -1) { // Allow focusing category with no items
-        set({ focusedItem: focus });
-    }
-  },
-  
-  toggleDisplayMode: () => set(state => {
-    const appConfig = useConfigStore.getState().config; // Get appConfig for selectors
-    const newDisplayMode = state.displayMode === 'section'
-      ? 'tab'
-      : state.displayMode === 'tab'
-        ? 'table'
-        : 'section';
-  
-    let newFocusedItem = { ...state.focusedItem };
-    let newActiveTabIndex = state.activeTabIndex;
-  
-    if (newDisplayMode === 'table') {
-      newActiveTabIndex = -1; // No specific tab is active in table mode from this perspective
-      const globallySortedTodos = getGloballySortedAndFilteredTodosInternal(state.categories, state.filter !== 'active', appConfig);
-      if (globallySortedTodos.length > 0) {
-        const currentItemInSortedList = globallySortedTodos.find(
-          item => item.originalCategoryIndex === state.focusedItem.categoryIndex && item.originalItemIndex === state.focusedItem.itemIndex
-        );
-        if (currentItemInSortedList) {
-          newFocusedItem = { categoryIndex: currentItemInSortedList.originalCategoryIndex, itemIndex: currentItemInSortedList.originalItemIndex };
-        } else {
-          newFocusedItem = { categoryIndex: globallySortedTodos[0].originalCategoryIndex, itemIndex: globallySortedTodos[0].originalItemIndex };
-        }
-      } else {
-        newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
-      }
-    } else if (state.displayMode === 'table') { // Switching FROM table mode
-      const filteredCategoryInfo = getFilteredCategoryInfoInternal(state.categories, appConfig);
-      const currentOriginalFocusedItem = state.focusedItem; 
-  
-      if (newDisplayMode === 'tab') {
-        if (currentOriginalFocusedItem.categoryIndex !== -1 && currentOriginalFocusedItem.categoryIndex < state.categories.length) {
-          const originalFocusedCategoryName = state.categories[currentOriginalFocusedItem.categoryIndex].name;
-          const targetTabIndexInFiltered = filteredCategoryInfo.findIndex(info => info.name === originalFocusedCategoryName);
-          if (targetTabIndexInFiltered !== -1) {
-            newActiveTabIndex = targetTabIndexInFiltered;
-            const hasItems = filteredCategoryInfo[newActiveTabIndex]?.count > 0;
-            newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 }; 
-          } else {
-            newActiveTabIndex = 0;
-            const hasItems = filteredCategoryInfo[newActiveTabIndex]?.count > 0;
-            newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 };
-          }
-        } else {
-          newActiveTabIndex = 0;
-          const hasItems = filteredCategoryInfo[newActiveTabIndex]?.count > 0;
-          newFocusedItem = { categoryIndex: newActiveTabIndex, itemIndex: hasItems ? 0 : -1 };
-        }
-      } else { // Switching from table to section mode
-        const itemToKeepFocus = state.categories[currentOriginalFocusedItem.categoryIndex]?.todos[currentOriginalFocusedItem.itemIndex];
-        let isVisibleInFiltered = false;
-        if (itemToKeepFocus) {
-            const filteredCats = getFilteredCategoriesInternal(state.categories, state.filter !== 'active', appConfig);
-            for (const fCat of filteredCats) {
-                if (fCat.name === state.categories[currentOriginalFocusedItem.categoryIndex].name) {
-                    if (fCat.todos.some(t => t.location === itemToKeepFocus.location && t.content === itemToKeepFocus.content)) {
-                        isVisibleInFiltered = true;
-                        newFocusedItem = { ...currentOriginalFocusedItem }; // Keep original indices
-                        break;
-                    }
-                }
-            }
-        }
-        if (!isVisibleInFiltered) {
-            const firstFilteredCat = getFilteredCategoriesInternal(state.categories, state.filter !== 'active', appConfig)[0];
-            if (firstFilteredCat && firstFilteredCat.todos.length > 0) {
-                const originalCatIdx = state.categories.findIndex(c => c.name === firstFilteredCat.name);
-                const originalItemIdx = originalCatIdx !== -1 ? state.categories[originalCatIdx].todos.findIndex(t => t.location === firstFilteredCat.todos[0].location && t.content === firstFilteredCat.todos[0].content) : -1;
-                newFocusedItem = { categoryIndex: originalCatIdx, itemIndex: originalItemIdx !== -1 ? originalItemIdx : -1 };
-            } else {
-                newFocusedItem = { categoryIndex: -1, itemIndex: -1 };
-            }
-        }
-        if (newFocusedItem.categoryIndex !== -1 && state.categories[newFocusedItem.categoryIndex]) {
-            const focusedCatName = state.categories[newFocusedItem.categoryIndex].name;
-            newActiveTabIndex = filteredCategoryInfo.findIndex(info => info.name === focusedCatName);
-            if (newActiveTabIndex === -1) newActiveTabIndex = 0; 
-        } else {
-            newActiveTabIndex = 0;
-        }
-      }
-    } // Add other transition logic if needed (e.g., tab to section)
-  
-    return {
-      displayMode: newDisplayMode,
-      focusedItem: newFocusedItem, 
-      activeTabIndex: newActiveTabIndex,
-    };
-  }),
-
-  setActiveTabIndex: (index) => set(state => {
-    const appConfig = useConfigStore.getState().config;
-    const filteredCategoryInfo = getFilteredCategoryInfoInternal(state.categories, appConfig);
-    const hasItems = filteredCategoryInfo[index]?.count > 0;
-    return { 
-      activeTabIndex: index,
-      focusedItem: { categoryIndex: index, itemIndex: hasItems ? 0 : -1 }
-    };
-  }),
-
-  navigateTodos: (direction, step = 1) => {
-    set(state => {
-      const appConfig = useConfigStore.getState().config;
-      const { categories, focusedItem, displayMode, activeTabIndex, filter } = state;
-      const showCompleted = filter !== 'active';
-
-      if (categories.length === 0) return { focusedItem: { categoryIndex: -1, itemIndex: -1 } };
-
-      if (displayMode === 'table') {
-        const globallySortedTodos = getGloballySortedAndFilteredTodosInternal(categories, showCompleted, appConfig);
-        if (globallySortedTodos.length === 0) return { focusedItem: { categoryIndex: -1, itemIndex: -1 } };
-
-        let currentIndexInSortedList = -1;
-        if (focusedItem.categoryIndex !== -1 && focusedItem.itemIndex !== -1) {
-          currentIndexInSortedList = globallySortedTodos.findIndex(
-            item => item.originalCategoryIndex === focusedItem.categoryIndex && item.originalItemIndex === focusedItem.itemIndex
-          );
-        }
-        
-        if (currentIndexInSortedList === -1) { 
-            const newIndex = direction === 'up' ? globallySortedTodos.length - 1 : 0;
-            const newItem = globallySortedTodos[newIndex];
-            return { focusedItem: { categoryIndex: newItem.originalCategoryIndex, itemIndex: newItem.originalItemIndex } };
-        }
-
-        let newSortedIndex = direction === 'up'
-          ? Math.max(0, currentIndexInSortedList - step)
-          : Math.min(globallySortedTodos.length - 1, currentIndexInSortedList + step);
-
-        if (newSortedIndex !== currentIndexInSortedList) {
-          const newItem = globallySortedTodos[newSortedIndex];
-          return { focusedItem: { categoryIndex: newItem.originalCategoryIndex, itemIndex: newItem.originalItemIndex } };
-        }
-      } else if (displayMode === 'tab') {
-        const filteredCategories = getFilteredCategoriesInternal(categories, showCompleted, appConfig);
-        const currentFilteredCategory = filteredCategories[activeTabIndex];
-        if (!currentFilteredCategory || currentFilteredCategory.todos.length === 0) return state;
-
-        let currentLocalItemIndex = focusedItem.itemIndex; 
-        if (focusedItem.categoryIndex !== activeTabIndex || currentLocalItemIndex === -1) { // Not focused in this tab or nothing focused
-            currentLocalItemIndex = direction === 'up' ? currentFilteredCategory.todos.length -1 : 0;
-        } else {
-            currentLocalItemIndex = direction === 'up'
-            ? Math.max(0, currentLocalItemIndex - step)
-            : Math.min(currentFilteredCategory.todos.length - 1, currentLocalItemIndex + step);
-        }
-        return { focusedItem: { categoryIndex: activeTabIndex, itemIndex: currentLocalItemIndex } };
-
-      } else { // section mode
-        const flatFilteredItems: { todo: TodoItem, originalCatIdx: number, originalItemIdx: number, filteredCatIdx:number, filteredItemIdx: number }[] = [];
-        let currentGlobalFlatIndex = -1;
-        let flatIdxCounter = 0;
-        const filteredCategories = getFilteredCategoriesInternal(categories, showCompleted, appConfig);
-
-        filteredCategories.forEach((cat, fCatIdx) => {
-          cat.todos.forEach((td, fItemIdx) => {
-            const originalCatIdx = categories.findIndex(origCat => origCat.name === cat.name); // Map back to original category index
-            const originalItemIdx = originalCatIdx !== -1 ? categories[originalCatIdx].todos.findIndex(origTd => origTd.location === td.location && origTd.content === td.content) : -1;
-
-            flatFilteredItems.push({ todo: td, originalCatIdx, originalItemIdx, filteredCatIdx: fCatIdx, filteredItemIdx: fItemIdx });
-            if (originalCatIdx === focusedItem.categoryIndex && originalItemIdx === focusedItem.itemIndex) {
-              currentGlobalFlatIndex = flatIdxCounter;
-            }
-            flatIdxCounter++;
-          });
-        });
-
-        if (flatFilteredItems.length === 0) return { focusedItem: { categoryIndex: -1, itemIndex: -1 } };
-
-        if (currentGlobalFlatIndex === -1) { 
-            const newFlatIdx = direction === 'up' ? flatFilteredItems.length - 1 : 0;
-            const newItemInfo = flatFilteredItems[newFlatIdx];
-            return { focusedItem: { categoryIndex: newItemInfo.originalCatIdx, itemIndex: newItemInfo.originalItemIdx } };
-        }
-
-        let newFlatIndex = direction === 'up'
-          ? Math.max(0, currentGlobalFlatIndex - step)
-          : Math.min(flatFilteredItems.length - 1, currentGlobalFlatIndex + step);
-
-        if (newFlatIndex !== currentGlobalFlatIndex) {
-          const newItemInfo = flatFilteredItems[newFlatIndex];
-          return { focusedItem: { categoryIndex: newItemInfo.originalCatIdx, itemIndex: newItemInfo.originalItemIdx } };
-        }
-      }
-      return state; 
+    return filtered.sort((a, b) => {
+      const aParsed = parseTodoContent(a.content);
+      const bParsed = parseTodoContent(b.content);
+      return (aParsed.priority ?? '').localeCompare(bParsed.priority ?? '');
     });
-  },
-  navigateTabs: (direction) => {
-    set(state => {
-      const appConfig = useConfigStore.getState().config;
-      const filteredCategoryInfo = getFilteredCategoryInfoInternal(state.categories, appConfig);
-      const { activeTabIndex } = state;
-      let newTabIndex = activeTabIndex;
+  }
 
-      if (direction === 'left') {
-        newTabIndex = Math.max(0, activeTabIndex - 1);
-      } else if (direction === 'right') {
-        newTabIndex = Math.min(filteredCategoryInfo.length - 1, activeTabIndex + 1);
-      }
-
-      if (newTabIndex !== activeTabIndex) {
-        const hasItems = filteredCategoryInfo[newTabIndex]?.count > 0;
-        return { 
-          activeTabIndex: newTabIndex,
-          focusedItem: { categoryIndex: newTabIndex, itemIndex: hasItems ? 0 : -1 }
-        };
-      }
-      return state;
-    });
-  },
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  toggleKeyboardHelp: () => set(state => ({ showKeyboardHelp: !state.showKeyboardHelp })),
-  openAddTodoModal: (categoryType, categoryName, exampleItemLocation) => set({
-    showAddTodoModal: true,
-    addTodoModalData: { categoryType, categoryName, exampleItemLocation }
-  }),
-  closeAddTodoModal: () => set({ showAddTodoModal: false, addTodoModalData: null }),
-  submitAddTodo: async (formData) => {
-    console.log('Submitting add todo:', formData);
-    get().loadData();
-    set({ showAddTodoModal: false, addTodoModalData: null });
-  },
-}));
-
-// This is the hook that components will use.
-// It gets appConfig from useConfigStore and passes it to the internal selectors.
-export const useTodoSelectors = (showCompleted: boolean) => {
-  const appConfig = useConfigStore(state => state.config);
-  const categories = useTodoStore(state => state.categories);
-
-  const filteredCategories = getFilteredCategoriesInternal(categories, showCompleted, appConfig);
-  const filteredCategoryInfo = getFilteredCategoryInfoInternal(categories, appConfig);
-  const globallySortedAndFilteredTodos = getGloballySortedAndFilteredTodosInternal(categories, showCompleted, appConfig);
-
-  const totalCountsObject = useMemo(() => {
+  get totalCounts() {
+    const appConfig = configStore.config;
     let active = 0;
     let done = 0;
-    categories.forEach(cat => {
+    this.categories.forEach(cat => {
       cat.todos.forEach(todo => {
         if (isStatusDoneLike(todo.status, appConfig)) {
           done++;
@@ -388,36 +214,266 @@ export const useTodoSelectors = (showCompleted: boolean) => {
       });
     });
     return { active, done, total: active + done };
-  }, [categories, appConfig]);
-  
-  return {
-    filteredCategories,
-    filteredCategoryInfo,
-    globallySortedAndFilteredTodos,
-    getTotalCounts: totalCountsObject,
-    loading: useTodoStore(state => state.loading),
-    error: useTodoStore(state => state.error),
-    lastFetched: useTodoStore(state => state.lastFetched),
-    focusedItem: useTodoStore(state => state.focusedItem),
-    setFocusedItem: useTodoStore(state => state.setFocusedItem),
-    tableEditingCell: useTodoStore(state => state.tableEditingCell),
-    setTableEditingCell: useTodoStore(state => state.setTableEditingCell),
-    displayMode: useTodoStore(state => state.displayMode),
-    activeTabIndex: useTodoStore(state => state.activeTabIndex),
-    toggleDisplayMode: useTodoStore(state => state.toggleDisplayMode),
-    setActiveTabIndex: useTodoStore(state => state.setActiveTabIndex),
-    navigateTodos: useTodoStore(state => state.navigateTodos),
-    navigateTabs: useTodoStore(state => state.navigateTabs),
-    filter: useTodoStore(state => state.filter),
-    setFilter: useTodoStore(state => state.setFilter),
-    searchQuery: useTodoStore(state => state.searchQuery),
-    setSearchQuery: useTodoStore(state => state.setSearchQuery),
-    showKeyboardHelp: useTodoStore(state => state.showKeyboardHelp),
-    toggleKeyboardHelp: useTodoStore(state => state.toggleKeyboardHelp),
-    showAddTodoModal: useTodoStore(state => state.showAddTodoModal),
-    addTodoModalData: useTodoStore(state => state.addTodoModalData),
-    openAddTodoModal: useTodoStore(state => state.openAddTodoModal),
-    closeAddTodoModal: useTodoStore(state => state.closeAddTodoModal),
-    submitAddTodo: useTodoStore(state => state.submitAddTodo),
-  };
-};
+  }
+
+  toggleDisplayMode = () => {
+    const newDisplayMode = this.displayMode === 'section'
+      ? 'tab'
+      : this.displayMode === 'tab'
+        ? 'table'
+        : 'section';
+    
+    this.displayMode = newDisplayMode;
+    // Adjust focus after mode toggle, MobX will auto-recompute dependent views
+    // This logic might need refinement based on how focus should behave across mode changes
+    this._adjustFocusAfterModeOrFilterChange();
+  }
+
+  _adjustFocusAfterModeOrFilterChange = () => {
+    // If current focus is invalid in the new view, reset or pick first valid
+    // For simplicity, we'll rely on components to handle focus within their new rendered lists
+    // A more robust solution would re-calculate a valid focusedItem here.
+    // Example: If switching to table and current focus is out of bounds for sorted list:
+    if (this.displayMode === 'table') {
+        if (this.globallySortedAndFilteredTodos.length > 0) {
+            const currentItemStillVisible = this.globallySortedAndFilteredTodos.find(
+                it => it.originalCategoryIndex === this.focusedItem.categoryIndex && it.originalItemIndex === this.focusedItem.itemIndex
+            );
+            if (!currentItemStillVisible) {
+                const firstItem = this.globallySortedAndFilteredTodos[0];
+                this.focusedItem = { categoryIndex: firstItem.originalCategoryIndex, itemIndex: firstItem.originalItemIndex };
+            }
+            // If visible, focus is preserved
+        } else {
+            this.focusedItem = { categoryIndex: -1, itemIndex: -1 }; // No items
+        }
+    } else if (this.displayMode === 'tab') {
+        const catInfo = this.filteredCategoryInfo[this.activeTabIndex];
+        if (catInfo && catInfo.count > 0) {
+             // If current focusedItem belongs to the active tab and is still valid, keep it.
+            // Otherwise, focus first item of active tab.
+            const currentCat = this.filteredCategories[this.activeTabIndex];
+            if (this.focusedItem.categoryIndex !== this.activeTabIndex || 
+                this.focusedItem.itemIndex >= (currentCat?.todos.length || 0) ||
+                this.focusedItem.itemIndex === -1) {
+                 this.focusedItem = { categoryIndex: this.activeTabIndex, itemIndex: 0 };
+            }
+        } else if (catInfo) {
+            this.focusedItem = { categoryIndex: this.activeTabIndex, itemIndex: -1 }; // No items in tab
+        } else { // No valid active tab (e.g. all categories filtered out)
+            this.activeTabIndex = 0; // Reset to first tab conceptually
+            this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+        }
+    } else { // Section mode
+        if (this.filteredCategories.length > 0) {
+            const firstCatWithItems = this.filteredCategories.find(cat => cat.todos.length > 0);
+            if (firstCatWithItems) {
+                 const originalCatIndex = this.categories.findIndex(c => c.name === firstCatWithItems.name);
+                // If current focus is still valid within filteredCategories, keep it.
+                // Otherwise, focus first item of first visible category.
+                const currentFocusedCat = this.categories[this.focusedItem.categoryIndex];
+                const isCurrentFocusVisible = currentFocusedCat && this.filteredCategories.some(fc => fc.name === currentFocusedCat.name) &&
+                                              this.filteredCategories.find(fc => fc.name === currentFocusedCat.name)?.todos[this.focusedItem.itemIndex];
+
+                if (!isCurrentFocusVisible) {
+                     this.focusedItem = { categoryIndex: originalCatIndex, itemIndex: 0 };
+                }
+            } else {
+                this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+            }
+        } else {
+            this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+        }
+    }
+    // Ensure activeTabIndex is valid for tab mode
+    if (this.displayMode === 'tab') {
+        if (this.activeTabIndex >= this.filteredCategoryInfo.filter(ci => ci.isVisible).length) {
+            this.activeTabIndex = Math.max(0, this.filteredCategoryInfo.filter(ci => ci.isVisible).length - 1);
+        }
+        if (this.filteredCategoryInfo.filter(ci => ci.isVisible).length === 0) this.activeTabIndex = 0;
+
+
+    }
+  }
+
+
+  setActiveTabIndex = (index: number) => {
+    const visibleTabs = this.filteredCategoryInfo.filter(info => info.isVisible);
+    if (index < 0 || index >= visibleTabs.length) return; // Invalid index for visible tabs
+
+    const targetCategoryName = visibleTabs[index].name;
+    const originalCategoryIndex = this.categories.findIndex(cat => cat.name === targetCategoryName);
+
+    if (originalCategoryIndex !== -1) {
+        this.activeTabIndex = originalCategoryIndex; // Store original index for consistency if categories can be reordered
+                                                // Or, if activeTabIndex should be index in filtered list, then `this.activeTabIndex = index;`
+                                                // Let's assume activeTabIndex relates to the *original* categories array index for now
+                                                // but navigation and display will use filteredCategoryInfo.
+
+        const catInfo = this.filteredCategoryInfo.find(info => info.name === targetCategoryName);
+        const hasItems = catInfo && catInfo.count > 0;
+        this.focusedItem = { categoryIndex: originalCategoryIndex, itemIndex: hasItems ? 0 : -1 };
+    }
+  }
+
+  navigateTodos = (direction: 'up' | 'down', step: number = 1) => {
+    const { categories, focusedItem, displayMode, activeTabIndex } = this;
+    
+    if (categories.length === 0) {
+        this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+        return;
+    }
+
+    if (displayMode === 'table') {
+        const sortedTodos = this.globallySortedAndFilteredTodos;
+        if (sortedTodos.length === 0) {
+            this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+            return;
+        }
+        let currentIndex = sortedTodos.findIndex(
+            item => item.originalCategoryIndex === focusedItem.categoryIndex && item.originalItemIndex === focusedItem.itemIndex
+        );
+        if (currentIndex === -1) currentIndex = direction === 'up' ? sortedTodos.length : -1; // Start from end or beginning
+
+        let newIndex = direction === 'up' 
+            ? Math.max(0, currentIndex - step) 
+            : Math.min(sortedTodos.length - 1, currentIndex + step);
+        
+        if (newIndex >= 0 && newIndex < sortedTodos.length) {
+            const newItem = sortedTodos[newIndex];
+            this.focusedItem = { categoryIndex: newItem.originalCategoryIndex, itemIndex: newItem.originalItemIndex };
+        }
+    } else if (displayMode === 'tab') {
+        // activeTabIndex here should refer to the index in the original categories array that corresponds to the visible active tab
+        const currentVisibleFilteredCategory = this.filteredCategories.find(cat => cat.name === this.categories[activeTabIndex]?.name);
+
+        if (!currentVisibleFilteredCategory || currentVisibleFilteredCategory.todos.length === 0) return;
+
+        let currentLocalItemIndex = -1;
+        // If focus is on the active tab, find the item's index within that tab's filtered todos
+        if (focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex !== -1) {
+            const focusedTodo = this.categories[activeTabIndex].todos[focusedItem.itemIndex];
+            currentLocalItemIndex = currentVisibleFilteredCategory.todos.findIndex(t => t.location === focusedTodo.location && t.content === focusedTodo.content);
+        }
+        
+        if (currentLocalItemIndex === -1) currentLocalItemIndex = direction === 'up' ? currentVisibleFilteredCategory.todos.length : -1;
+
+        let newLocalIndex = direction === 'up'
+            ? Math.max(0, currentLocalItemIndex - step)
+            : Math.min(currentVisibleFilteredCategory.todos.length - 1, currentLocalItemIndex + step);
+
+        if (newLocalIndex >= 0 && newLocalIndex < currentVisibleFilteredCategory.todos.length) {
+            // Map newLocalIndex back to originalItemIndex in the original categories array for consistency
+            const targetTodoInFiltered = currentVisibleFilteredCategory.todos[newLocalIndex];
+            const originalItemIndex = this.categories[activeTabIndex].todos.findIndex(t => t.location === targetTodoInFiltered.location && t.content === targetTodoInFiltered.content);
+            this.focusedItem = { categoryIndex: activeTabIndex, itemIndex: originalItemIndex };
+        }
+
+    } else { // Section mode
+        const flatItems: { originalCatIdx: number, originalItemIdx: number }[] = [];
+        this.filteredCategories.forEach(cat => {
+            const originalCatIdx = this.categories.findIndex(c => c.name === cat.name);
+            cat.todos.forEach((todo, itemIdxInFiltered) => {
+                const originalItemIdx = this.categories[originalCatIdx].todos.findIndex(t => t.location === todo.location && t.content === todo.content);
+                flatItems.push({ originalCatIdx, originalItemIdx });
+            });
+        });
+
+        if (flatItems.length === 0) {
+            this.focusedItem = { categoryIndex: -1, itemIndex: -1 };
+            return;
+        }
+        let currentIndex = flatItems.findIndex(
+            item => item.originalCatIdx === focusedItem.categoryIndex && item.originalItemIdx === focusedItem.itemIndex
+        );
+        if (currentIndex === -1) currentIndex = direction === 'up' ? flatItems.length : -1;
+
+        let newIndex = direction === 'up' 
+            ? Math.max(0, currentIndex - step) 
+            : Math.min(flatItems.length - 1, currentIndex + step);
+
+        if (newIndex >= 0 && newIndex < flatItems.length) {
+           this.focusedItem = { categoryIndex: flatItems[newIndex].originalCatIdx, itemIndex: flatItems[newIndex].originalItemIdx };
+        }
+    }
+  }
+
+  navigateTabs = (direction: 'left' | 'right') => {
+    if (this.displayMode !== 'tab') return;
+
+    const visibleCatInfo = this.filteredCategoryInfo.filter(info => info.isVisible);
+    if(visibleCatInfo.length === 0) return;
+
+    let currentVisibleTabIndex = visibleCatInfo.findIndex(info => info.name === this.categories[this.activeTabIndex]?.name);
+    if (currentVisibleTabIndex === -1) currentVisibleTabIndex = 0;
+
+
+    let newVisibleTabIndex = currentVisibleTabIndex;
+    if (direction === 'left') {
+      newVisibleTabIndex = Math.max(0, currentVisibleTabIndex - 1);
+    } else {
+      newVisibleTabIndex = Math.min(visibleCatInfo.length - 1, currentVisibleTabIndex + 1);
+    }
+
+    if (newVisibleTabIndex !== currentVisibleTabIndex) {
+        const targetCategoryName = visibleCatInfo[newVisibleTabIndex].name;
+        const originalCategoryIndex = this.categories.findIndex(cat => cat.name === targetCategoryName);
+
+        if (originalCategoryIndex !== -1) {
+            this.activeTabIndex = originalCategoryIndex;
+            const catInfo = visibleCatInfo[newVisibleTabIndex];
+            const hasItems = catInfo && catInfo.count > 0;
+            this.focusedItem = { categoryIndex: originalCategoryIndex, itemIndex: hasItems ? 0 : -1 };
+        }
+    }
+  }
+
+  setSearchQuery = (query: string) => {
+    this.searchQuery = query;
+    // Potentially adjust focus if search results change focused item visibility
+    this._adjustFocusAfterModeOrFilterChange();
+  }
+
+  toggleKeyboardHelp = () => {
+    this.showKeyboardHelp = !this.showKeyboardHelp;
+  }
+
+  openAddTodoModal = (categoryType: 'git' | 'project', categoryName: string, exampleItemLocation?: string) => {
+    this.addTodoModalData = { categoryType, categoryName, exampleItemLocation };
+    this.showAddTodoModal = true;
+  }
+
+  closeAddTodoModal = () => {
+    this.showAddTodoModal = false;
+    this.addTodoModalData = null;
+  }
+
+  submitAddTodo = async (formData: { content: string; categoryName: string; categoryType: 'git' | 'project'; exampleItemLocation?: string }) => {
+    // console.log('Submitting add todo:', formData); // Keep for debugging if needed
+    try {
+        await apiAddTodoItem({
+            category_type: formData.categoryType,
+            category_name: formData.categoryName,
+            content: formData.content,
+            example_item_location: formData.exampleItemLocation
+        });
+        await this.loadData(); // Refresh data after adding
+    } catch (err) {
+        console.error("Failed to submit todo:", err);
+        // Optionally set an error state to show in UI
+        runInAction(() => {
+            this.error = (err as Error).message || "Failed to add ToDo";
+        });
+    } finally {
+        this.closeAddTodoModal();
+    }
+  }
+}
+
+const todoStore = new TodoStoreImpl();
+export default todoStore;
+
+// No useTodoSelectors hook needed. Components will import `todoStore`
+// and use `observer` from `mobx-react-lite`.
+// Computed properties like `filteredCategories`, `globallySortedAndFilteredTodos`, etc.,
+// are now part of the store itself.

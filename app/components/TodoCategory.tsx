@@ -1,76 +1,63 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { TodoCategory as TodoCategoryType, TodoItem as TodoItemType } from '../types';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
-import { useTodoStore } from '../store/todoStore'; // Import Zustand store
+import todoStore, { isStatusDoneLike } from '../store/todoStore';
+import configStore from '../store/configStore';
 
 interface TodoCategoryProps {
   category: TodoCategoryType;
-  categoryIndex: number; // Index within the *filtered* list
+  categoryIndex: number; // Index within the *original* categories list (passed from Todo.tsx)
+  // This index should consistently refer to the main store's categories array for reliable data access.
 }
 
-export default function TodoCategory({ 
+const TodoCategory: React.FC<TodoCategoryProps> = observer(({
   category, 
   categoryIndex,
-}: TodoCategoryProps) {
-  const [expanded, setExpanded] = React.useState(true);
+}) => {
+  const [expanded, setExpanded] = useState(true);
   const categoryRef = useRef<HTMLDivElement>(null);
-  const itemsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Get necessary state and actions from Zustand store
-  const focusedItem = useTodoStore(state => state.focusedItem);
-  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
+  const { focusedItem, setFocusedItem } = todoStore;
+  const { config: appConfig } = configStore;
   
-  const completedCount = category.todos.filter(todo => todo.completed).length;
+  const completedCount = category.todos.filter(todo => appConfig && isStatusDoneLike(todo.status, appConfig)).length;
   const totalCount = category.todos.length;
   
-  // Determine if any item within this category is currently focused
   const isAnyChildFocused = focusedItem.categoryIndex === categoryIndex;
   
-  // Ensure category is always expanded when it contains a focused item
   useEffect(() => {
     if (isAnyChildFocused && focusedItem.itemIndex !== -1 && !expanded) {
       setExpanded(true);
     }
   }, [isAnyChildFocused, focusedItem.itemIndex, expanded]);
   
-  // Scroll category into view when it contains focused item
-  useEffect(() => {
-    if (isAnyChildFocused && focusedItem.itemIndex !== -1) {
-      // Don't scroll the category header, let the TodoItem handle scrolling
-      // The TodoItem's useEffect will take care of scrolling the item into view
-      // Remove the categoryRef.current.scrollIntoView call
-    }
-  }, [isAnyChildFocused, focusedItem.itemIndex]);
-  
-  // Handle item clicks - set focus in the store
-  const handleItemClick = (itemIndex: number) => {
-    setFocusedItem({ categoryIndex, itemIndex });
+  const handleItemClick = (itemIndexInOriginalCategory: number) => {
+    setFocusedItem({ categoryIndex: categoryIndex, itemIndex: itemIndexInOriginalCategory });
   };
   
-  // Handle keyboard events for the category header (e.g., collapsing)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       setExpanded(!expanded);
     }
-    // Note: Item navigation (up/down) is now handled globally in Todo.tsx/store
   };
   
   return (
     <div 
-      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`}
+      className={`hn-category ${isAnyChildFocused && focusedItem.itemIndex !== -1 ? 'has-focus' : ''}`}
       ref={categoryRef}
     >
       <div 
-        className="hn-category-header dark:border-neutral-700 dark:text-neutral-200 sticky top-0 bg-white dark:bg-neutral-900 z-10"
+        className="hn-category-header dark:border-neutral-700 dark:text-neutral-200 sticky top-0 bg-white dark:bg-neutral-900 z-10 cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
-        tabIndex={-1}
         onKeyDown={handleKeyDown}
         role="button"
         aria-expanded={expanded}
+        tabIndex={-1}
       >
         <NerdFontIcon 
           icon={category.icon} 
@@ -87,19 +74,18 @@ export default function TodoCategory({
       </div>
       
       {expanded && (
-        <div ref={itemsContainerRef} role="list" className="focus-within:outline-none">
+        <div role="list" className="focus-within:outline-none">
           {category.todos.length > 0 ? (
-            category.todos.map((todo, index) => {
-              // Determine if this specific item is focused
-              const isFocused = isAnyChildFocused && focusedItem.itemIndex === index;
+            category.todos.map((todo, itemIndex) => {
+              const isFocused = isAnyChildFocused && focusedItem.itemIndex === itemIndex;
               return (
                 <TodoItem 
-                  key={`${todo.location}-${index}`} 
+                  key={`${todo.location}-${itemIndex}-${category.name}`}
                   todo={todo} 
                   isFocused={isFocused}
-                  onClick={() => handleItemClick(index)}
+                  onClick={() => handleItemClick(itemIndex)}
                   categoryIndex={categoryIndex}
-                  itemIndex={index}
+                  itemIndex={itemIndex}
                   role="listitem"
                 />
               );
@@ -113,4 +99,6 @@ export default function TodoCategory({
       )}
     </div>
   );
-} 
+});
+
+export default TodoCategory; 
