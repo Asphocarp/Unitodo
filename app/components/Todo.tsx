@@ -221,6 +221,7 @@ const Todo: React.FC = observer(() => {
   }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal, displayMode, navigateTodos, setFilter, setSearchQuery]);
 
   useEffect(() => {
+    // TODO: 2 fix this scrollToItem is always triggered. it should only trigger when the focused item changes (typically when the user click on a item or press j/k)
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       const { categoryIndex, itemIndex } = todoStore.focusedItem;

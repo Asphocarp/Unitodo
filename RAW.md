@@ -76,7 +76,7 @@ T0DO1@fffff@@eeeee content lalalaa
 
 T0DO 1@fffff content lalalaa
 T0DO: 1@fffff content lalalaa
-- [ ] 1@AoVs5 content lalalaa
+- [ ] 1@AoVs5 content lalalaa // UNITODO_IGNORE_LINE
 - [-] 1@AoVs5 In progress example // UNITODO_IGNORE_LINE
 - [x] 1@AoVs5 Done example // UNITODO_IGNORE_LINE
 - [/] 1@AoVs5 Cancelled example // UNITODO_IGNORE_LINE
@@ -92,7 +92,7 @@ where:
 - `##12` is a unique incremented number id, assigned by unitodo system.
 - Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
 - We only match all of above stuff in the-first-word of the line, excluding all leading blanks and `:`.
-- The initial part of the line (e.g., `- [ ] `, `TODO:`, `T0DO`) determines the TODO's current state. These state markers are configurable in `todo_states` in `config.toml`, where each sub-array defines a set of states (e.g., Todo, Doing, Done, Cancelled).
+- The initial part of the line (e.g., `- [ ] `, `TODO:`, `T0DO`) determines the TODO's current state. These state markers are configurable in `todo_states` in `config.toml`, where each sub-array defines a set of states (e.g., Todo, Doing, Done, Cancelled). <!-- UNITODO_IGNORE_LINE -->
 
 ## Best practices
 
@@ -123,7 +123,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2@Apt3d (fancy) edit online; api to fetch from notion, slack, etc
 - [ ] 2 support timeline
 - [ ] 1@Aruxf figure out history-edit / bi-sync problem, so that supporting view on phone;
-- [ ] 0@Aq6hD tree-view / dep-chain-view  (table,tab,section,tree)-view
+- [ ] 1@Aq6hD tree-view / dep-chain-view  (table,tab,section,tree)-view
 - [ ] 0@AqTDc polish readme and homepage like <https://inputsource.pro/zh-CN>, <https://github.com/runjuu/InputSourcePro>
 
 ## Todos
@@ -140,7 +140,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 
 - [x] 2@@ArSOf unique-id can be fucking doomed! (with checking before applying)
   - [x] 2@@ArSOR render timestamp (even when not leading) / remove it?
-- [ ] 1 ci: submit to homebrew cask; make doc and everything more user-friendly
+- [ ] 1 chore: submit to homebrew cask; make doc and everything more user-friendly
 
 - [x] 2@@ArSOC move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 1 feat: show est time, like @1h; record time?
@@ -154,7 +154,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 3@AoVsd@@Aq6f3 see from cease plugin, how to inline-render a string - X no need to see it inline
 - [x] 3@@ArSO4 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
-- [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
+- [ ] 0 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
 
 ---
 
@@ -205,7 +205,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 2@@ArSOJ remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [x] 2@AptAw@@ArSMz doc: say that by default config at ~/.config/unitodo/unitodo.toml
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
-- [ ] 1@Aptsh fix: make click on a lexcial editor starts editing
+- [ ] 2@Aptsh fix: make click on a lexcial editor starts editing
 - [x] 1@Aptww@@Aq6dl fix: click on filename should behave the same as pressing enter (no new windows popup)
 - [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
 - [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
@@ -252,15 +252,18 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 000@@Aruxu make 000 prior a chip (render using lexcial in table-view)
 - [x] fix other mode content should not be original
 - [ ] 1@Aron2 allow for switch profile in main page
-- [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause)
+- [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
 - [ ] 2@Ar4YD UI: align buttons
 - [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
-- [ ] 00 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
+- [ ] 0 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
 
 - [x] @@AuNy0add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
-- [ ] 2 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
+- [ ] 0 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
 - [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
 - [ ] 3 fix search-bar func broken now (after switching to mobx)
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - i cannot even type task content, it is constantly updating!
+- [x] @@AuO3F00 fix sorting (to the old way)
+- [ ] 2 modify hotkey help panel accordingly
+- [ ] 1@AuO-X 0 fix: cannot type in addTodoDialog due to constantly re-rendering <- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)

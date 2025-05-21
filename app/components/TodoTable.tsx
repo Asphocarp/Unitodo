@@ -385,6 +385,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                row.original.itemIndex === focusedItem.itemIndex
       );
       if (targetRowIndex !== -1) {
+        // TODO: 2 fix this scrollToIndex is always triggered. it should only trigger when the focused item changes (typically when the user click on a item or press j/k) (maybe deteck real change via MobX, rather than SHIT useEffect)
         rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto' });
         
         setTimeout(() => {

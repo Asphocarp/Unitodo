@@ -32,6 +32,41 @@ export function getTodoStatusSortOrder(status: string, appConfig: AppConfig | nu
   return 3; // other_active (active, but not the primary TODO or DOING)
 }
 
+// Helper function to get character rank for custom sorting
+function getCharRankTs(c: string): number {
+  const charCode = c.charCodeAt(0);
+  if (c >= '0' && c <= '9') return charCode - '0'.charCodeAt(0); // 0-9
+  if (c >= 'A' && c <= 'Z') return charCode - 'A'.charCodeAt(0) + 10; // A-Z after digits
+  if (c >= 'a' && c <= 'z') return charCode - 'a'.charCodeAt(0) + 36; // a-z after A-Z
+  if (c === '-') return 62;
+  if (c === '_') return 63;
+  if (c === ' ') return 64;
+  return 65; // Other characters last
+}
+
+// Helper function to compare two todo content strings based on custom character rank
+function compareTodoContentTs(contentA: string, contentB: string): number {
+  const lenA = contentA.length;
+  const lenB = contentB.length;
+  const minLen = Math.min(lenA, lenB);
+
+  for (let i = 0; i < minLen; i++) {
+    const charA = contentA[i];
+    const charB = contentB[i];
+
+    if (charA === charB) continue;
+
+    const rankA = getCharRankTs(charA);
+    const rankB = getCharRankTs(charB);
+
+    if (rankA !== rankB) return rankA - rankB;
+    // If ranks are the same but chars are different (e.g. due to case mapping in an earlier version of getCharRankTs),
+    // fall back to simple char comparison for stability, though current getCharRankTs should avoid this.
+    return charA.localeCompare(charB); 
+  }
+  return lenA - lenB; // Shorter string comes first if all preceding chars are equal
+}
+
 // New comparator function for 'active' filter
 function compareActiveTodos(a: {content: string, status: string}, b: {content: string, status: string}, appConfig: AppConfig | null): number {
   const orderA = getTodoStatusSortOrder(a.status, appConfig);
@@ -41,10 +76,8 @@ function compareActiveTodos(a: {content: string, status: string}, b: {content: s
     return orderA - orderB;
   }
 
-  // Secondary sort by priority
-  const priorityA = parseTodoContent(a.content).priority ?? 'zzz'; // Default to low priority if undefined
-  const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
-  return priorityA.localeCompare(priorityB);
+  // Secondary sort by content using custom logic
+  return compareTodoContentTs(a.content, b.content);
 }
 
 interface GlobalTodoItem extends TodoItem {
@@ -192,22 +225,14 @@ class TodoStoreImpl {
       if (this.filter === 'active') {
         processedTodos = category.todos
           .filter(todo => !isStatusDoneLike(todo.status, appConfig)) // Keep only active items
-          .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort them: DOING > TODO > OTHER_ACTIVE > Priority
+          .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort them: DOING > TODO > OTHER_ACTIVE > Content
       } else if (this.filter === 'closed') {
         processedTodos = category.todos
           .filter(todo => isStatusDoneLike(todo.status, appConfig)) // Keep only done-like items
-          .sort((a, b) => { // Sort by priority
-            const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
-            const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
-            return priorityA.localeCompare(priorityB);
-          });
+          .sort((a, b) => compareTodoContentTs(a.content, b.content)); // Sort by content
       } else { // filter === 'all'
-        // Sort all todos in the category by priority
-        processedTodos = [...category.todos].sort((a, b) => {
-          const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
-          const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
-          return priorityA.localeCompare(priorityB);
-        });
+        // Sort all todos in the category by content
+        processedTodos = [...category.todos].sort((a, b) => compareTodoContentTs(a.content, b.content));
       }
       return { ...category, todos: processedTodos };
     });
@@ -249,20 +274,18 @@ class TodoStoreImpl {
     if (this.filter === 'active') {
       return allTodos
         .filter(todo => !isStatusDoneLike(todo.status, appConfig)) // Filter out done-like
-        .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort: DOING > TODO > OTHER_ACTIVE > Priority
+        .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort: DOING > TODO > OTHER_ACTIVE > Content
     } 
     
     if (this.filter === 'closed') {
       return allTodos
         .filter(todo => isStatusDoneLike(todo.status, appConfig)) // Filter for done-like
-        .sort((a, b) => { // Sort by priority (or other criteria for closed items if desired)
-            const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
-            const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
-            // Add more stable sort if priorities are equal, e.g., by creation date if available
-            if (priorityA !== priorityB) {
-                return priorityA.localeCompare(priorityB);
-            }
-            // Fallback to original order for stability
+        .sort((a, b) => { // Sort by content
+            // Primary sort by content
+            const contentComparison = compareTodoContentTs(a.content, b.content);
+            if (contentComparison !== 0) return contentComparison;
+
+            // Fallback to original order for stability if content is identical
             if (a.originalCategoryIndex !== b.originalCategoryIndex) {
                 return a.originalCategoryIndex - b.originalCategoryIndex;
             }
@@ -271,14 +294,13 @@ class TodoStoreImpl {
     }
 
     // This is for filter === 'all'
-    // Sort all items by priority, then by original order for stability
+    // Sort all items by content, then by original order for stability
     return allTodos.sort((a, b) => {
-        const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
-        const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
-        if (priorityA !== priorityB) {
-          return priorityA.localeCompare(priorityB);
-        }
-        // Fallback to original order for stability
+        // Primary sort by content
+        const contentComparison = compareTodoContentTs(a.content, b.content);
+        if (contentComparison !== 0) return contentComparison;
+        
+        // Fallback to original order for stability if content is identical
         if (a.originalCategoryIndex !== b.originalCategoryIndex) {
             return a.originalCategoryIndex - b.originalCategoryIndex;
         }

@@ -33,14 +33,13 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
     // If line starts with TODO, - [ ], or contains a todo item pattern // UNITODO_IGNORE_LINE
     else if (currentCategory && (line.startsWith('TODO') || line.startsWith('- [') || line.match(/^[^-]*?TODO/))) { // UNITODO_IGNORE_LINE
       // Default to incomplete status string
-      let currentStatus = "- [ ] "; // Default status
+      let currentStatus = "- [ ] "; // Default status // UNITODO_IGNORE_LINE
       
       // Check if it's marked as completed
       if (line.includes('- [x]') || line.includes('- [X]')) {
         currentStatus = "- [x] "; // Common done status
       }
-      // TODO: Add more sophisticated status parsing here if needed, to match various 
-      // patterns from todo_states config, e.g., by checking line.startsWith(configured_marker)
+      // TODO: 2 fix this func, Add more sophisticated status parsing here if needed, to match various patterns from todo_states config, e.g., by checking line.startsWith(configured_marker)
       
       // Extract the content and location parts
       let content = line;
@@ -55,7 +54,7 @@ export function parseTodoMarkdown(markdown: string): TodoCategory[] {
       
       // Clean up the content based on different formats
       // This part needs to be careful not to remove actual content if status markers are complex
-      if (content.startsWith('- [ ] ')) { 
+      if (content.startsWith('- [ ] ')) {  // UNITODO_IGNORE_LINE
         content = content.substring(6);
       } else if (content.startsWith('- [x] ') || content.startsWith('- [X] ')) {
         content = content.substring(6);
@@ -234,7 +233,7 @@ export interface ParsedTodo {
  * ASSUMES input string starts optionally with whitespace, then the first word (priority/id/timestamp).
  * Handles different ID formats (@timestamp, #nanoid, ##incremented) and optional priority/done markers.
  */
-// TODO: refine parser here, just get first occured anywhere (@[a-zA-Z0-9_\-]{5})[@\#\s] which is ts5 (\#[a-zA-Z0-9_\-]{23})[@#\s] which is nanoid as the idpart, the rest is matched as text_parts, parse into a json object.
+// TODO: 2 refine parser here, just get first occured anywhere (@[a-zA-Z0-9_\-]{5})[@\#\s] which is ts5 (\#[a-zA-Z0-9_\-]{23})[@#\s] which is nanoid as the idpart, the rest is matched as text_parts, parse into a json object.
 export function parseTodoContent(content: string): ParsedTodo {
   const match = content.match(TODO_REGEX); // UNITODO_IGNORE_LINE
 
