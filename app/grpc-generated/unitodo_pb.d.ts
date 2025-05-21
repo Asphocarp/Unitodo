@@ -263,6 +263,8 @@ export class CycleTodoStateRequest extends jspb.Message {
     setLocation(value: string): CycleTodoStateRequest;
     getOriginalContent(): string;
     setOriginalContent(value: string): CycleTodoStateRequest;
+    getDirection(): CycleTodoStateRequest.CycleDirection;
+    setDirection(value: CycleTodoStateRequest.CycleDirection): CycleTodoStateRequest;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CycleTodoStateRequest.AsObject;
@@ -278,7 +280,14 @@ export namespace CycleTodoStateRequest {
     export type AsObject = {
         location: string,
         originalContent: string,
+        direction: CycleTodoStateRequest.CycleDirection,
     }
+
+    export enum CycleDirection {
+    FORWARD = 0,
+    BACKWARD = 1,
+    }
+
 }
 
 export class CycleTodoStateResponse extends jspb.Message { 

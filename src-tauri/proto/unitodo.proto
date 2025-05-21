@@ -62,6 +62,12 @@ message MarkDoneResponse {
 message CycleTodoStateRequest {
     string location = 1;
     string original_content = 2;
+
+    enum CycleDirection {
+        FORWARD = 0;
+        BACKWARD = 1;
+    }
+    CycleDirection direction = 3;
 }
 
 message CycleTodoStateResponse {

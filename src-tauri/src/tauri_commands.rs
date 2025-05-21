@@ -225,25 +225,26 @@ pub mod app_updates {
 
     #[tauri::command]
     pub async fn install_update(
-        app_handle: AppHandle, // Use direct AppHandle type
+        app_handle: AppHandle,
         pending_update: tauri::State<'_, PendingUpdate>,
     ) -> Result<(), String> {
-        let update_to_install = pending_update.0.write().await.take();
-        if let Some(update_val) = update_to_install {
-            log::info!(
-                "Attempting to install update: version {} from {}",
-                update_val.version,
-                update_val.date.map_or_else(|| "N/A".to_string(), |d| d.to_string())
-            );
-            
-            update_val.download_and_install(
-                |_chunk_length, _content_length| {},
-                || {} 
-            ).await.map_err(|e| e.to_string())?;
-            app_handle.restart();
-        } else {
-            return Err("No pending update to install.".to_string());
+        match pending_update.0.write().await.take() {
+            Some(update_val) => {
+                log::info!(
+                    "Attempting to install update: version {} from {}",
+                    update_val.version,
+                    update_val
+                        .date
+                        .map_or_else(|| "N/A".to_string(), |d| d.to_string())
+                );
+                update_val
+                    .download_and_install(|_, _| {}, || {})
+                    .await
+                    .map_err(|e| e.to_string())?;
+                app_handle.restart()
+            }
+            None => Err("No pending update to install.".to_string()),
         }
-        Ok(())
     }
+
 }

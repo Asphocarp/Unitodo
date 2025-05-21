@@ -424,6 +424,34 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
           setTableEditingCell({ categoryIndex: categoryIndex!, itemIndex: itemIndex!, initialFocus: 'afterPriority' });
         }
         return;
+      case 'h':
+        e.preventDefault();
+        e.stopPropagation();
+        apiCycleTodoState({
+          location: originalTodo.location,
+          original_content: originalTodo.content,
+          direction: 'BACKWARD',
+        }).then(() => {
+          todoStore.loadData();
+        }).catch(error => {
+          console.error("Failed to cycle todo state backward from table:", error);
+        });
+        return;
+      case ' ':
+      case 'Spacebar':
+      case 'l':
+        e.preventDefault();
+        e.stopPropagation();
+        apiCycleTodoState({
+          location: originalTodo.location,
+          original_content: originalTodo.content,
+          direction: 'FORWARD',
+        }).then(() => {
+          todoStore.loadData();
+        }).catch(error => {
+          console.error("Failed to cycle todo state forward from table:", error);
+        });
+        return;
       case 'x':
         e.preventDefault();
         ;(async () => {
@@ -468,24 +496,6 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
             }
           }
         }
-        break;
-      case ' ':
-      case 'Spacebar':
-        e.preventDefault();
-        const todoForCycle = row.original.originalTodo!;
-        apiCycleTodoState({
-          location: todoForCycle.location,
-          original_content: todoForCycle.content,
-        }).then((response) => {
-          // Optionally, you could update the specific todo item in the store directly
-          // using response.new_content and response.new_marker if the backend provides them
-          // and they are sufficient to update the UI without a full reload.
-          // For now, a full reload ensures consistency.
-          todoStore.loadData();
-        }).catch(error => {
-          console.error("Failed to cycle todo state from table:", error);
-          // Optionally, show an error message to the user
-        });
         break;
       case 'ArrowUp':
       case 'k':

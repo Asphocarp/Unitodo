@@ -27,6 +27,7 @@ goog.exportSymbol('proto.unitodo.AddTodoRequest', null, global);
 goog.exportSymbol('proto.unitodo.AddTodoResponse', null, global);
 goog.exportSymbol('proto.unitodo.ConfigMessage', null, global);
 goog.exportSymbol('proto.unitodo.CycleTodoStateRequest', null, global);
+goog.exportSymbol('proto.unitodo.CycleTodoStateRequest.CycleDirection', null, global);
 goog.exportSymbol('proto.unitodo.CycleTodoStateResponse', null, global);
 goog.exportSymbol('proto.unitodo.DeleteProfileRequest', null, global);
 goog.exportSymbol('proto.unitodo.DeleteProfileResponse', null, global);
@@ -2565,7 +2566,8 @@ proto.unitodo.CycleTodoStateRequest.prototype.toObject = function(opt_includeIns
 proto.unitodo.CycleTodoStateRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     location: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    originalContent: jspb.Message.getFieldWithDefault(msg, 2, "")
+    originalContent: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    direction: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -2610,6 +2612,10 @@ proto.unitodo.CycleTodoStateRequest.deserializeBinaryFromReader = function(msg, 
       var value = /** @type {string} */ (reader.readString());
       msg.setOriginalContent(value);
       break;
+    case 3:
+      var value = /** @type {!proto.unitodo.CycleTodoStateRequest.CycleDirection} */ (reader.readEnum());
+      msg.setDirection(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -2653,8 +2659,23 @@ proto.unitodo.CycleTodoStateRequest.serializeBinaryToWriter = function(message, 
       f
     );
   }
+  f = message.getDirection();
+  if (f !== 0.0) {
+    writer.writeEnum(
+      3,
+      f
+    );
+  }
 };
 
+
+/**
+ * @enum {number}
+ */
+proto.unitodo.CycleTodoStateRequest.CycleDirection = {
+  FORWARD: 0,
+  BACKWARD: 1
+};
 
 /**
  * optional string location = 1;
@@ -2689,6 +2710,24 @@ proto.unitodo.CycleTodoStateRequest.prototype.getOriginalContent = function() {
  */
 proto.unitodo.CycleTodoStateRequest.prototype.setOriginalContent = function(value) {
   return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional CycleDirection direction = 3;
+ * @return {!proto.unitodo.CycleTodoStateRequest.CycleDirection}
+ */
+proto.unitodo.CycleTodoStateRequest.prototype.getDirection = function() {
+  return /** @type {!proto.unitodo.CycleTodoStateRequest.CycleDirection} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {!proto.unitodo.CycleTodoStateRequest.CycleDirection} value
+ * @return {!proto.unitodo.CycleTodoStateRequest} returns this
+ */
+proto.unitodo.CycleTodoStateRequest.prototype.setDirection = function(value) {
+  return jspb.Message.setProto3EnumField(this, 3, value);
 };
 
 

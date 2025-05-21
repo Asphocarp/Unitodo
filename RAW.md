@@ -260,5 +260,5 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] @@AuNy0add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
 - [ ] 2 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
-- [-] 0 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
+- [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)

@@ -104,6 +104,7 @@ export async function markTodoAsDone(payload: MarkDonePayload): Promise<ProtoMar
 export interface CycleTodoStatePayload {
   location: string;
   original_content: string;
+  direction: 'FORWARD' | 'BACKWARD';
 }
 
 // Expected response structure from the backend for cycling state
@@ -119,7 +120,15 @@ export async function cycleTodoState(payload: CycleTodoStatePayload): Promise<Cy
   try {
     // This assumes a Tauri command named 'cycle_todo_state_command' is defined in Rust,
     // which in turn calls the gRPC cycle_todo_state method.
-    return await invoke<CycleTodoStateResponse>('cycle_todo_state_command', { payload });
+    // Map frontend direction to the i32 expected by gRPC enum (0 for FORWARD, 1 for BACKWARD)
+    const numericDirection = payload.direction === 'FORWARD' ? 0 : 1;
+    return await invoke<CycleTodoStateResponse>('cycle_todo_state_command', { 
+      payload: {
+        location: payload.location,
+        original_content: payload.original_content,
+        direction: numericDirection,
+      }
+    });
   } catch (error) {
     console.error('Error invoking cycle_todo_state_command:', error);
     throw error;

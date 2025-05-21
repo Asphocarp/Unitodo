@@ -188,7 +188,8 @@ impl TodoService for MyTodoService {
         let payload = request.into_inner();
         let app_config_guard = self.config_state.read().await;
         if let Some(active_config) = app_config_guard.get_active_config() {
-            match cycle_todo_state_in_file_grpc(active_config, &payload.location, &payload.original_content) {
+            let direction_as_i32 = payload.direction as i32;
+            match cycle_todo_state_in_file_grpc(active_config, &payload.location, &payload.original_content, direction_as_i32) {
                 Ok((new_content_part, new_marker)) => Ok(Response::new(CycleTodoStateResponse {
                     status: "success".to_string(),
                     message: "Todo state cycled successfully".to_string(),
