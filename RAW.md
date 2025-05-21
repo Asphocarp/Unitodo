@@ -264,5 +264,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 0 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - [ ] 2 modify hotkey help panel accordingly
-- [-] 0000 fix all fucking annoying re-rendering issues: cannot type in searchbar/addTodoDialog due to constantly re-rendering <- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)
+- [-] 0000 fix all fucking annoying re-rendering issues: i cannot type chars in searchbar/addTodoDialog due to constantly re-rendering and rob my focus state 
+- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)
 - [ ] 1 add hotkey `c` for change first word (like in vim)
+- [ ] 1 how to debug a tauri app in browser? i want to run it in the browser, for the ease of debugging. but got the following errors (i know `invoke` is a tauri api, but i now want to run it) (maybe you can help me make another `npm run dev:browser` for the ease of debugging)
