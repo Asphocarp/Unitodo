@@ -91,7 +91,6 @@ pub fn default_todo_states() -> Vec<Vec<String>> {
     vec![
         vec!["- [ ] ".to_string(), "- [-] ".to_string(), "- [x] ".to_string(), "- [/] ".to_string()], // UNITODO_IGNORE_LINE
         vec!["TODO:".to_string(), "DOING:".to_string(), "DONE:".to_string(), "CANCELLED:".to_string()], // UNITODO_IGNORE_LINE
-        vec!["TODO".to_string(), "DOING".to_string(), "DONE".to_string(), "CANCELLED".to_string()], // UNITODO_IGNORE_LINE
     ]
 }
 pub fn default_append_basename() -> String { "unitodo.append.md".to_string() } // Made public 

@@ -6,7 +6,6 @@ editor_uri_scheme = "cursor://file/"
 todo_states = [
   ["- [ ] ", "- [-] ", "- [x] ", "- [/] "],
   ["TODO:", "DOING:", "DONE:", "CANCELLED:"],
-  ["TODO", "DOING", "DONE", "CANCELLED"]
 ]
 default_append_basename = "unitodo.append.md"
 
