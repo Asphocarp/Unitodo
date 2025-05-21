@@ -558,7 +558,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                         colSpan={table.getAllColumns().length} 
                         className="px-3 py-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300 border-b dark:border-neutral-700 tracking-wider uppercase"
                       >
-                        {row.original.sectionHeaderText}
+                        {row.original.sectionHeaderText}:
                       </td>
                     </tr>
                   );
