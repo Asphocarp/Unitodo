@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { observer } from 'mobx-react-lite';
@@ -75,14 +75,14 @@ const Todo: React.FC = observer(() => {
     return item?.type === 'header' ? CATEGORY_HEADER_HEIGHT : ITEM_HEIGHT;
   };
 
-  const getFlatIndex = (targetCategoryIndex: number, targetItemIndex: number): number => {
-    const foundItem = flattenedList.find(item => 
+  const getFlatIndex = useCallback((targetCategoryIndex: number, targetItemIndex: number): number => {
+    const foundItem = todoStore.computedFlattenedList.find(item => 
         item.type === 'item' && 
         item.categoryIndex === targetCategoryIndex && 
         item.itemIndex === targetItemIndex
     );
     return foundItem ? foundItem.flatIndex : -1;
-  };
+  }, []);
 
   useEffect(() => {
     if (displayMode === 'tab' && tabHeaderRef.current) {
@@ -221,30 +221,44 @@ const Todo: React.FC = observer(() => {
   }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal, displayMode, navigateTodos, setFilter, setSearchQuery]);
 
   useEffect(() => {
-    // TODO: 2 fix this scrollToItem is always triggered. it should only trigger when the focused item changes (typically when the user click on a item or press j/k)
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     scrollTimeoutRef.current = setTimeout(() => {
       const { categoryIndex, itemIndex } = todoStore.focusedItem;
       if (categoryIndex === -1 && itemIndex === -1) return;
       if (searchInputRef.current && document.activeElement === searchInputRef.current) return;
+      if (todoStore.tableEditingCell) return;
+
+      const currentFlattenedList = todoStore.computedFlattenedList; 
+      const currentFilteredCategories = todoStore.filteredCategories;
+      const currentCategories = todoStore.categories;
 
       if (displayMode === 'tab' && tabListRef.current) {
         const activeOriginalCatIndex = todoStore.activeTabIndex;
         if (categoryIndex === activeOriginalCatIndex && itemIndex !== -1) {
-          const activeCatInFiltered = todoStore.filteredCategories.find(cat => todoStore.categories[activeOriginalCatIndex]?.name === cat.name);
+          const activeCatInFiltered = currentFilteredCategories.find(cat => currentCategories[activeOriginalCatIndex]?.name === cat.name);
           if(activeCatInFiltered) {
-            const focusedTodo = todoStore.categories[activeOriginalCatIndex]?.todos[itemIndex];
-            const itemIndexInFiltered = activeCatInFiltered.todos.findIndex(t => t.location === focusedTodo?.location && t.content === focusedTodo?.content);
-            if(itemIndexInFiltered !== -1) tabListRef.current.scrollToItem(itemIndexInFiltered, 'smart');
+            const focusedTodo = currentCategories[activeOriginalCatIndex]?.todos[itemIndex];
+            if (focusedTodo) {
+                const itemIndexInFiltered = activeCatInFiltered.todos.findIndex(t => t.location === focusedTodo.location && t.content === focusedTodo.content);
+                if(itemIndexInFiltered !== -1) tabListRef.current.scrollToItem(itemIndexInFiltered, 'smart');
+            }
           }
         }
       } else if (displayMode === 'section' && sectionListRef.current) {
-        const flatIndex = getFlatIndex(categoryIndex, itemIndex);
+        const getFlatIndexLocal = (catIdx: number, itmIdx: number): number => {
+            const foundItem = currentFlattenedList.find(item => 
+                item.type === 'item' && 
+                item.categoryIndex === catIdx && 
+                item.itemIndex === itmIdx
+            );
+            return foundItem ? foundItem.flatIndex : -1;
+        };
+        const flatIndex = getFlatIndexLocal(categoryIndex, itemIndex);
         if (flatIndex !== -1) sectionListRef.current.scrollToItem(flatIndex, 'smart');
       }
     }, 50);
     return () => { if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current); };
-  }, [todoStore.focusedItem, displayMode, flattenedList, getFlatIndex, todoStore.activeTabIndex, todoStore.filteredCategories, todoStore.categories]);
+  }, [todoStore.focusedItem.categoryIndex, todoStore.focusedItem.itemIndex, displayMode, todoStore.activeTabIndex, todoStore.tableEditingCell]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || todoStore.filteredCategories.length === 0) return;
@@ -395,6 +409,21 @@ const Todo: React.FC = observer(() => {
     }
     return null;
   };
+
+  const handleCloseAddTodoModal = useCallback(() => {
+    todoStore.closeAddTodoModal();
+  }, []);
+
+  const handleSubmitAddTodoModal = useCallback((todoText: string, categoryType: "git" | "project", categoryName: string) => {
+    if (todoStore.addTodoModalData) {
+      todoStore.submitAddTodo({
+        content: todoText,
+        categoryName,
+        categoryType,
+        exampleItemLocation: todoStore.addTodoModalData.exampleItemLocation
+      });
+    }
+  }, []);
 
   if (error) {
     return (
@@ -610,15 +639,8 @@ const Todo: React.FC = observer(() => {
       {showAddTodoModal && addTodoModalData && (
         <AddTodoModal
           isOpen={showAddTodoModal}
-          onClose={() => closeAddTodoModal()}
-          onSubmit={(todoText: string, categoryType: "git" | "project", categoryName: string) => {
-            submitAddTodo({
-              content: todoText, 
-              categoryName, 
-              categoryType, 
-              exampleItemLocation: addTodoModalData.exampleItemLocation
-            });
-          }}
+          onClose={handleCloseAddTodoModal}
+          onSubmit={handleSubmitAddTodoModal}
           categoryName={addTodoModalData.categoryName}
           categoryType={addTodoModalData.categoryType}
         />
