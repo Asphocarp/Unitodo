@@ -4,6 +4,31 @@ import { fetchTodoData, addTodoItem as apiAddTodoItem } from '../services/todoSe
 import { parseTodoContent, decodeTimestampId } from '../utils';
 import configStore from './configStore'; // Import the MobX config store instance
 
+// Helper function for deep comparison of categories
+function areCategoriesEqual(arr1: TodoCategory[], arr2: TodoCategory[]): boolean {
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    const cat1 = arr1[i];
+    const cat2 = arr2[i];
+    if (cat1.name !== cat2.name || cat1.icon !== cat2.icon || cat1.todos.length !== cat2.todos.length) {
+      return false;
+    }
+    // Sort todos by a consistent key (e.g., location then content) before comparison if order isn't guaranteed
+    // For now, assuming order from backend/fetchTodoData is consistent or order doesn't matter for equality
+    const sortedTodos1 = [...cat1.todos].sort((a, b) => (a.location + a.content).localeCompare(b.location + b.content));
+    const sortedTodos2 = [...cat2.todos].sort((a, b) => (a.location + a.content).localeCompare(b.location + b.content));
+
+    for (let j = 0; j < sortedTodos1.length; j++) {
+      const todo1 = sortedTodos1[j];
+      const todo2 = sortedTodos2[j];
+      if (todo1.content !== todo2.content || todo1.location !== todo2.location || todo1.status !== todo2.status) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // Helper function (can remain outside or be part of the store if preferred)
 export function isStatusDoneLike(status: string, appConfig: AppConfig | null): boolean {
   if (!appConfig || !appConfig.todo_states || appConfig.todo_states.length === 0) return false;
@@ -165,11 +190,18 @@ class TodoStoreImpl {
       this.error = null;
     });
     try {
-      const data = await fetchTodoData();
+      const newData = await fetchTodoData();
+      let categoriesChanged = !areCategoriesEqual(this.categories, newData);
+
+      if (categoriesChanged) {
+        runInAction(() => {
+          this.categories = newData;
+        });
+      }
+      
       runInAction(() => {
-        this.categories = data;
         this.loading = false;
-        this.lastFetched = new Date();
+        this.lastFetched = new Date(); // Update lastFetched on every successful call
       });
     } catch (err: any) {
       runInAction(() => {
@@ -538,8 +570,8 @@ class TodoStoreImpl {
 
   setSearchQuery = (query: string) => {
     this.searchQuery = query;
-    // Potentially adjust focus if search results change focused item visibility
-    this._adjustFocusAfterModeOrFilterChange();
+    // Removed: this._adjustFocusAfterModeOrFilterChange(); 
+    // Focus adjustment should be handled by the component, e.g., on Enter key in search bar.
   }
 
   toggleKeyboardHelp = () => {
