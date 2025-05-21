@@ -4,7 +4,7 @@ active_profile = "default"
 refresh_interval = 5000
 editor_uri_scheme = "cursor://file/"
 todo_states = [
-  ["- [ ] ", "- [-] ", "- [x] ", "- [/] "],
+  ["- [ ] ", "- [/] ", "- [x] ", "- [-] "],
   ["TODO:", "DOING:", "DONE:", "CANCELLED:"],
 ]
 default_append_basename = "unitodo.append.md"

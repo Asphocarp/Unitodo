@@ -116,6 +116,10 @@ xattr -cr /Applications/Unitodo.app
 
 The config file is at `~/.config/unitodo/config.toml`.
 
+## note
+
+- checkbox style is (by default) designed to match the style listed in https://github.com/AnubisNekhet/AnuPpuccin.
+
 ## NO_RELEASE_UNTIL
 
 - but end up feeling more productive editing markdown.

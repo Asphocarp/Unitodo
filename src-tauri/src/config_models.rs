@@ -89,7 +89,7 @@ pub fn default_refresh_interval() -> u32 { 5000 } // Made public
 pub fn default_editor_uri_scheme() -> String { "vscode://file/".to_string() } // Made public
 pub fn default_todo_states() -> Vec<Vec<String>> { 
     vec![
-        vec!["- [ ] ".to_string(), "- [-] ".to_string(), "- [x] ".to_string(), "- [/] ".to_string()], // UNITODO_IGNORE_LINE
+        vec!["- [ ] ".to_string(), "- [/] ".to_string(), "- [x] ".to_string(), "- [-] ".to_string()], // UNITODO_IGNORE_LINE
         vec!["TODO:".to_string(), "DOING:".to_string(), "DONE:".to_string(), "CANCELLED:".to_string()], // UNITODO_IGNORE_LINE
     ]
 }
