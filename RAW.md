@@ -204,25 +204,15 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 2@Apdxw@@ArSMR config profile slots, offering mixed view (all todos from all projects mixed ranking, project source at right)
 - [x] 2@@ArSOJ remove the native title bar in macos electron app, by moving the 3 macos buttons at the left of the web title header
 - [x] 2@AptAw@@ArSMz doc: say that by default config at ~/.config/unitodo/unitodo.toml
-- [ ] 2@AptCd even when nothing changed, the updated time should be updated
-- [ ] 2@Aptsh fix: make click on a lexcial editor starts editing
 - [x] 1@Aptww@@Aq6dl fix: click on filename should behave the same as pressing enter (no new windows popup)
-- [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
-- [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
-- [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
 - [x] 2@Apt81@@Aq6fI let the priority part include "-" (not just alphanumeric)- X no more concept of fisrt word, simply append timestamp and stuff at the end
-- [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
-- [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
 - [x] 0@AqTDq@@AqWoV tarui instead of electron!
 - [x] 0@AqWoP@@Aqn1l fix: enter to open
 - [x] 01@AqnH7@@AqnWV fix sorting (blank > number)
 - [x] 0@AqoNf@@AqpXT add updater <https://v2.tauri.app/plugin/updater/>
-- [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
 - [x] 000@Aq2kC@@Aq24r update config
 - [x] 1@Aq2qH@@Aq6c- fix dark mode titlebar color
 - [x] 000@Aq26w@@Aq3Lo do you have any idea why `npm run dev` of this project would consume 1000% of CPU - it is rust backend in dev mode not optimized
-- [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
-
 - [x] 00 table-view; show file git repo (if available) or project name (not if in tab-mode);
   - add a table view for items of this todo page @Todo.tsx (each item is a row), with cols of: content, zone (git-repo or project-name), file(filename:line), created(time), finishe    d(time), est(duration).
     - @web, maybe you can find a high-performance interactive table component for this (one that allow user to drag cols around). tell me your choice of component first.
@@ -238,10 +228,7 @@ The config file is at `~/.config/unitodo/config.toml`.
     - remember to adjust the config page frontend to fit the new profile-switchable feature. (add, modify, delete profile); use shadcn if you want.
     - continue to save all profiles in `~/.config/unitodo/config.toml`, the default profile is `default` (which can not be deleted).
   - (then design algo for appending to filters)
-- [ ] 1@Aq6kT item color (base on git repo or project color)
 - [x] 1@Aq7DJ@@ArSKQ X separate dev and release config? or let the frontend connect the same one
-- [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
-- [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
 - [x] 00@ArSeL@@ArUS3 minor: upgrade next.js react.js to SOTA fancy versions; a or i for editing:
   - make the content cell in TodoTable @TodoTable.tsx  editable, and we can start to edit it like we can do via pressing 'a' or 'i' like in @TodoItem.tsx @Todo.tsx .
 - [x] 00@ArYft@@ArYkt font
@@ -251,19 +238,31 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 000@@Aruxo rounded highlight whole item;
 - [x] 000@@Aruxu make 000 prior a chip (render using lexcial in table-view)
 - [x] fix other mode content should not be original
+- [x] @@AuO3F00 fix sorting (to the old way)
+- [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
+
+- [ ] 2@AptCd even when nothing changed, the updated time should be updated
+- [ ] 2@Aptsh fix: make click on a lexcial editor starts editing
+- [ ] 1@Aptz8 show GET todos time cost, auto-adjust interval to be larger than it, and for user to tune refresh interval
+- [ ] 1@Apt6w fancy: like notion-mail, define view/filters (replace proj); hover (or v) to show nearby lines, maybe make it a card component, show more info like file path;
+- [ ] 1@Apt7C fancy: left sidebar (instead of tabs)
+- [ ] 2@ApuFL rust backend offer exact char pos instead of just line pos, so that following checking can be easier
+- [ ] 2@Ap-nc UI: the "edit" "ignore" button at the left of filename instead of right (currently)
+- [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
+- [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
+
+- [ ] 1@Aq6kT item color (base on git repo or project color)
+- [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
+- [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
 - [ ] 1@Aron2 allow for switch profile in main page
-- [ ] 0@AruxC rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
-- [ ] 2@Ar4YD UI: align buttons
-- [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
+- [ ] 0@AruxC hard: rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
+- [ ] 3@Ar4YD UI: align buttons in config page
+- [ ] 1 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
 - [ ] 0 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
 
-- [x] @@AuNy0add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
 - [ ] 0 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
-- [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
-- [ ] 3 fix search-bar func broken now (after switching to mobx)
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
-- i cannot even type task content, it is constantly updating!
-- [x] @@AuO3F00 fix sorting (to the old way)
 - [ ] 2 modify hotkey help panel accordingly
-- [ ] 1@AuO-X 0 fix: cannot type in addTodoDialog due to constantly re-rendering <- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)
+- [-] 0000 fix all fucking annoying re-rendering issues: cannot type in searchbar/addTodoDialog due to constantly re-rendering <- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)
+- [ ] 1 add hotkey `c` for change first word (like in vim)
