@@ -9,7 +9,7 @@ import {
     ConfigMessage as PbConfigMessage,
     RgConfigMessage as PbRgConfigMessage,
     ProjectConfigMessage as PbProjectConfigMessage,
-    TodoDonePair as PbTodoDonePair
+    TodoStateSet as PbTodoStateSet,
 } from '../../grpc-generated/unitodo_pb';
 import { Config as AppConfig, RgConfig as AppRgConfig, ProjectConfig as AppProjectConfig } from '@/app/types';
 import { grpcStatusToHttpStatus } from '../utils';
@@ -19,35 +19,21 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
     const configMessage = new PbConfigMessage();
     
     const rgMessage = new PbRgConfigMessage();
-    rgMessage.setPathsList(appConfig.rg.paths || []);
-    rgMessage.setIgnoreList(appConfig.rg.ignore || []);
-    rgMessage.setFileTypesList(appConfig.rg.file_types || []);
+    rgMessage.setPathsList([]);
+    rgMessage.setIgnoreList(appConfig.ignore || []);
+    rgMessage.setFileTypesList(appConfig.file_types || []);
     configMessage.setRg(rgMessage);
 
-    const projectsMap = configMessage.getProjectsMap();
-    for (const [key, value] of Object.entries(appConfig.projects)) {
-        const projectMessage = new PbProjectConfigMessage();
-        projectMessage.setPatternsList(value.patterns || []);
-        if (value.append_file_path) {
-            projectMessage.setAppendFilePath(value.append_file_path);
-        }
-        projectsMap.set(key, projectMessage);
-    }
-
-    configMessage.setRefreshInterval(appConfig.refresh_interval);
-    configMessage.setEditorUriScheme(appConfig.editor_uri_scheme);
+    configMessage.setRefreshInterval(appConfig.refresh_interval || 5000);
+    configMessage.setEditorUriScheme(appConfig.editor_uri_scheme || 'vscode://file/');
     
-    // Adapt appConfig.todo_states to PbTodoDonePair for gRPC
-    const todoDonePairsMessages = (appConfig.todo_states || []).map(state_set => {
-        const pairMessage = new PbTodoDonePair();
-        pairMessage.setTodoMarker(state_set[0] || ""); // First element as todo_marker
-        // Third element as done_marker, with fallbacks
-        const doneMarker = state_set.length >= 3 ? state_set[2] : (state_set.length >=2 ? state_set[1] : (state_set[0] || ""));
-        pairMessage.setDoneMarker(doneMarker);
-        return pairMessage;
+    const todoStateSetMessages = (appConfig.todo_states || []).map(state_set_array => {
+        const stateSetMessage = new PbTodoStateSet();
+        stateSetMessage.setStatesList(state_set_array || []);
+        return stateSetMessage;
     });
-    configMessage.setTodoDonePairsList(todoDonePairsMessages);
-    configMessage.setDefaultAppendBasename(appConfig.default_append_basename);
+    configMessage.setTodoStatesList(todoStateSetMessages);
+    configMessage.setDefaultAppendBasename(appConfig.default_append_basename || 'unitodo.append.md');
     
     return configMessage;
 }
@@ -56,38 +42,29 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
 function grpcConfigMessageToAppConfig(configMessage?: PbConfigMessage): AppConfig {
     if (!configMessage) {
         return {
-            rg: { paths: [], ignore: [], file_types: [] },
-            projects: {},
             refresh_interval: 5000,
             editor_uri_scheme: 'vscode://file/',
-            todo_states: [], // Changed from todo_done_pairs
-            default_append_basename: 'unitodo.append.md'
+            todo_states: [],
+            default_append_basename: 'unitodo.append.md',
+            ignore: [],
+            file_types: []
         };
     }
-    const projects: Record<string, AppProjectConfig> = {};
-    configMessage.getProjectsMap().forEach((value: PbProjectConfigMessage, key: string) => {
-        projects[key] = {
-            patterns: value.getPatternsList(),
-            append_file_path: value.hasAppendFilePath() ? value.getAppendFilePath() : undefined,
-        };
-    });
-
-    // Adapt PbTodoDonePair list from gRPC to AppConfig.todo_states
-    const appTodoStates: string[][] = configMessage.getTodoDonePairsList().map((pair: PbTodoDonePair) => 
-        [pair.getTodoMarker(), pair.getDoneMarker()]
+    const appTodoStates: string[][] = configMessage.getTodoStatesList().map((stateSetMessage: PbTodoStateSet) => 
+        stateSetMessage.getStatesList()
     );
+    
+    const rgConfig = configMessage.getRg();
 
     return {
-        rg: {
-            paths: configMessage.getRg()?.getPathsList() || [],
-            ignore: configMessage.getRg()?.getIgnoreList(),
-            file_types: configMessage.getRg()?.getFileTypesList(),
-        },
-        projects: projects,
+        ignore: rgConfig?.getIgnoreList() || [],
+        file_types: rgConfig?.getFileTypesList() || [],
         refresh_interval: configMessage.getRefreshInterval(),
         editor_uri_scheme: configMessage.getEditorUriScheme(),
-        todo_states: appTodoStates, // Changed from todo_done_pairs
+        todo_states: appTodoStates,
         default_append_basename: configMessage.getDefaultAppendBasename(),
+        editor_scheme: undefined,
+        default_priority: undefined,
     };
 }
 
@@ -101,7 +78,7 @@ export async function GET(request: NextRequest) {
                 projects: {},
                 refresh_interval: 5000,
                 editor_uri_scheme: 'vscode://file/',
-                todo_states: [], // Changed from todo_done_pairs
+                todo_states: [],
                 default_append_basename: 'unitodo.append.md'
             },
             activeProfileName: 'default'

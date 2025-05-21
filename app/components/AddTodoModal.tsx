@@ -34,16 +34,9 @@ const AddTodoModal: React.FC<AddTodoModalProps> = observer(({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (todoText.trim()) {
-      let fullTodoText = todoText.trim();
-      if (config?.todo_states && config.todo_states.length > 0 && config.todo_states[0] && config.todo_states[0][0]) {
-        let pattern = config.todo_states[0][0];
-        if (!pattern.endsWith(' ')) pattern += ' ';
-        if (!fullTodoText.startsWith(pattern.trim().split(' ')[0])){
-            fullTodoText = pattern + fullTodoText;
-        }
-      }
-      onSubmit(fullTodoText, categoryType, categoryName);
+    const trimmed = todoText.trim();
+    if (trimmed) {
+      onSubmit(trimmed, categoryType, categoryName);
     }
   };
   
