@@ -486,14 +486,14 @@ const Todo: React.FC = observer(() => {
             ⌨️
           </button>
           
-          <Link href="config" passHref legacyBehavior prefetch={false}>
-            <a 
-              className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
-              title="Configure Unitodo"
-              aria-label="Configure Unitodo"
-            >
-              ⚙️
-            </a>
+          <Link
+            href="config"
+            prefetch={false}
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
+            title="Configure Unitodo"
+            aria-label="Configure Unitodo"
+          >
+            ⚙️
           </Link>
         </div>
       </div>
