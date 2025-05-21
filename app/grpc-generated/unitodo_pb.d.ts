@@ -106,8 +106,6 @@ export class EditTodoRequest extends jspb.Message {
     setNewContent(value: string): EditTodoRequest;
     getOriginalContent(): string;
     setOriginalContent(value: string): EditTodoRequest;
-    getCompleted(): boolean;
-    setCompleted(value: boolean): EditTodoRequest;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EditTodoRequest.AsObject;
@@ -124,7 +122,6 @@ export namespace EditTodoRequest {
         location: string,
         newContent: string,
         originalContent: string,
-        completed: boolean,
     }
 }
 

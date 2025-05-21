@@ -10,7 +10,7 @@ use fs2::FileExt;
 
 // --- Core File Operation Logic (uses active_profile_config) ---
 #[rustfmt::skip]
-pub fn edit_todo_in_file_grpc(active_profile_config: &Config, location: &str, new_content: &str, original_content: &str, _completed: bool) -> io::Result<()> {
+pub fn edit_todo_in_file_grpc(active_profile_config: &Config, location: &str, new_content: &str, original_content: &str) -> io::Result<()> {
     let location_parts: Vec<&str> = location.splitn(2, ':').collect();
     if location_parts.len() != 2 { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format")); }
     let file_path_str = location_parts[0];

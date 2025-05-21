@@ -8,7 +8,6 @@ interface EditTodoApiRequestBody {
   location: string;
   new_content: string;
   original_content: string; // Added based on gRPC definition and frontend logic
-  completed: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -36,7 +35,6 @@ export async function POST(request: NextRequest) {
     grpcRequest.setLocation(payload.location);
     grpcRequest.setNewContent(payload.new_content);
     grpcRequest.setOriginalContent(payload.original_content);
-    grpcRequest.setCompleted(payload.completed);
 
     return new Promise<NextResponse>((resolve) => {
       client.editTodo(grpcRequest, (error: grpc.ServiceError | null, response: EditTodoResponse | null) => {

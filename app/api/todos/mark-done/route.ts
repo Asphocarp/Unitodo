@@ -12,7 +12,7 @@ interface MarkDoneApiRequestBody {
 export async function POST(request: NextRequest) {
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log('[API Route POST /api/todos/mark-done] Build phase, skipping gRPC call.');
-    return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build', new_content: '', completed: false }, { status: 200 });
+    return NextResponse.json({ status: 'skipped_build', message: 'Skipped during build', new_content: ''}, { status: 200 });
   }
 
   const grpcPort = request.headers.get('X-GRPC-Port');
@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
             status: response.getStatus(),
             message: response.getMessage(),
             new_content: response.getNewContent(),
-            completed: response.getCompleted(),
           }));
         } else {
           resolve(NextResponse.json(

@@ -127,7 +127,7 @@ impl TodoService for MyTodoService {
         let payload = request.into_inner();
         let app_config_guard = self.config_state.read().await;
         if let Some(active_config) = app_config_guard.get_active_config() {
-            match edit_todo_in_file_grpc(active_config, &payload.location, &payload.new_content, &payload.original_content, payload.completed) {
+            match edit_todo_in_file_grpc(active_config, &payload.location, &payload.new_content, &payload.original_content) {
                 Ok(()) => Ok(Response::new(EditTodoResponse { status: "success".to_string(), message: "Todo edited successfully".to_string() })),
                 Err(e) => { 
                     let (code, msg) = match e.kind() {

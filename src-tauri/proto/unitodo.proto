@@ -26,7 +26,6 @@ message EditTodoRequest {
     string location = 1;
     string new_content = 2;
     string original_content = 3;
-    bool completed = 4;
 }
 
 message EditTodoResponse {

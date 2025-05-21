@@ -1409,8 +1409,7 @@ proto.unitodo.EditTodoRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     location: jspb.Message.getFieldWithDefault(msg, 1, ""),
     newContent: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    originalContent: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    completed: jspb.Message.getBooleanFieldWithDefault(msg, 4, false)
+    originalContent: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -1459,10 +1458,6 @@ proto.unitodo.EditTodoRequest.deserializeBinaryFromReader = function(msg, reader
       var value = /** @type {string} */ (reader.readString());
       msg.setOriginalContent(value);
       break;
-    case 4:
-      var value = /** @type {boolean} */ (reader.readBool());
-      msg.setCompleted(value);
-      break;
     default:
       reader.skipField();
       break;
@@ -1510,13 +1505,6 @@ proto.unitodo.EditTodoRequest.serializeBinaryToWriter = function(message, writer
   if (f.length > 0) {
     writer.writeString(
       3,
-      f
-    );
-  }
-  f = message.getCompleted();
-  if (f) {
-    writer.writeBool(
-      4,
       f
     );
   }
@@ -1574,24 +1562,6 @@ proto.unitodo.EditTodoRequest.prototype.getOriginalContent = function() {
  */
 proto.unitodo.EditTodoRequest.prototype.setOriginalContent = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
-};
-
-
-/**
- * optional bool completed = 4;
- * @return {boolean}
- */
-proto.unitodo.EditTodoRequest.prototype.getCompleted = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 4, false));
-};
-
-
-/**
- * @param {boolean} value
- * @return {!proto.unitodo.EditTodoRequest} returns this
- */
-proto.unitodo.EditTodoRequest.prototype.setCompleted = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 4, value);
 };
 
 

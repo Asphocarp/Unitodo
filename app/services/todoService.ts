@@ -34,7 +34,7 @@ export async function fetchTodoData(): Promise<AppTodoCategory[]> {
         todos: (cat.todos || []).map((item: any /* ProtoTodoItem as plain object */) => ({
             content: item.content,
             location: item.location,
-            status: item.status, // Changed from completed to status
+            status: item.status, 
         })),
     }));
   } catch (error) {
@@ -48,14 +48,10 @@ interface EditTodoPayload {
   location: string;
   new_content: string;
   original_content: string; 
-  // completed: boolean; // Removed: Backend logic ignores it / proto EditTodoRequest might change
 }
 
 export async function editTodoItem(payload: EditTodoPayload): Promise<ProtoEditTodoResponse> {
   try {
-    // If ProtoEditTodoRequest in gRPC Stubs still has `completed`, 
-    // and it's not optional, this might error if Rust command expects it.
-    // However, core Rust logic was ignoring it.
     const commandPayload = { ...payload }; // Send payload as is (without completed)
     return await invoke<ProtoEditTodoResponse>('edit_todo_command', { payload: commandPayload });
   } catch (error) {
@@ -86,8 +82,6 @@ export interface MarkDonePayload {
   original_content: string;
 }
 
-// ProtoMarkDoneResponse still contains `completed: boolean` (reflecting if status changed to done-like)
-// and `new_content: string` (which includes the new status marker).
 export async function markTodoAsDone(payload: MarkDonePayload): Promise<ProtoMarkDoneResponse> { 
   try {
     // Payload structure matches ProtoMarkDoneRequest
