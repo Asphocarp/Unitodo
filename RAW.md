@@ -261,5 +261,6 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
 - [ ] 2 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
 - [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
+- [ ] 3 fix search-bar func broken now (after switching to mobx)
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - i cannot even type task content, it is constantly updating!

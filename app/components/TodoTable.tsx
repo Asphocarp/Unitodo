@@ -171,6 +171,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
         if (row.original.isSectionHeader || !row.original.originalTodo) return null;
         const isThisEditing = tableEditingCell?.categoryIndex === row.original.categoryIndex && tableEditingCell?.itemIndex === row.original.itemIndex;
         if (isThisEditing) {
+          const editorKey = `editor-${row.original.id}`;
           return (
             <div
               ref={editorWrapperRef}
@@ -193,6 +194,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
               }}
             >
               <LexicalTodoEditor
+                key={editorKey}
                 initialFullContent={editedContent}
                 isReadOnly={false}
                 onSubmit={async () => {
@@ -373,6 +375,10 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
   const virtualRows = rowVirtualizer.getVirtualItems();
 
   useEffect(() => {
+    if (todoStore.tableEditingCell) {
+      return;
+    }
+
     if (focusedItem && table.getRowModel().rows.length > 0) {
       const targetRowIndex = table.getRowModel().rows.findIndex(
         row => row.original.categoryIndex === focusedItem.categoryIndex && 
@@ -380,11 +386,16 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       );
       if (targetRowIndex !== -1) {
         rowVirtualizer.scrollToIndex(targetRowIndex, { align: 'auto' });
-        const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
-        rowElement?.focus({ preventScroll: true }); 
+        
+        setTimeout(() => {
+          const rowElement = tableContainerRef.current?.querySelector(`tr[data-index="${targetRowIndex}"]`) as HTMLElement | null;
+          if (rowElement && document.activeElement !== rowElement) {
+            rowElement.focus({ preventScroll: true }); 
+          }
+        }, 0);
       }
     }
-  }, [focusedItem, rowVirtualizer, table.getRowModel().rows]);
+  }, [focusedItem, rowVirtualizer, table.getRowModel().rows, todoStore.tableEditingCell]);
 
   const getEditorUrl = (location: string) => {
     if (!location || !appConfig) return null;
