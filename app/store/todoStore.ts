@@ -14,6 +14,39 @@ export function isStatusDoneLike(status: string, appConfig: AppConfig | null): b
   return false;
 }
 
+// New helper function to determine sort order of a todo status
+export function getTodoStatusSortOrder(status: string, appConfig: AppConfig | null): number {
+  if (!appConfig || !appConfig.todo_states || appConfig.todo_states.length === 0) return 5; // unknown
+
+  // isStatusDoneLike checks for states at index 2 (DONE) and 3 (CANCELLED)
+  if (isStatusDoneLike(status, appConfig)) return 4; // done
+
+  for (const stateSet of appConfig.todo_states) {
+    // stateSet[1] is typically DOING/IN_PROGRESS
+    if (stateSet.length > 1 && status === stateSet[1]) return 1; // doing
+    // stateSet[0] is typically TODO/OPEN
+    if (stateSet.length > 0 && status === stateSet[0]) return 2; // todo
+  }
+  
+  // If not DONE, and not the primary DOING or TODO state, it's "other active"
+  return 3; // other_active (active, but not the primary TODO or DOING)
+}
+
+// New comparator function for 'active' filter
+function compareActiveTodos(a: {content: string, status: string}, b: {content: string, status: string}, appConfig: AppConfig | null): number {
+  const orderA = getTodoStatusSortOrder(a.status, appConfig);
+  const orderB = getTodoStatusSortOrder(b.status, appConfig);
+
+  if (orderA !== orderB) {
+    return orderA - orderB;
+  }
+
+  // Secondary sort by priority
+  const priorityA = parseTodoContent(a.content).priority ?? 'zzz'; // Default to low priority if undefined
+  const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
+  return priorityA.localeCompare(priorityB);
+}
+
 interface GlobalTodoItem extends TodoItem {
   originalCategoryIndex: number;
   originalItemIndex: number;
@@ -152,13 +185,35 @@ class TodoStoreImpl {
   // Computed property for filtered categories
   get filteredCategories(): TodoCategory[] {
     const appConfig = configStore.config; // Access MobX configStore
-    if (this.showCompleted) return this.categories;
-    return this.categories
-      .map(category => ({
-        ...category,
-        todos: category.todos.filter(todo => !isStatusDoneLike(todo.status, appConfig)),
-      }))
-      .filter(category => category.todos.length > 0);
+    
+    const processedCategories = this.categories.map(category => {
+      let processedTodos: TodoItem[];
+
+      if (this.filter === 'active') {
+        processedTodos = category.todos
+          .filter(todo => !isStatusDoneLike(todo.status, appConfig)) // Keep only active items
+          .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort them: DOING > TODO > OTHER_ACTIVE > Priority
+      } else if (this.filter === 'closed') {
+        processedTodos = category.todos
+          .filter(todo => isStatusDoneLike(todo.status, appConfig)) // Keep only done-like items
+          .sort((a, b) => { // Sort by priority
+            const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
+            const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
+            return priorityA.localeCompare(priorityB);
+          });
+      } else { // filter === 'all'
+        // Sort all todos in the category by priority
+        processedTodos = [...category.todos].sort((a, b) => {
+          const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
+          const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
+          return priorityA.localeCompare(priorityB);
+        });
+      }
+      return { ...category, todos: processedTodos };
+    });
+
+    // Filter out categories that have no todos after processing
+    return processedCategories.filter(category => category.todos.length > 0);
   }
 
   // Computed property for category information (name, icon, counts)
@@ -191,14 +246,43 @@ class TodoStoreImpl {
       });
     });
 
-    const filtered = this.showCompleted
-      ? allTodos
-      : allTodos.filter(todo => !isStatusDoneLike(todo.status, appConfig));
+    if (this.filter === 'active') {
+      return allTodos
+        .filter(todo => !isStatusDoneLike(todo.status, appConfig)) // Filter out done-like
+        .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort: DOING > TODO > OTHER_ACTIVE > Priority
+    } 
+    
+    if (this.filter === 'closed') {
+      return allTodos
+        .filter(todo => isStatusDoneLike(todo.status, appConfig)) // Filter for done-like
+        .sort((a, b) => { // Sort by priority (or other criteria for closed items if desired)
+            const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
+            const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
+            // Add more stable sort if priorities are equal, e.g., by creation date if available
+            if (priorityA !== priorityB) {
+                return priorityA.localeCompare(priorityB);
+            }
+            // Fallback to original order for stability
+            if (a.originalCategoryIndex !== b.originalCategoryIndex) {
+                return a.originalCategoryIndex - b.originalCategoryIndex;
+            }
+            return a.originalItemIndex - b.originalItemIndex;
+        });
+    }
 
-    return filtered.sort((a, b) => {
-      const aParsed = parseTodoContent(a.content);
-      const bParsed = parseTodoContent(b.content);
-      return (aParsed.priority ?? '').localeCompare(bParsed.priority ?? '');
+    // This is for filter === 'all'
+    // Sort all items by priority, then by original order for stability
+    return allTodos.sort((a, b) => {
+        const priorityA = parseTodoContent(a.content).priority ?? 'zzz';
+        const priorityB = parseTodoContent(b.content).priority ?? 'zzz';
+        if (priorityA !== priorityB) {
+          return priorityA.localeCompare(priorityB);
+        }
+        // Fallback to original order for stability
+        if (a.originalCategoryIndex !== b.originalCategoryIndex) {
+            return a.originalCategoryIndex - b.originalCategoryIndex;
+        }
+        return a.originalItemIndex - b.originalItemIndex;
     });
   }
 
