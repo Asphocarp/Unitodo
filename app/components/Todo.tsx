@@ -23,7 +23,6 @@ const CATEGORY_HEADER_HEIGHT = 30;
 
 const Todo: React.FC = observer(() => {
   const {
-    loading,
     error,
     filter,
     searchQuery,
@@ -396,7 +395,7 @@ const Todo: React.FC = observer(() => {
     return null;
   };
 
-  if (error && !loading) {
+  if (error) {
     return (
       <div className="bg-red-50 dark:bg-red-900 p-2 text-xs dark:text-red-100">
         <strong>Error:</strong> {error}
