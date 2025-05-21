@@ -124,7 +124,6 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2 support timeline
 - [ ] 1@Aruxf figure out history-edit / bi-sync problem, so that supporting view on phone;
 - [ ] 0@Aq6hD tree-view / dep-chain-view  (table,tab,section,tree)-view
-TODO: asdsfskha
 - [ ] 0@AqTDc polish readme and homepage like <https://inputsource.pro/zh-CN>, <https://github.com/runjuu/InputSourcePro>
 
 ## Todos
@@ -258,11 +257,9 @@ TODO: asdsfskha
 - [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
 - [ ] 00 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
 
-- [-] add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
-- [-] custom sorting? editing like vim (dd move it to dropover/clipboard sec); 
-  - say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
-  - no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
-  - dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
-  - lets do a huge refractor: replace all `zustand` with `mobx` for state management. including all affected in files in @app  . 
+- [x] @@AuNy0add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
+- [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
+- [ ] 2 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
+- think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 
 - [ ] use tRPC instead of gRPC
