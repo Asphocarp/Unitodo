@@ -4,14 +4,15 @@ import React, { useRef, useEffect } from 'react';
 import { TodoCategory as TodoCategoryType, TodoItem as TodoItemType } from '../types';
 import TodoItem from './TodoItem';
 import NerdFontIcon from './NerdFontIcon';
-import { useTodoStore } from '../store/todoStore'; // Import Zustand store
+import todoStore from '../store/todoStore'; // Import MobX store
+import { observer } from 'mobx-react-lite'; // Import observer
 
 interface TodoCategoryProps {
   category: TodoCategoryType;
   categoryIndex: number; // Index within the *filtered* list
 }
 
-export default function TodoCategory({ 
+function TodoCategory({ // Changed for observer wrapping
   category, 
   categoryIndex,
 }: TodoCategoryProps) {
@@ -19,12 +20,17 @@ export default function TodoCategory({
   const categoryRef = useRef<HTMLDivElement>(null);
   const itemsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Get necessary state and actions from Zustand store
-  const focusedItem = useTodoStore(state => state.focusedItem);
-  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
+  // Get necessary state and actions from MobX store
+  const { focusedItem, setFocusedItem, filteredCategoryInfo } = todoStore;
   
-  const completedCount = category.todos.filter(todo => todo.completed).length;
-  const totalCount = category.todos.length;
+  // Get counts from filteredCategoryInfo if available, otherwise calculate manually as fallback
+  const currentCategoryInfo = filteredCategoryInfo.find(info => info.name === category.name);
+  const completedCount = currentCategoryInfo 
+    ? (currentCategoryInfo.totalCount - currentCategoryInfo.count) // Assuming count is active items
+    : category.todos.filter(todo => todoStore.isStatusDoneLike(todo.status)).length; // Fallback, make isStatusDoneLike public or use a different approach
+  const totalCount = currentCategoryInfo 
+    ? currentCategoryInfo.totalCount 
+    : category.todos.length;
   
   // Determine if any item within this category is currently focused
   const isAnyChildFocused = focusedItem.categoryIndex === categoryIndex;
@@ -61,7 +67,7 @@ export default function TodoCategory({
   
   return (
     <div 
-      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`}
+      className={`hn-category ${isAnyChildFocused ? 'has-focus' : ''}`} // isAnyChildFocused uses focusedItem from MobX
       ref={categoryRef}
     >
       <div 
@@ -79,7 +85,7 @@ export default function TodoCategory({
         />
         {category.name}
         <span className="ml-1 text-subtle-color dark:text-neutral-500 text-xs">
-          ({completedCount}/{totalCount})
+          ({completedCount}/{totalCount}) {/* Counts now derived using MobX store info */}
         </span>
         <span className="ml-1 text-subtle-color dark:text-neutral-500 text-xs">
           {expanded ? '▼' : '►'}
@@ -91,13 +97,13 @@ export default function TodoCategory({
           {category.todos.length > 0 ? (
             category.todos.map((todo, index) => {
               // Determine if this specific item is focused
-              const isFocused = isAnyChildFocused && focusedItem.itemIndex === index;
+              const isFocused = isAnyChildFocused && focusedItem.itemIndex === index; // focusedItem from MobX
               return (
                 <TodoItem 
                   key={`${todo.location}-${index}`} 
                   todo={todo} 
                   isFocused={isFocused}
-                  onClick={() => handleItemClick(index)}
+                  onClick={() => handleItemClick(index)} // handleItemClick uses setFocusedItem from MobX
                   categoryIndex={categoryIndex}
                   itemIndex={index}
                   role="listitem"
@@ -113,4 +119,6 @@ export default function TodoCategory({
       )}
     </div>
   );
-} 
+}
+
+export default observer(TodoCategory); // Wrap with observer

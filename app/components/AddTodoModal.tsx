@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import useConfigStore from '../store/configStore';
+import configStore from '../store/configStore';
+import { observer } from 'mobx-react-lite';
 
 interface AddTodoModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface AddTodoModalProps {
   categoryType: 'git' | 'project';
 }
 
-export default function AddTodoModal({ 
+function AddTodoModal({ 
   isOpen, 
   onClose, 
   onSubmit, 
@@ -19,7 +20,7 @@ export default function AddTodoModal({
   categoryType 
 }: AddTodoModalProps) {
   const [todoText, setTodoText] = useState('');
-  const { config } = useConfigStore();
+  const { config } = configStore; // Changed to use MobX store directly
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -44,8 +45,9 @@ export default function AddTodoModal({
 
   // Get the appropriate todo pattern from config
   let todoPattern = '- [ ] '; // Default TODO marker
-  if (config?.todo_states && config.todo_states.length > 0 && config.todo_states[0] && config.todo_states[0].length > 0) {
-    todoPattern = config.todo_states[0][0]; // Use first state of first set
+  // Access config directly from the MobX store
+  if (configStore.config?.todo_states && configStore.config.todo_states.length > 0 && configStore.config.todo_states[0] && configStore.config.todo_states[0].length > 0) {
+    todoPattern = configStore.config.todo_states[0][0]; // Use first state of first set
     // Add space if pattern doesn't end with one
     if (!todoPattern.endsWith(' ')) {
       todoPattern += ' ';
@@ -117,4 +119,6 @@ export default function AddTodoModal({
       </div>
     </div>
   );
-} 
+}
+
+export default observer(AddTodoModal);

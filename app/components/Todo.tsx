@@ -3,8 +3,10 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { FixedSizeList, VariableSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
-import { useTodoStore, useTodoSelectors, isStatusDoneLike } from '../store/todoStore';
-import useConfigStore from '../store/configStore';
+import todoStore from '../store/todoStore'; // MobX store
+import configStore from '../store/configStore'; // MobX store
+import { observer } from 'mobx-react-lite'; // MobX observer
+// Removed: useTodoStore, useTodoSelectors, isStatusDoneLike, useConfigStore
 import TodoCategory from './TodoCategory';
 import TodoCategoryHeader from './TodoCategoryHeader';
 import TodoItem from './TodoItem';
@@ -36,41 +38,41 @@ interface FlatTodoItem {
 
 type FlatListItem = FlatHeaderItem | FlatTodoItem;
 
-export default function Todo() {
-  const categories = useTodoStore(state => state.categories);
-  const loading = useTodoStore(state => state.loading);
-  const error = useTodoStore(state => state.error);
-  const filter = useTodoStore(state => state.filter);
-  const searchQuery = useTodoStore(state => state.searchQuery);
-  const lastUpdated = useTodoStore(state => state.lastFetched);
-  const displayMode = useTodoStore(state => state.displayMode);
-  const activeTabIndex = useTodoStore(state => state.activeTabIndex);
-  const focusedItem = useTodoStore(state => state.focusedItem);
-  const showKeyboardHelp = useTodoStore(state => state.showKeyboardHelp);
-  const showAddTodoModal = useTodoStore(state => state.showAddTodoModal);
-  const addTodoModalData = useTodoStore(state => state.addTodoModalData);
-  
+function Todo() { // Changed to function declaration for observer
+  const { 
+    categories, 
+    loading, 
+    error, 
+    filter, 
+    searchQuery, 
+    lastFetched: lastUpdated, 
+    displayMode, 
+    activeTabIndex, 
+    focusedItem, 
+    showKeyboardHelp,
+    showAddTodoModal,
+    addTodoModalData,
+    loadData,
+    setFilter,
+    setSearchQuery,
+    toggleDisplayMode,
+    setActiveTabIndex,
+    setFocusedItem,
+    toggleKeyboardHelp,
+    navigateTodos,
+    navigateTabs,
+    openAddTodoModal,
+    closeAddTodoModal,
+    submitAddTodo,
+    // Computed properties from todoStore directly
+    totalCounts, 
+    filteredCategories,
+    globallySortedAndFilteredTodos
+  } = todoStore;
+
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   
-  const loadData = useTodoStore(state => state.loadData);
-  const setFilter = useTodoStore(state => state.setFilter);
-  const setSearchQuery = useTodoStore(state => state.setSearchQuery);
-  const toggleDisplayMode = useTodoStore(state => state.toggleDisplayMode);
-  const setActiveTabIndex = useTodoStore(state => state.setActiveTabIndex);
-  const setFocusedItem = useTodoStore(state => state.setFocusedItem);
-  const toggleKeyboardHelp = useTodoStore(state => state.toggleKeyboardHelp);
-  const navigateTodos = useTodoStore(state => state.navigateTodos);
-  const navigateTabs = useTodoStore(state => state.navigateTabs);
-  const openAddTodoModal = useTodoStore(state => state.openAddTodoModal);
-  const closeAddTodoModal = useTodoStore(state => state.closeAddTodoModal);
-  const submitAddTodo = useTodoStore(state => state.submitAddTodo);
-  
-  const todoStoreState = useTodoStore.getState();
-  const showCompleted = filter === 'all' || filter === 'closed';
-  const selectors = useTodoSelectors(showCompleted);
-  const { active: activeTodos, done: completedTodos, total: totalTodos } = selectors.getTotalCounts;
-  
-  const filteredCategories = selectors.filteredCategories;
+  // const showCompleted = filter === 'all' || filter === 'closed'; // This logic is now internal to computed properties in todoStore
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,14 +83,15 @@ export default function Todo() {
   const tabListRef = useRef<FixedSizeList>(null);
   const sectionListRef = useRef<VariableSizeList>(null);
 
-  const { config: appConfig, loadActiveProfileAndConfig: loadAppConfig, initialConfigLoaded } = useConfigStore();
+  const { config: appConfig, loadActiveProfileAndConfig: loadAppConfig, initialConfigLoaded } = configStore; // Use MobX configStore
 
   const flattenedList = useMemo((): FlatListItem[] => {
-    if (displayMode !== 'section') return [];
+    if (todoStore.displayMode !== 'section') return []; // Use todoStore.displayMode
 
     const flatList: FlatListItem[] = [];
     let currentFlatIndex = 0;
-    filteredCategories.forEach((category: TodoCategoryType, catIndex: number) => {
+    // Use todoStore.filteredCategories directly as it's computed
+    todoStore.filteredCategories.forEach((category: TodoCategoryType, catIndex: number) => {
       flatList.push({
         type: 'header',
         category: category,
@@ -106,16 +109,17 @@ export default function Todo() {
       });
     });
     return flatList;
-  }, [filteredCategories, displayMode]);
+  }, [todoStore.filteredCategories, todoStore.displayMode]);
 
   const tableDisplayData = useMemo((): TodoTableRow[] => {
-    if (displayMode !== 'table') return [];
-    const sortedItems = selectors.globallySortedAndFilteredTodos;
-    const originalStoreCategories = categories;
+    if (todoStore.displayMode !== 'table') return [];
+    // Use todoStore.globallySortedAndFilteredTodos directly
+    const sortedItems = todoStore.globallySortedAndFilteredTodos; 
+    const originalStoreCategories = todoStore.categories; // Access categories from todoStore
 
     return sortedItems.map(item => {
       const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
-      const parsed = parseTodoContent(content);
+
       
       let fullPath = location || '';
       let lineNumberStr = '';
@@ -153,7 +157,7 @@ export default function Todo() {
         itemIndex: originalItemIndex,
       };
     });
-  }, [displayMode, categories, selectors.globallySortedAndFilteredTodos, filter, searchQuery]);
+  }, [todoStore.displayMode, todoStore.categories, todoStore.globallySortedAndFilteredTodos, todoStore.filter, todoStore.searchQuery]);
 
   const getItemSize = (index: number): number => {
     const item = flattenedList[index];
@@ -170,7 +174,7 @@ export default function Todo() {
   };
 
   useEffect(() => {
-    if (displayMode === 'tab' && tabHeaderRef.current) {
+    if (todoStore.displayMode === 'tab' && tabHeaderRef.current) { // Use todoStore.displayMode
       const updateScrollPadding = () => {
         const tabHeaderHeight = tabHeaderRef.current?.offsetHeight || 0;
         document.documentElement.style.setProperty('--tab-header-height', `${tabHeaderHeight + 10}px`);
@@ -188,21 +192,21 @@ export default function Todo() {
       document.documentElement.style.removeProperty('--tab-header-height');
       document.documentElement.style.scrollPaddingTop = '';
     }
-  }, [displayMode, categories.length, activeTabIndex, filter]);
+  }, [todoStore.displayMode, todoStore.categories.length, todoStore.activeTabIndex, todoStore.filter]); // Depend on todoStore properties
 
   useEffect(() => {
-    loadData();
-    if (!initialConfigLoaded) {
-        loadAppConfig();
+    todoStore.loadData(); // Call MobX action
+    if (!configStore.initialConfigLoaded) { // Use MobX configStore
+        configStore.loadActiveProfileAndConfig(); // Call MobX action
     }
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
-    if (appConfig?.refresh_interval && appConfig.refresh_interval > 0) {
-        console.log(`Setting refresh interval to ${appConfig.refresh_interval}ms`);
-        intervalRef.current = setInterval(loadData, appConfig.refresh_interval);
+    if (configStore.config?.refresh_interval && configStore.config.refresh_interval > 0) { // Use MobX configStore
+        console.log(`Setting refresh interval to ${configStore.config.refresh_interval}ms`);
+        intervalRef.current = setInterval(todoStore.loadData, configStore.config.refresh_interval); // Call MobX action
     } else {
         console.log("Refresh interval not set or invalid, disabling auto-refresh.");
     }
@@ -219,18 +223,20 @@ export default function Todo() {
         if (e.key === 'Enter') {
           e.preventDefault();
           searchInputRef.current?.blur();
-          const { focusedItem: currentFocusedItem, displayMode: currentDisplayMode, activeTabIndex: currentActiveTabIndex } = useTodoStore.getState();
-          const currentFilteredCategories = selectors.filteredCategories;
+          // Access state directly from todoStore
+          const currentFocusedItem = todoStore.focusedItem;
+          const currentDisplayMode = todoStore.displayMode;
+          const currentActiveTabIndex = todoStore.activeTabIndex;
+          const currentFilteredCategories = todoStore.filteredCategories; // Use computed property
 
           let newFocusCategoryIndex = -1;
           let newFocusItemIndex = -1;
-
           if (currentDisplayMode === 'tab') {
             if (currentFilteredCategories[currentActiveTabIndex]?.todos.length > 0) {
               newFocusCategoryIndex = currentActiveTabIndex;
               newFocusItemIndex = 0;
             }
-          } else {
+          } else { // Section or Table mode (table mode also uses flattenedList logic for first item)
             if (flattenedList.length > 0) {
               const firstItem = flattenedList.find(item => item.type === 'item') as FlatTodoItem | undefined;
               if (firstItem) {
@@ -241,7 +247,7 @@ export default function Todo() {
           }
 
           if (newFocusCategoryIndex !== -1 && newFocusItemIndex !== -1) {
-            setFocusedItem({ categoryIndex: newFocusCategoryIndex, itemIndex: newFocusItemIndex });
+            todoStore.setFocusedItem({ categoryIndex: newFocusCategoryIndex, itemIndex: newFocusItemIndex }); // Call MobX action
             setTimeout(() => {
               const itemSelector = `[data-category-index="${newFocusCategoryIndex}"][data-item-index="${newFocusItemIndex}"] .todo-item-main-content`;
               const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
@@ -269,13 +275,13 @@ export default function Todo() {
         case 'h':
           if (!isEditingContext) {
             e.preventDefault();
-            navigateTabs('left');
+            todoStore.navigateTabs('left'); // Call MobX action
           }
           break;
         case 'l':
           if (!isEditingContext) {
             e.preventDefault();
-            navigateTabs('right');
+            todoStore.navigateTabs('right'); // Call MobX action
           }
           break;
         case 'd':
@@ -285,7 +291,7 @@ export default function Todo() {
             if (containerRef.current) {
               setTimeout(() => {
                 containerRef.current?.focus();
-                const { categoryIndex, itemIndex } = useTodoStore.getState().focusedItem;
+                const { categoryIndex, itemIndex } = todoStore.focusedItem; // Access state from todoStore
                 if (categoryIndex !== -1 && itemIndex !== -1) {
                   const itemSelector = `[data-category-index="${categoryIndex}"][data-item-index="${itemIndex}"]`;
                   const focusedElement = containerRef.current?.querySelector(itemSelector) as HTMLElement;
@@ -298,22 +304,22 @@ export default function Todo() {
         case '?':
           if (!isEditingContext) {
             e.preventDefault();
-            toggleKeyboardHelp();
+            todoStore.toggleKeyboardHelp(); // Call MobX action
           }
           break;
         case '1':
           if (!isEditingContext) {
-            setFilter('all');
+            todoStore.setFilter('all'); // Call MobX action
           }
           break;
         case '2':
           if (!isEditingContext) {
-            setFilter('active');
+            todoStore.setFilter('active'); // Call MobX action
           }
           break;
         case '3':
           if (!isEditingContext) {
-            setFilter('closed');
+            todoStore.setFilter('closed'); // Call MobX action
           }
           break;
         case '/':
@@ -328,27 +334,27 @@ export default function Todo() {
         case 'r':
           if (e.ctrlKey) {
             e.preventDefault();
-            loadData();
+            todoStore.loadData(); // Call MobX action
           }
           break;
         case 'm':
            if (!isEditingContext) {
              e.preventDefault();
-             toggleDisplayMode();
+             todoStore.toggleDisplayMode(); // Call MobX action
            }
            break;
         case 'o':
           if (!isEditingContext) {
             e.preventDefault();
-            const currentFocusedItem = useTodoStore.getState().focusedItem;
-            const currentCategories = selectors.filteredCategories;
-            const currentDisplayMode = useTodoStore.getState().displayMode;
-            const currentActiveTabIndex = useTodoStore.getState().activeTabIndex;
+            // Access state directly from todoStore
+            const currentFocusedItem = todoStore.focusedItem;
+            const currentCategories = todoStore.filteredCategories; // Use computed property
+            const currentDisplayMode = todoStore.displayMode;
+            const currentActiveTabIndex = todoStore.activeTabIndex;
 
             let categoryType: 'git' | 'project';
             let categoryName: string;
             let exampleItemLocation: string | undefined = undefined;
-
             if (currentDisplayMode === 'tab') {
                 if (currentActiveTabIndex >= 0 && currentActiveTabIndex < currentCategories.length) {
                     const activeCategory = currentCategories[currentActiveTabIndex];
@@ -368,7 +374,7 @@ export default function Todo() {
                     alert('No active tab selected to add TODO to.'); // UNITODO_IGNORE_LINE
                     return;
                 }
-            } else {
+            } else { // Section or Table mode
                 if (currentFocusedItem.categoryIndex !== -1 && currentFocusedItem.categoryIndex < currentCategories.length) {
                     const focusedCategory = currentCategories[currentFocusedItem.categoryIndex];
                     categoryName = focusedCategory.name;
@@ -389,7 +395,7 @@ export default function Todo() {
                     return;
                 }
             }
-            openAddTodoModal(categoryType, categoryName, exampleItemLocation);
+            todoStore.openAddTodoModal(categoryType, categoryName, exampleItemLocation); // Call MobX action
           }
           break;
       }
@@ -403,15 +409,16 @@ export default function Todo() {
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal]);
+  }, [configStore.config, configStore.initialConfigLoaded, todoStore.loadData, todoStore.navigateTabs, toggleDarkMode, todoStore.toggleKeyboardHelp, todoStore.toggleDisplayMode, todoStore.openAddTodoModal]); // Add MobX store actions/state to dependency array
 
   useEffect(() => {
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
     scrollTimeoutRef.current = setTimeout(() => {
-      const currentFocusedItem = useTodoStore.getState().focusedItem;
-      const currentDisplayMode = useTodoStore.getState().displayMode;
+      // Access state directly from todoStore
+      const currentFocusedItem = todoStore.focusedItem;
+      const currentDisplayMode = todoStore.displayMode;
       const { categoryIndex, itemIndex } = currentFocusedItem;
 
       if (categoryIndex === -1 || itemIndex === -1) return;
@@ -423,7 +430,7 @@ export default function Todo() {
       if (currentDisplayMode === 'tab' && tabListRef.current) {
         tabListRef.current.scrollToItem(itemIndex, 'smart');
       } else if (currentDisplayMode === 'section' && sectionListRef.current) {
-        const flatIndex = getFlatIndex(categoryIndex, itemIndex);
+        const flatIndex = getFlatIndex(categoryIndex, itemIndex); // getFlatIndex now uses flattenedList (derived from todoStore.filteredCategories)
         if (flatIndex !== -1) {
           sectionListRef.current.scrollToItem(flatIndex, 'smart');
         }
@@ -434,10 +441,10 @@ export default function Todo() {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [focusedItem, displayMode, flattenedList]);
+  }, [todoStore.focusedItem, todoStore.displayMode, flattenedList]); // Depend on todoStore properties and flattenedList
 
   useEffect(() => {
-    if (typeof window === 'undefined' || filteredCategories.length === 0) return;
+    if (typeof window === 'undefined' || todoStore.filteredCategories.length === 0) return; // Use todoStore.filteredCategories
     
     try {
       const hash = window.location.hash.substring(1);
@@ -449,7 +456,7 @@ export default function Todo() {
       
       if (!tabName || !itemId) return;
       
-      const categoryIndex = filteredCategories.findIndex((c: TodoCategoryType) => c.name === tabName);
+      const categoryIndex = todoStore.filteredCategories.findIndex((c: TodoCategoryType) => c.name === tabName); // Use todoStore.filteredCategories
       if (categoryIndex === -1) return;
       
       let itemIndex = -1;
@@ -460,28 +467,28 @@ export default function Todo() {
         const indexStr = itemIdString.replace('index=', '');
         itemIndex = parseInt(indexStr, 10);
       } else {
-        itemIndex = filteredCategories[categoryIndex].todos.findIndex((todo: TodoItemType) => {
+        itemIndex = todoStore.filteredCategories[categoryIndex].todos.findIndex((todo: TodoItemType) => { // Use todoStore.filteredCategories
           const parsed = parseTodoContent(todo.content);
           return parsed.idPart === itemIdString;
         });
       }
       
-      if (itemIndex === -1 || itemIndex >= filteredCategories[categoryIndex].todos.length) return;
+      if (itemIndex === -1 || itemIndex >= todoStore.filteredCategories[categoryIndex].todos.length) return; // Use todoStore.filteredCategories
       
-      setActiveTabIndex(categoryIndex);
-      setFocusedItem({ categoryIndex, itemIndex });
+      todoStore.setActiveTabIndex(categoryIndex); // Call MobX action
+      todoStore.setFocusedItem({ categoryIndex, itemIndex }); // Call MobX action
       
     } catch (err) {
       console.error('Error handling URL hash:', err);
     }
-  }, [filteredCategories, setActiveTabIndex, setFocusedItem]);
+  }, [todoStore.filteredCategories, todoStore.setActiveTabIndex, todoStore.setFocusedItem]); // Depend on todoStore properties/actions
 
   const getOriginalCategoryIndex = (categoryName: string) => {
-    return categories.findIndex(cat => cat.name === categoryName);
+    return todoStore.categories.findIndex(cat => cat.name === categoryName); // Use todoStore.categories
   };
 
   const renderTabs = () => {
-    const activeCategoryData = filteredCategories[activeTabIndex];
+    const activeCategoryData = todoStore.filteredCategories[todoStore.activeTabIndex]; // Use todoStore properties
     const itemCount = activeCategoryData?.todos.length || 0;
 
     const TabRow = ({ index, style }: { index: number, style: React.CSSProperties }) => {
@@ -489,7 +496,7 @@ export default function Todo() {
       const todo = activeCategoryData.todos[index];
       
       const searchInputIsActive = !!(searchInputRef.current && document.activeElement === searchInputRef.current);
-      const isFocused = !searchInputIsActive && focusedItem.categoryIndex === activeTabIndex && focusedItem.itemIndex === index;
+      const isFocused = !searchInputIsActive && todoStore.focusedItem.categoryIndex === todoStore.activeTabIndex && todoStore.focusedItem.itemIndex === index; // Use todoStore properties
 
       return (
         <div style={style}>
@@ -497,8 +504,8 @@ export default function Todo() {
             key={`${todo.location}-${index}`}
             todo={todo}
             isFocused={isFocused}
-            onClick={() => setFocusedItem({ categoryIndex: activeTabIndex, itemIndex: index })}
-            categoryIndex={activeTabIndex}
+            onClick={() => todoStore.setFocusedItem({ categoryIndex: todoStore.activeTabIndex, itemIndex: index })} // Call MobX action
+            categoryIndex={todoStore.activeTabIndex} // Use todoStore property
             itemIndex={index}
           />
         </div>
@@ -509,32 +516,39 @@ export default function Todo() {
       <div className="relative flex flex-col flex-grow min-h-0">
         <div ref={tabHeaderRef} className="sticky top-0 z-10 bg-white dark:bg-neutral-900 shadow-sm flex-shrink-0">
           <div className="flex flex-wrap border-b border-border-color dark:border-neutral-700 text-xs overflow-visible">
-            {categories.map((category, index) => (
-              <button
-                key={index}
-                className={`px-2 py-1 my-1 mr-1 font-medium ${
-                  activeTabIndex === index
-                  ? 'border-b-2 border-accent-color font-bold dark:text-neutral-200'
-                  : 'text-subtle-color dark:text-neutral-400'
-                }`}
-                onClick={() => {
-                  setActiveTabIndex(index);
-                  if (tabListRef.current) {
-                    tabListRef.current.scrollToItem(0);
-                  }
-                }}
-              >
-                <NerdFontIcon
-                  icon={category.icon}
-                  category={category.name}
-                  className="text-sm"
-                />
-                {category.name}
-                <span className="ml-1 text-subtle-color dark:text-neutral-500">
-                  ({category.todos.filter(todo => isStatusDoneLike(todo.status, appConfig)).length}/{category.todos.length})
-                </span>
-              </button>
-            ))}
+            {todoStore.categories.map((category, index) => { // Use todoStore.categories
+              // Get counts from filteredCategoryInfo for the current original category index
+              const categoryInfo = todoStore.filteredCategoryInfo.find(ci => ci.name === category.name);
+              const displayCount = categoryInfo ? categoryInfo.count : 0;
+              const displayTotalCount = categoryInfo ? categoryInfo.totalCount : 0;
+
+              return (
+                <button
+                  key={index}
+                  className={`px-2 py-1 my-1 mr-1 font-medium ${
+                    todoStore.activeTabIndex === index // Use todoStore property
+                    ? 'border-b-2 border-accent-color font-bold dark:text-neutral-200'
+                    : 'text-subtle-color dark:text-neutral-400'
+                  }`}
+                  onClick={() => {
+                    todoStore.setActiveTabIndex(index); // Call MobX action
+                    if (tabListRef.current) {
+                      tabListRef.current.scrollToItem(0);
+                    }
+                  }}
+                >
+                  <NerdFontIcon
+                    icon={category.icon}
+                    category={category.name}
+                    className="text-sm"
+                  />
+                  {category.name}
+                  <span className="ml-1 text-subtle-color dark:text-neutral-500">
+                    ({displayCount}/{displayTotalCount})
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -566,7 +580,7 @@ export default function Todo() {
   };
 
   const SectionRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const item = flattenedList[index];
+    const item = flattenedList[index]; // flattenedList is derived from todoStore.filteredCategories
     if (!item) return null;
 
     if (item.type === 'header') {
@@ -579,14 +593,14 @@ export default function Todo() {
     
     if (item.type === 'item') {
         const searchInputIsActive = !!(searchInputRef.current && document.activeElement === searchInputRef.current);
-        const isFocused = !searchInputIsActive && focusedItem.categoryIndex === item.categoryIndex && focusedItem.itemIndex === item.itemIndex;
+        const isFocused = !searchInputIsActive && todoStore.focusedItem.categoryIndex === item.categoryIndex && todoStore.focusedItem.itemIndex === item.itemIndex; // Use todoStore.focusedItem
         return (
             <div style={style}>
                 <TodoItem
                     key={`${item.todo.location}-${item.itemIndex}`}
                     todo={item.todo}
                     isFocused={isFocused}
-                    onClick={() => setFocusedItem({ categoryIndex: item.categoryIndex, itemIndex: item.itemIndex })}
+                    onClick={() => todoStore.setFocusedItem({ categoryIndex: item.categoryIndex, itemIndex: item.itemIndex })} // Call MobX action
                     categoryIndex={item.categoryIndex}
                     itemIndex={item.itemIndex}
                 />
@@ -597,10 +611,10 @@ export default function Todo() {
     return null;
   };
 
-  if (error) {
+  if (todoStore.error) { // Use todoStore.error
     return (
       <div className="bg-red-50 dark:bg-red-900 p-2 text-xs dark:text-red-100">
-        <strong>Error:</strong> {error}
+        <strong>Error:</strong> {todoStore.error} {/* Use todoStore.error */}
       </div>
     );
   }
@@ -613,7 +627,7 @@ export default function Todo() {
       role="application"
       aria-label="Todo Application"
     >
-      {/* {loading && (
+      {/* {todoStore.loading && ( // Use todoStore.loading
         <div className="fixed bottom-4 right-4 z-50 p-2 bg-neutral-100 dark:bg-neutral-700 rounded-full shadow-lg">
           <div className="animate-spin h-5 w-5 border-2 border-t-transparent border-accent-color rounded-full"></div>
         </div>
@@ -622,9 +636,9 @@ export default function Todo() {
       <div className="hn-header dark:border-neutral-700 flex-shrink-0 flex justify-between" data-tauri-drag-region="">
         <div className="flex items-center">
           <h1 className="hn-title text-black dark:text-white"><img src="images/icon.png" alt="Unitodo icon" className="h-6 w-auto inline-block" />Unitodo</h1>
-          {lastUpdated && (
+          {todoStore.lastFetched && ( // Use todoStore.lastFetched
             <span className="ml-3 text-xs text-neutral-500 dark:text-neutral-400">
-              Updated {lastUpdated.toLocaleTimeString()}
+              Updated {todoStore.lastFetched.toLocaleTimeString()} {/* Use todoStore.lastFetched */}
             </span>
           )}
         </div>
@@ -632,18 +646,18 @@ export default function Todo() {
         <div className="flex items-center gap-2">
           <button
             className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300"
-            onClick={loadData}
+            onClick={todoStore.loadData} // Call MobX action
             title="Refresh data (Ctrl+R)"
           >
             <span className="inline-block">↻</span>
           </button>
           
           <button
-            className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
-            onClick={toggleDisplayMode}
-            title={`Switch to ${displayMode === 'section' ? 'tab' : displayMode === 'tab' ? 'table' : 'section'} mode (m)`}
+            className={`hn-filter-button ${todoStore.displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`} // Use todoStore.displayMode
+            onClick={todoStore.toggleDisplayMode} // Call MobX action
+            title={`Switch to ${todoStore.displayMode === 'section' ? 'tab' : todoStore.displayMode === 'tab' ? 'table' : 'section'} mode (m)`} // Use todoStore.displayMode
           >
-            {displayMode === 'section' ? '≡' : displayMode === 'tab' ? '▦' : '⊞'}
+            {todoStore.displayMode === 'section' ? '≡' : todoStore.displayMode === 'tab' ? '▦' : '⊞'} {/* Use todoStore.displayMode */}
           </button>
           
           <button
@@ -659,7 +673,7 @@ export default function Todo() {
             className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
             title="Keyboard shortcuts (?)"
             aria-label="Show keyboard shortcuts"
-            onClick={toggleKeyboardHelp}
+            onClick={todoStore.toggleKeyboardHelp} // Call MobX action
           >
             ⌨️
           </button>
@@ -681,29 +695,29 @@ export default function Todo() {
           ref={searchInputRef}
           type="text"
           placeholder="Search todos... (/)"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={todoStore.searchQuery} // Use todoStore.searchQuery
+          onChange={(e) => todoStore.setSearchQuery(e.target.value)} // Call MobX action
           className="hn-search dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700 dark:placeholder-neutral-500 flex-grow"
         />
         
         <div className="flex ml-2">
           <button 
-            className={`hn-filter-button ${filter === 'all' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
-            onClick={() => setFilter('all')}
+            className={`hn-filter-button ${todoStore.filter === 'all' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`} // Use todoStore.filter
+            onClick={() => todoStore.setFilter('all')} // Call MobX action
             title="All todos (1)"
           >
             All
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
-            onClick={() => setFilter('active')}
+            className={`hn-filter-button ${todoStore.filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`} // Use todoStore.filter
+            onClick={() => todoStore.setFilter('active')} // Call MobX action
             title="Active todos (2)"
           >
             Active
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
-            onClick={() => setFilter('closed')}
+            className={`hn-filter-button ${todoStore.filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`} // Use todoStore.filter
+            onClick={() => todoStore.setFilter('closed')} // Call MobX action
             title="Closed todos (3)"
           >
             Closed
@@ -712,31 +726,31 @@ export default function Todo() {
       </div>
       
       <div className="flex-grow min-h-0 flex flex-col">
-        {error ? (
+        {todoStore.error ? ( // Use todoStore.error
           <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-xs dark:text-red-100 flex-grow">
-            <strong>Error:</strong> {error}
+            <strong>Error:</strong> {todoStore.error} {/* Use todoStore.error */}
           </div>
-        ) : displayMode === 'table' ? (
+        ) : todoStore.displayMode === 'table' ? ( // Use todoStore.displayMode
            <AutoSizer>
             {({ height, width }) => (
               <TodoTable 
-                  tableRows={tableDisplayData}
-                  onRowClick={(catIndex, itmIndex) => setFocusedItem({ categoryIndex: catIndex, itemIndex: itmIndex })}
-                  focusedItem={focusedItem}
+                  tableRows={tableDisplayData} // tableDisplayData is derived from todoStore properties
+                  onRowClick={(catIndex, itmIndex) => todoStore.setFocusedItem({ categoryIndex: catIndex, itemIndex: itmIndex })} // Call MobX action
+                  focusedItem={todoStore.focusedItem} // Use todoStore.focusedItem
                   height={height}
                   width={width}
               />
             )}
           </AutoSizer>
-        ) : filteredCategories.length > 0 || (displayMode === 'section' && flattenedList.length > 0) ? (
-          displayMode === 'section' ? (
+        ) : todoStore.filteredCategories.length > 0 || (todoStore.displayMode === 'section' && flattenedList.length > 0) ? ( // Use todoStore properties
+          todoStore.displayMode === 'section' ? ( // Use todoStore.displayMode
             <AutoSizer>
               {({ height, width }) => (
                 <VariableSizeList
                   ref={sectionListRef}
                   height={height}
-                  itemCount={flattenedList.length}
-                  itemSize={getItemSize}
+                  itemCount={flattenedList.length} // flattenedList is derived from todoStore.filteredCategories
+                  itemSize={getItemSize} // getItemSize uses flattenedList
                   width={width}
                   className="focus-within:outline-none"
                 >
@@ -745,7 +759,7 @@ export default function Todo() {
               )}
             </AutoSizer>
           ) : (
-            renderTabs()
+            renderTabs() // renderTabs uses todoStore properties
           )
         ) : (
           <div className="empty-state">
@@ -760,13 +774,13 @@ export default function Todo() {
       </div>
       
       {/* Keyboard shortcuts modal with improved styling */}
-      {showKeyboardHelp && (
+      {todoStore.showKeyboardHelp && ( // Use todoStore.showKeyboardHelp
         <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop">
           <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-4 max-w-md w-full mx-4 text-xs modal-content dark:text-neutral-200 border dark:border-neutral-700">
             <div className="flex justify-between items-center mb-3">
               <div className="font-medium text-base">Keyboard Shortcuts</div>
               <button 
-                onClick={() => toggleKeyboardHelp()}
+                onClick={() => todoStore.toggleKeyboardHelp()} // Call MobX action
                 className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
                 aria-label="Close shortcuts help"
               >
@@ -811,21 +825,22 @@ export default function Todo() {
       )}
       
       {/* Add Todo Modal */}
-      {showAddTodoModal && addTodoModalData && (
+      {todoStore.showAddTodoModal && todoStore.addTodoModalData && ( // Use todoStore properties
         <AddTodoModal
-          isOpen={showAddTodoModal}
-          onClose={closeAddTodoModal}
+          isOpen={todoStore.showAddTodoModal} // Use todoStore property
+          onClose={todoStore.closeAddTodoModal} // Call MobX action
           onSubmit={(todoText: string, categoryType: "git" | "project", categoryName: string) => {
-            submitAddTodo({ 
+            todoStore.submitAddTodo({ // Call MobX action
               content: todoText, 
               categoryName, 
               categoryType, 
             });
           }}
-          categoryName={addTodoModalData.categoryName}
-          categoryType={addTodoModalData.categoryType}
+          categoryName={todoStore.addTodoModalData.categoryName} // Use todoStore property
+          categoryType={todoStore.addTodoModalData.categoryType} // Use todoStore property
         />
       )}
     </div>
   );
-} 
+}
+export default observer(Todo); // Wrap component with observer

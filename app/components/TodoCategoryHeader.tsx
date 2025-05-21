@@ -1,15 +1,25 @@
 import React from 'react';
 import { TodoCategory } from '../types';
 import NerdFontIcon from './NerdFontIcon';
+import todoStore from '../store/todoStore'; // Import MobX store
+import { observer } from 'mobx-react-lite'; // Import observer
 
 interface TodoCategoryHeaderProps {
   category: TodoCategory;
 }
 
 // Simple, non-interactive header for virtualized list
-export default function TodoCategoryHeader({ category }: TodoCategoryHeaderProps) {
-  const completedCount = category.todos.filter(todo => todo.completed).length;
-  const totalCount = category.todos.length;
+function TodoCategoryHeader({ category }: TodoCategoryHeaderProps) { // Changed for observer
+  const { filteredCategoryInfo } = todoStore; // Access MobX store
+
+  // Get counts from filteredCategoryInfo if available, otherwise calculate manually as fallback
+  const currentCategoryInfo = filteredCategoryInfo.find(info => info.name === category.name);
+  const completedCount = currentCategoryInfo 
+    ? (currentCategoryInfo.totalCount - currentCategoryInfo.count) // Assuming count is active items
+    : category.todos.filter(todo => todoStore.isStatusDoneLike(todo.status)).length; // Fallback
+  const totalCount = currentCategoryInfo 
+    ? currentCategoryInfo.totalCount 
+    : category.todos.length;
 
   return (
     <div 
@@ -23,7 +33,7 @@ export default function TodoCategoryHeader({ category }: TodoCategoryHeaderProps
       />
       {category.name}
       <span className="ml-1 text-subtle-color dark:text-neutral-500 text-xs">
-        ({completedCount}/{totalCount})
+        ({completedCount}/{totalCount}) {/* Counts now derived using MobX store info */}
       </span>
       {/* Removed expansion indicator ▼/► */}
     </div>
@@ -31,4 +41,6 @@ export default function TodoCategoryHeader({ category }: TodoCategoryHeaderProps
 }
 
 // Make sure CATEGORY_HEADER_HEIGHT is defined or imported if used here
-const CATEGORY_HEADER_HEIGHT = 30; 
+const CATEGORY_HEADER_HEIGHT = 30;
+
+export default observer(TodoCategoryHeader); // Wrap with observer

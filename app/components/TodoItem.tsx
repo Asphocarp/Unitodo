@@ -7,8 +7,10 @@ import { parseTodoContent, generateTimestamp } from '../utils';
 import LexicalTodoEditor from './LexicalTodoEditor';
 import { EditorState, $getRoot } from 'lexical';
 import { nanoid } from 'nanoid';
-import { useTodoStore, isStatusDoneLike } from '../store/todoStore';
-import useConfigStore from '../store/configStore';
+import todoStore from '../store/todoStore'; // MobX store
+import configStore from '../store/configStore'; // MobX store
+import { observer } from 'mobx-react-lite'; // MobX observer
+// Removed: useTodoStore, isStatusDoneLike, useConfigStore
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 interface TodoItemProps {
@@ -20,7 +22,7 @@ interface TodoItemProps {
   role?: string;
 }
 
-export default function TodoItem({ 
+function TodoItem({ // Changed for observer wrapping
   todo, 
   isFocused,
   onClick,
@@ -28,11 +30,13 @@ export default function TodoItem({
   itemIndex,
   role
 }: TodoItemProps) {
-  // Use Zustand actions
-  const storeLoadData = useTodoStore(state => state.loadData);
-  const updateTodo = useTodoStore(state => state.updateTodo);
-  const navigateTodos = useTodoStore(state => state.navigateTodos);
-  const { config: appConfig } = useConfigStore();
+  // Use MobX store actions and state
+  const { 
+    loadData: storeLoadData, 
+    updateTodo, 
+    navigateTodos 
+  } = todoStore;
+  const { config: appConfig } = configStore; // Access MobX configStore
   
   const [hovered, setHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -89,7 +93,7 @@ export default function TodoItem({
   const parsed = parseTodoContent(todo.content);
   // const isReadOnly = !parsed.isUnique; // TODO 1 consider no more unique-id?
   const isReadOnly = false;
-  const isValidTodoFormat = parsed.isValidTodoFormat;
+  // const isValidTodoFormat = parsed.isValidTodoFormat; // This was not used, can be removed if not needed.
 
   // Format content based on identifier and prefix
   const formatContent = (identifier: string, prefix: string, content: string): string => {
@@ -415,7 +419,7 @@ export default function TodoItem({
     }
   };
 
-  const isDone = isStatusDoneLike(todo.status, appConfig);
+  const isDone = todoStore.isStatusDoneLike(todo.status); // Use MobX store method
 
   return (
     <div
@@ -516,3 +520,5 @@ export default function TodoItem({
     </div>
   );
 }
+
+export default observer(TodoItem); // Wrap with observer
