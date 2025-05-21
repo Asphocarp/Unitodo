@@ -121,7 +121,9 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
     {
       id: 'select',
       header: () => null,
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        if (row.original.isSectionHeader || !row.original.originalTodo) return null;
+        return (
         <div className="flex items-center justify-center h-full">
           <input
             type="checkbox"
@@ -130,7 +132,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
               checked: isStatusDoneLike(row.original.originalTodo.status, appConfig),
               disabled: false,
               onChange: async () => {
-                const todo = row.original.originalTodo;
+                const todo = row.original.originalTodo!;
                 try {
                   await apiMarkTodoAsDone({
                     location: todo.location,
@@ -144,7 +146,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
             }}
           />
         </div>
-      ),
+      )},
       size: 25,
     },
     {
@@ -152,9 +154,10 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       header: 'Zone',
       size: 100,
       cell: ({ row }) => {
+        if (row.original.isSectionHeader || !row.original.zone) return null;
         return (
           <div className="flex items-center truncate">
-            <NerdFontIcon icon={row.original.zoneIcon} category={row.original.zone} className="mr-0.5 text-sm" />
+            <NerdFontIcon icon={row.original.zoneIcon!} category={row.original.zone} className="mr-0.5 text-sm" />
             <span className="truncate" title={row.original.zone}>{row.original.zone}</span>
           </div>
         );
@@ -165,6 +168,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       header: 'Content',
       size: 1250, 
       cell: ({ row }) => {
+        if (row.original.isSectionHeader || !row.original.originalTodo) return null;
         const isThisEditing = tableEditingCell?.categoryIndex === row.original.categoryIndex && tableEditingCell?.itemIndex === row.original.itemIndex;
         if (isThisEditing) {
           return (
@@ -176,14 +180,14 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                   e.preventDefault();
                   e.stopPropagation();
                   setTableEditingCell(null);
-                  focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                  focusRowElement(row.original.categoryIndex!, row.original.itemIndex!);
                 }
               }}
               onBlur={(e) => {
                 if (editorWrapperRef.current && !editorWrapperRef.current.contains(e.relatedTarget as Node | null)) {
                   if (todoStore.tableEditingCell) {
                     setTableEditingCell(null);
-                    focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                    focusRowElement(row.original.categoryIndex!, row.original.itemIndex!);
                   }
                 }
               }}
@@ -192,7 +196,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                 initialFullContent={editedContent}
                 isReadOnly={false}
                 onSubmit={async () => {
-                  if (!todoStore.tableEditingCell) return;
+                  if (!todoStore.tableEditingCell || !row.original.originalTodo) return;
                   const root = $getRoot();
                   const text = root.getTextContent();
                   try {
@@ -214,7 +218,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                   } finally {
                     if (todoStore.tableEditingCell) {
                         setTableEditingCell(null);
-                        focusRowElement(row.original.categoryIndex, row.original.itemIndex);
+                        focusRowElement(row.original.categoryIndex!, row.original.itemIndex!);
                     }
                   }
                 }}
@@ -230,7 +234,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
           >
             <LexicalTodoEditor
                 key={row.original.id + '-display'}
-                initialFullContent={row.original.content}
+                initialFullContent={row.original.content!}
                 isReadOnly={true}
                 displayMode='table-view'
             />
@@ -242,7 +246,9 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       accessorKey: 'filePath',
       header: 'File',
       size: 180,
-      cell: ({ row }) => (
+      cell: ({ row }) => {
+        if (row.original.isSectionHeader || !row.original.originalTodo) return null;
+        return (
         <div className="truncate text-xs text-neutral-500">
           <a 
             href={getEditorUrl(row.original.originalTodo.location) || '#'} 
@@ -251,7 +257,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              const url = getEditorUrl(row.original.originalTodo.location);
+              const url = getEditorUrl(row.original.originalTodo!.location);
               if (url && appConfig) {
                 try {
                   openUrl(url).catch(error => {
@@ -271,13 +277,15 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
             {row.original.filePath}{row.original.lineNumber ? `:${row.original.lineNumber}` : ''}
           </a>
         </div>
-      ),
+      );},
     },
     {
       accessorKey: 'created',
       header: 'Created',
       size: 150,
       cell: info => {
+        const row = info.row;
+        if (row.original.isSectionHeader) return null;
         const createdVal = info.getValue() as string | null;
         if (!createdVal) return <div className="truncate" title="-"> - </div>;
         const decodedDate = new Date(createdVal);
@@ -292,6 +300,8 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       header: 'Finished',
       size: 150,
       cell: info => {
+        const row = info.row;
+        if (row.original.isSectionHeader) return null;
         const finishedVal = info.getValue() as string | null;
         if (!finishedVal) return <div className="truncate" title="-"> - </div>;
         const decodedDate = new Date(finishedVal);
@@ -306,6 +316,8 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       header: 'Est. Dur',
       size: 80,
       cell: info => {
+        const row = info.row;
+        if (row.original.isSectionHeader) return null;
         const estDurVal = info.getValue() as string | null || 'N/A';
         return <div className="truncate" title={estDurVal}>{estDurVal}</div>;
       }
@@ -392,7 +404,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
   };
   
   const handleRowKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>, row: Row<TodoTableRow>) => {
-    if (tableEditingCell) {
+    if (tableEditingCell || row.original.isSectionHeader || !row.original.originalTodo) {
       return;
     }
     const { originalTodo, categoryIndex, itemIndex } = row.original;
@@ -401,15 +413,15 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       case 'i':
         e.preventDefault();
         e.stopPropagation();
-        setEditedContent(originalTodo.content);
-        setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'end' });
+        setEditedContent(originalTodo.content!);
+        setTableEditingCell({ categoryIndex: categoryIndex!, itemIndex: itemIndex!, initialFocus: 'end' });
         return;
       case 'I':
         if (e.shiftKey) {
           e.preventDefault();
           e.stopPropagation();
-          setEditedContent(originalTodo.content);
-          setTableEditingCell({ categoryIndex, itemIndex, initialFocus: 'afterPriority' });
+          setEditedContent(originalTodo.content!);
+          setTableEditingCell({ categoryIndex: categoryIndex!, itemIndex: itemIndex!, initialFocus: 'afterPriority' });
         }
         return;
       case 'x':
@@ -433,7 +445,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
           } catch (err) {
             console.error('[TodoTable] Failed to add ignore comment:', err);
           } finally {
-            focusRowElement(categoryIndex, itemIndex);
+            focusRowElement(categoryIndex!, itemIndex!);
           }
         })();
         return;
@@ -460,7 +472,7 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
       case ' ':
       case 'Spacebar':
         e.preventDefault();
-        const todoForDone = row.original.originalTodo;
+        const todoForDone = row.original.originalTodo!;
         apiMarkTodoAsDone({
           location: todoForDone.location,
           original_content: todoForDone.content,
@@ -525,7 +537,33 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
             <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualRows.map(virtualRow => {
                 const row = table.getRowModel().rows[virtualRow.index];
-                const isDoneLike = appConfig ? isStatusDoneLike(row.original.originalTodo.status, appConfig) : false;
+                const isDoneLike = appConfig && row.original.originalTodo ? isStatusDoneLike(row.original.originalTodo.status, appConfig) : false;
+
+                if (row.original.isSectionHeader) {
+                  return (
+                    <tr
+                      key={row.id}
+                      ref={node => rowVirtualizer.measureElement(node)}
+                      data-index={virtualRow.index}
+                      style={{
+                        position: 'absolute',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        width: '100%',
+                      }}
+                      className="h-7 bg-neutral-100 dark:bg-neutral-800 sticky top-[29px] z-[2]"
+                      // Header height + sticky top offset by thead height
+                      role="rowheader"
+                    >
+                      <td 
+                        colSpan={table.getAllColumns().length} 
+                        className="px-3 py-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300 border-b dark:border-neutral-700 tracking-wider uppercase"
+                      >
+                        {row.original.sectionHeaderText}
+                      </td>
+                    </tr>
+                  );
+                }
+
                 return (
                   <tr 
                     key={row.id} 
@@ -543,42 +581,42 @@ const TodoTable: React.FC<TodoTableProps> = observer(({ tableRows, onRowClick, f
                         : 'hover:bg-neutral-50 dark:hover:bg-neutral-800'
                       }`}
                     onClick={() => {
-                        onRowClick(row.original.categoryIndex, row.original.itemIndex);
-                        todoStore.setFocusedItem({ categoryIndex: row.original.categoryIndex, itemIndex: row.original.itemIndex });
+                        if (!row.original.isSectionHeader && typeof row.original.categoryIndex === 'number' && typeof row.original.itemIndex === 'number') {
+                            onRowClick(row.original.categoryIndex, row.original.itemIndex);
+                            todoStore.setFocusedItem({ categoryIndex: row.original.categoryIndex, itemIndex: row.original.itemIndex });
+                        }
                     }}
                     onKeyDown={(e) => handleRowKeyDown(e, row)}
-                    tabIndex={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 0 : -1}
-                    data-location={row.original.originalTodo.location}
+                    tabIndex={!row.original.isSectionHeader && focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 0 : -1}
+                    data-location={row.original.originalTodo?.location}
                     data-category-index={row.original.categoryIndex}
                     data-item-index={row.original.itemIndex}
                     role="row"
-                    aria-current={focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 'true' : undefined}
+                    aria-current={!row.original.isSectionHeader && focusedItem.categoryIndex === row.original.categoryIndex && focusedItem.itemIndex === row.original.itemIndex ? 'true' : undefined}
                   >
                     {row.getVisibleCells().map(cell => {
                       const width = cell.column.getSize();
                       return (
                         <td 
                           key={cell.id} 
-                          className={`px-2 py-0.5 border-b dark:border-neutral-700 ${
-                            cell.column.id === 'select' ? 'w-10' : ''
-                          }`}
+                          className={`px-2 py-0.5 border-b dark:border-neutral-700 ${cell.column.id === 'select' ? 'w-10' : ''
+                            }`}
                           style={{ 
                             width: `${width}px`,
                             minWidth: `${width}px`,
                             maxWidth: `${width}px`
                           }}
                           onDoubleClick={() => {
-                            if (cell.column.id === 'content' && !tableEditingCell) {
-                                setEditedContent(row.original.content);
-                                setTableEditingCell({ categoryIndex: row.original.categoryIndex, itemIndex: row.original.itemIndex, initialFocus: 'end' });
+                            if (cell.column.id === 'content' && !tableEditingCell && row.original.originalTodo) {
+                                setEditedContent(row.original.content!);
+                                setTableEditingCell({ categoryIndex: row.original.categoryIndex!, itemIndex: row.original.itemIndex!, initialFocus: 'end' });
                             }
                           }}
                         >
-                          <div className={`h-full flex items-center ${
-                            isDoneLike && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
+                          <div className={`h-full flex items-center ${isDoneLike && cell.column.id !== 'select' && cell.column.id !== 'filePath' ? 
                             'line-through text-neutral-500 dark:text-neutral-400' : ''
-                          }`}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            }`}>
+                            {row.original.isSectionHeader ? (cell.column.id === 'select' ? '' : null ) : flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </div>
                         </td>
                       );

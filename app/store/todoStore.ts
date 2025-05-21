@@ -590,51 +590,119 @@ class TodoStoreImpl {
   // Computed property for table display data (replaces useMemo in Todo.tsx)
   get computedTableDisplayData(): TodoTableRow[] {
     if (this.displayMode !== 'table') return [];
-    const sortedItems = this.globallySortedAndFilteredTodos;
+    
+    const appConfig = configStore.config;
+    const sortedItems = this.globallySortedAndFilteredTodos; // This is already sorted correctly for 'active' filter
     const originalStoreCategories = this.categories;
+    const tableRows: TodoTableRow[] = [];
 
-    return sortedItems.map(item => {
-      const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
-      const parsed = parseTodoContent(content);
-      const categoryIcon = originalStoreCategories[originalCategoryIndex]?.icon || ''; // Get icon
-      
-      let fullPath = location || '';
-      let lineNumberStr = '';
-      const lineMatch = location?.match(/\:(\d+)$/);
-      if (lineMatch) {
-        lineNumberStr = lineMatch[1];
-        fullPath = location.replace(/\:\d+$/, '');
-      }
-      const basename = fullPath.split(/[/\\]/).pop() || fullPath || 'N/A';
-      
-      let createdTimestamp: string | null = null;
-      if (parsed.idPart && parsed.idPart.startsWith('@')) {
-        const dateObj = decodeTimestampId(parsed.idPart.substring(1));
-        createdTimestamp = dateObj ? dateObj.toISOString() : null;
-      }
-      
-      let completedTimestamp: string | null = null;
-      if (parsed.donePart && parsed.donePart.startsWith('@@')) {
-        const dateObj = decodeTimestampId(parsed.donePart.substring(2));
-        completedTimestamp = dateObj ? dateObj.toISOString() : null;
-      }
+    if (this.filter === 'active') {
+      let currentGroup = "";
+      sortedItems.forEach(item => {
+        const itemStatus = item.status;
+        const itemStatusOrder = getTodoStatusSortOrder(itemStatus, appConfig);
+        let groupName = "OTHER ACTIVE"; // Default for active items not explicitly DOING or TODO
+        if (itemStatusOrder === 1) groupName = "DOING";
+        else if (itemStatusOrder === 2) groupName = "TODO";
+        // We don't expect other orders here as globallySortedAndFilteredTodos for 'active' filter only contains active items
 
-      return {
-        id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
-        content: content,
-        parsedContent: parsed,
-        zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
-        zoneIcon: categoryIcon,
-        filePath: basename,
-        lineNumber: lineNumberStr,
-        created: createdTimestamp,
-        finished: completedTimestamp,
-        estDuration: null, // Placeholder, logic to derive this can be added if available
-        originalTodo: item, // The GlobalTodoItem
-        categoryIndex: originalCategoryIndex,
-        itemIndex: originalItemIndex,
-      };
-    });
+        if (groupName !== currentGroup) {
+          tableRows.push({
+            id: `header-${groupName}`,
+            isSectionHeader: true,
+            sectionHeaderText: groupName,
+          });
+          currentGroup = groupName;
+        }
+
+        // Add actual todo item row
+        const { content, location, originalCategoryIndex, originalItemIndex } = item;
+        const parsed = parseTodoContent(content!);
+        const categoryIcon = originalStoreCategories[originalCategoryIndex]?.icon || '';
+        
+        let fullPath = location || '';
+        let lineNumberStr = '';
+        const lineMatch = location?.match(/\:(\d+)$/);
+        if (lineMatch) {
+          lineNumberStr = lineMatch[1];
+          fullPath = location!.replace(/\:\d+$/, '');
+        }
+        const basename = fullPath.split(/[\/\\]/).pop() || fullPath || 'N/A';
+        
+        let createdTimestamp: string | null = null;
+        if (parsed.idPart && parsed.idPart.startsWith('@')) {
+          const dateObj = decodeTimestampId(parsed.idPart.substring(1));
+          createdTimestamp = dateObj ? dateObj.toISOString() : null;
+        }
+        
+        let completedTimestamp: string | null = null;
+        if (parsed.donePart && parsed.donePart.startsWith('@@')) {
+          const dateObj = decodeTimestampId(parsed.donePart.substring(2));
+          completedTimestamp = dateObj ? dateObj.toISOString() : null;
+        }
+
+        tableRows.push({
+          id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
+          content: content,
+          parsedContent: parsed,
+          zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
+          zoneIcon: categoryIcon,
+          filePath: basename,
+          lineNumber: lineNumberStr,
+          created: createdTimestamp,
+          finished: completedTimestamp,
+          estDuration: null, 
+          originalTodo: item, 
+          categoryIndex: originalCategoryIndex,
+          itemIndex: originalItemIndex,
+        });
+      });
+    } else {
+      // Original logic for 'all' or 'closed' filters (no section headers)
+      return sortedItems.map(item => {
+        const { content, location, status, originalCategoryIndex, originalItemIndex } = item;
+        const parsed = parseTodoContent(content!);
+        const categoryIcon = originalStoreCategories[originalCategoryIndex]?.icon || '';
+        
+        let fullPath = location || '';
+        let lineNumberStr = '';
+        const lineMatch = location?.match(/\:(\d+)$/);
+        if (lineMatch) {
+          lineNumberStr = lineMatch[1];
+          fullPath = location!.replace(/\:\d+$/, '');
+        }
+        const basename = fullPath.split(/[\/\\]/).pop() || fullPath || 'N/A';
+        
+        let createdTimestamp: string | null = null;
+        if (parsed.idPart && parsed.idPart.startsWith('@')) {
+          const dateObj = decodeTimestampId(parsed.idPart.substring(1));
+          createdTimestamp = dateObj ? dateObj.toISOString() : null;
+        }
+        
+        let completedTimestamp: string | null = null;
+        if (parsed.donePart && parsed.donePart.startsWith('@@')) {
+          const dateObj = decodeTimestampId(parsed.donePart.substring(2));
+          completedTimestamp = dateObj ? dateObj.toISOString() : null;
+        }
+
+        return {
+          id: (location || 'loc') + (parsed.idPart || 'id') + originalCategoryIndex + '-' + originalItemIndex,
+          content: content,
+          parsedContent: parsed,
+          zone: originalStoreCategories[originalCategoryIndex]?.name || 'Unknown',
+          zoneIcon: categoryIcon,
+          filePath: basename,
+          lineNumber: lineNumberStr,
+          created: createdTimestamp,
+          finished: completedTimestamp,
+          estDuration: null, 
+          originalTodo: item, 
+          categoryIndex: originalCategoryIndex,
+          itemIndex: originalItemIndex,
+        };
+      });
+    }
+    return tableRows;
   }
 }
 

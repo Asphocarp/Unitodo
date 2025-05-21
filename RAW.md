@@ -154,7 +154,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 3@AoVsd@@Aq6f3 see from cease plugin, how to inline-render a string - X no need to see it inline
 - [x] 3@@ArSO4 show currently focused tab and (maybe) the focused item (unique id or index if no unique-ensured id) in the address bar, for easy navigation back?
 
-- [ ] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
+- [-] 1 fancy: add mcp server; let agent navigate files, pick easy todos and resolve them with agency. (cli would work too though)
 
 ---
 
@@ -257,8 +257,8 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 00 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
 - [ ] 00 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
 
-- [ ] (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
-- [ ] custom sorting? editing like vim (dd move it to dropover/clipboard sec); 
+- [-] add (4-state system) give an un-sorted sec / states: TODO([ ]), DOING/IN-PROGRESS([-]), DONE([x]), CANCELLED([/]) - THINK: make it a field, or the prefix, or a field in new novel prefix (like LDO (easier to type), i prefer!)? -> This is now implemented via configurable `todo_states`.
+- [-] custom sorting? editing like vim (dd move it to dropover/clipboard sec); 
   - say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
   - no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
   - dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)

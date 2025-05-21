@@ -61,17 +61,21 @@ export type FlatListItem = FlatHeaderItem | FlatTodoItem;
 
 // Added type definition for TodoTable component's row data
 export interface TodoTableRow {
-  id: string; // Unique ID for the row (e.g., todo.location + todo.content hash)
-  content: string;
-  parsedContent: any; // ReturnType<typeof parseTodoContent>; Adjust if parseTodoContent is moved/typed
-  zone: string; // Category name (git-repo or project-name)
-  zoneIcon: string; // Added for category icon
-  filePath: string;
-  lineNumber: string;
-  created: string | null; // Will be extracted from parsedContent.idPart
-  finished: string | null; // Will be extracted from parsedContent.donePart
-  estDuration: string | null; // Placeholder
-  originalTodo: TodoItem; // Keep original todo for actions
-  categoryIndex: number;
-  itemIndex: number;
+  id: string; // Unique ID for the row (e.g., todo.location + todo.content hash, or header type)
+  isSectionHeader?: boolean; // True if this row represents a section header
+  sectionHeaderText?: string; // Text for the section header (e.g., "DOING", "TODO")
+
+  // Fields for actual todo items - optional if isSectionHeader is true
+  content?: string;
+  parsedContent?: any; // ReturnType<typeof parseTodoContent>; Adjust if parseTodoContent is moved/typed
+  zone?: string; // Category name (git-repo or project-name)
+  zoneIcon?: string; // Added for category icon
+  filePath?: string;
+  lineNumber?: string;
+  created?: string | null; // Will be extracted from parsedContent.idPart
+  finished?: string | null; // Will be extracted from parsedContent.donePart
+  estDuration?: string | null; // Placeholder
+  originalTodo?: TodoItem; // Keep original todo for actions
+  categoryIndex?: number;
+  itemIndex?: number;
 } 
