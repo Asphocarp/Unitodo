@@ -9,7 +9,7 @@
     "dev:web": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:web:turbo": "concurrently \"npm run dev:frontend:turbo\" \"npm run dev:backend\"",
     "build": "tauri build",
-    "dev:backend": "cd src-tauri && cargo run --release",
+    "dev:backend": "cd src-tauri && cargo run",
     "dev:frontend": "next dev",
     "dev:frontend:turbo": "next dev --turbo",
     "build:frontend": "next build",
