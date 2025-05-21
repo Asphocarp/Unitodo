@@ -112,7 +112,7 @@ const ConfigPage: React.FC = observer(() => { // Wrap component with observer
   }, [initialConfigLoaded, loading, loadActiveProfileAndConfig]);
 
   const handleProjectPatternChange = (projectName: string, e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const patterns = e.target.value.split('\\n').map(p => p.trim()).filter(Boolean);
+    const patterns = e.target.value.split("\n").map(p => p.trim()).filter(Boolean);
     updateProjectFieldForCurrentProfile(projectName, patterns);
   };
   
@@ -172,7 +172,7 @@ const ConfigPage: React.FC = observer(() => { // Wrap component with observer
     return <div className="text-xs flex items-center justify-center h-screen">Configuration not available. Attempting to load...</div>;
   }
 
-  // Ensure projects is always an object
+  // config is now of type Config from app/types.ts, which has nested rg and projects
   const projects: Record<string, ProjectConfig> = config.projects || {};
 
   return (
@@ -293,16 +293,16 @@ const ConfigPage: React.FC = observer(() => { // Wrap component with observer
                   label="Search Paths"
                   description="Locations to scan (one per line)"
                   id="rg_paths"
-                  value={(config.rg && config.rg.paths) ? config.rg.paths.join('\\n') : ''}
-                  onChange={(e) => updateRgFieldForCurrentProfile('paths', e.target.value.split('\\n').map(p => p.trim()).filter(Boolean))}
+                  value={(config.rg && config.rg.paths) ? config.rg.paths.join('\n') : ''}
+                  onChange={(e) => updateRgFieldForCurrentProfile('paths', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
                   disabled={isSaving || profilesLoading}
               />
               <TextareaField
                   label="Ignore Patterns (Globs)"
                   description="Files/dirs to ignore (one per line)"
                   id="rg_ignore"
-                  value={(config.rg && config.rg.ignore) ? config.rg.ignore.join('\\n') : ''}
-                  onChange={(e) => updateRgFieldForCurrentProfile('ignore', e.target.value.split('\\n').map(p => p.trim()).filter(Boolean))}
+                  value={(config.rg && config.rg.ignore) ? config.rg.ignore.join('\n') : ''}
+                  onChange={(e) => updateRgFieldForCurrentProfile('ignore', e.target.value.split('\n').map(p => p.trim()).filter(Boolean))}
                   disabled={isSaving || profilesLoading}
               />
           </section>
@@ -358,7 +358,7 @@ const ConfigPage: React.FC = observer(() => { // Wrap component with observer
                                         dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-accent-color transition-all duration-150"
                               rows={2}
                               placeholder="Path glob patterns (one per line, e.g., src/**/*.js)"
-                              value={(projectConfig.patterns || []).join('\\n')}
+                              value={(projectConfig.patterns || []).join("\n")}
                               onChange={(e) => handleProjectPatternChange(projectName, e)}
                               disabled={isSaving || profilesLoading}
                           />

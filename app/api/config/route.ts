@@ -19,10 +19,20 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
     const configMessage = new PbConfigMessage();
     
     const rgMessage = new PbRgConfigMessage();
-    rgMessage.setPathsList([]);
-    rgMessage.setIgnoreList(appConfig.ignore || []);
-    rgMessage.setFileTypesList(appConfig.file_types || []);
+    rgMessage.setPathsList(appConfig.rg?.paths || []);
+    rgMessage.setIgnoreList(appConfig.rg?.ignore || []);
+    rgMessage.setFileTypesList(appConfig.rg?.file_types || []);
     configMessage.setRg(rgMessage);
+
+    const projectsMap = configMessage.getProjectsMap();
+    for (const [key, value] of Object.entries(appConfig.projects || {})) {
+        const projectMessage = new PbProjectConfigMessage();
+        projectMessage.setPatternsList(value.patterns || []);
+        if (value.append_file_path) {
+            projectMessage.setAppendFilePath(value.append_file_path);
+        }
+        projectsMap.set(key, projectMessage);
+    }
 
     configMessage.setRefreshInterval(appConfig.refresh_interval || 5000);
     configMessage.setEditorUriScheme(appConfig.editor_uri_scheme || 'vscode://file/');
@@ -42,23 +52,35 @@ function appConfigToGrpcConfigMessage(appConfig: AppConfig): PbConfigMessage {
 function grpcConfigMessageToAppConfig(configMessage?: PbConfigMessage): AppConfig {
     if (!configMessage) {
         return {
+            rg: { paths: [], ignore: [], file_types: [] },
+            projects: {},
             refresh_interval: 5000,
             editor_uri_scheme: 'vscode://file/',
             todo_states: [],
-            default_append_basename: 'unitodo.append.md',
-            ignore: [],
-            file_types: []
+            default_append_basename: 'unitodo.append.md'
         };
     }
+    const projects: Record<string, AppProjectConfig> = {};
+    configMessage.getProjectsMap().forEach((value: PbProjectConfigMessage, key: string) => {
+        projects[key] = {
+            patterns: value.getPatternsList(),
+            append_file_path: value.hasAppendFilePath() ? value.getAppendFilePath() : undefined,
+        };
+    });
+
     const appTodoStates: string[][] = configMessage.getTodoStatesList().map((stateSetMessage: PbTodoStateSet) => 
         stateSetMessage.getStatesList()
     );
     
-    const rgConfig = configMessage.getRg();
+    const rgConfigFromGrpc = configMessage.getRg();
 
     return {
-        ignore: rgConfig?.getIgnoreList() || [],
-        file_types: rgConfig?.getFileTypesList() || [],
+        rg: {
+            paths: rgConfigFromGrpc?.getPathsList() || [],
+            ignore: rgConfigFromGrpc?.getIgnoreList() || [],
+            file_types: rgConfigFromGrpc?.getFileTypesList() || [],
+        },
+        projects: projects,
         refresh_interval: configMessage.getRefreshInterval(),
         editor_uri_scheme: configMessage.getEditorUriScheme(),
         todo_states: appTodoStates,

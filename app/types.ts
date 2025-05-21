@@ -12,6 +12,8 @@ export interface TodoCategory {
 
 // Corresponds to the Rust Config struct
 export interface Config {
+  rg: RgConfig;
+  projects: Record<string, ProjectConfig>; // Updated: Value is now ProjectConfig
   editor_scheme?: string;
   refresh_interval?: number;
   todo_states?: string[][];
@@ -24,8 +26,6 @@ export interface Config {
   always_show_project_root_todo?: boolean;
   auto_create_project_root_todo?: boolean;
   default_append_basename?: string;
-  ignore?: string[];
-  file_types?: string[];
 }
 
 // Added: Corresponds to the Rust ProjectConfig struct

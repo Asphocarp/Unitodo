@@ -240,6 +240,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] fix other mode content should not be original
 - [x] @@AuO3F00 fix sorting (to the old way)
 - [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
+- [x] @@AuP7H0000 fix all fucking annoying re-rendering issues: i cannot type chars in searchbar/addTodoDialog due to constantly re-rendering and rob my focus state and scroll to the item/index; caused by `loadData` in `todoStore.ts` i think. Just find a way to load data, but do not re-render anything if the data is not changed
 
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
 - [ ] 2@Aptsh fix: make click on a lexcial editor starts editing
@@ -253,18 +254,16 @@ The config file is at `~/.config/unitodo/config.toml`.
 
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
-- [ ] 2@ArSPW support uri like unitodo://timestamp/xxx
+- [ ] 2@ArSPW support uri like unitodo://nanoid/xxx
 - [ ] 1@Aron2 allow for switch profile in main page
 - [ ] 0@AruxC hard: rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
 - [ ] 3@Ar4YD UI: align buttons in config page
 - [ ] 1 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
-- [ ] 0 EZ fuck @stuff, just use 7-char nanoid as unique id; use @abc(xxx) as fields, @file://xxx as file-link?
+- [ ] 0 EZ no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp), just use 6-char nanoid as unique id; use @abc(xxx) as fields; remove all fucking timestamp fields stuff from everywhere to simplify all logic; 
+  - note: nanoid(6) for 37k items; nanoid(7) for 300k items; i will go with 6.
 
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
-- [ ] 0 no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp)
 - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - [ ] 2 modify hotkey help panel accordingly
-- better make it run on brower so that i can use react extensions to profile rerendering (besides, the added todo has an addtional `- [ ] `, i think i need to remove all fucking timestamp fields stuff from everywhere to simplify all logic)
 - [ ] 1 add hotkey `c` for change first word (like in vim)
 - [ ] 1 how to debug a tauri app in browser? i want to run it in the browser, for the ease of debugging. but got the following errors (i know `invoke` is a tauri api, but i now want to run it) (maybe you can help me make another `npm run dev:browser` for the ease of debugging)
-- [x] @@AuP7H0000 fix all fucking annoying re-rendering issues: i cannot type chars in searchbar/addTodoDialog due to constantly re-rendering and rob my focus state and scroll to the item/index; caused by `loadData` in `todoStore.ts` i think. Just find a way to load data, but do not re-render anything if the data is not changed.
