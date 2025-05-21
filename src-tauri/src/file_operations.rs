@@ -120,7 +120,7 @@ pub fn add_todo_to_file_grpc(active_profile_config: &Config, category_type: &str
 }
 
 #[rustfmt::skip]
-pub fn cycle_todo_state_in_file_grpc(active_profile_config: &Config, location: &str, original_content_payload: &str) -> Result<(String, String), io::Error> {
+pub fn cycle_todo_state_in_file_grpc(active_profile_config: &Config, location: &str, original_content_payload: &str, direction: i32) -> Result<(String, String), io::Error> {
     let location_parts: Vec<&str> = location.splitn(2, ':').collect();
     if location_parts.len() != 2 { return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid location format for cycle_todo_state")); }
     let file_path_str = location_parts[0];
@@ -166,13 +166,13 @@ pub fn cycle_todo_state_in_file_grpc(active_profile_config: &Config, location: &
             let content_after_marker_with_space = &original_line_on_disk[mat.end()..];
 
             let mut relevant_cycle_states: Option<&Vec<String>> = None;
-            let mut current_marker_idx_in_cycle: Option<usize> = None;
+            let mut current_marker_idx_in_cycle_opt: Option<usize> = None; // Renamed for clarity
 
             for state_set in &todo_state_sets {
                 if state_set.len() == 4 { // Check if it's a 4-state cycle
                     if let Some(idx) = state_set.iter().position(|marker_in_cycle| marker_in_cycle == current_matched_marker_str) {
                         relevant_cycle_states = Some(state_set);
-                        current_marker_idx_in_cycle = Some(idx);
+                        current_marker_idx_in_cycle_opt = Some(idx);
                         break; // Found the relevant cycle
                     }
                 }
@@ -181,13 +181,19 @@ pub fn cycle_todo_state_in_file_grpc(active_profile_config: &Config, location: &
             let cycle_to_use = relevant_cycle_states
                 .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("Current marker '{}' not found in any configured 4-state cycle.", current_matched_marker_str)))?;
             
-            let current_marker_idx = current_marker_idx_in_cycle.unwrap(); // Safe due to the check above
+            let current_marker_idx = current_marker_idx_in_cycle_opt.unwrap(); // Safe due to the check above
 
             // Derive done_marker and cancelled_marker from the found cycle
             let done_marker = cycle_to_use.get(2).map_or("", |s| s.as_str()); // Index 2 for DONE
             let cancelled_marker = cycle_to_use.get(3).map_or("", |s| s.as_str()); // Index 3 for CANCELLED
             
-            let next_marker_idx = (current_marker_idx + 1) % cycle_to_use.len(); // cycle_to_use.len() is 4
+            // Determine next_marker_idx based on direction
+            // Assuming direction: 0 for FORWARD, 1 for BACKWARD (proto enum values)
+            let next_marker_idx = if direction == 0 { // FORWARD
+                (current_marker_idx + 1) % cycle_to_use.len()
+            } else { // BACKWARD
+                (current_marker_idx + cycle_to_use.len() - 1) % cycle_to_use.len()
+            };
             new_marker_for_response = cycle_to_use[next_marker_idx].clone();
 
             let actual_content_to_process = content_after_marker_with_space.trim_start();
