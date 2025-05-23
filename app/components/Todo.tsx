@@ -75,15 +75,6 @@ const Todo: React.FC = observer(() => {
     return item?.type === 'header' ? CATEGORY_HEADER_HEIGHT : ITEM_HEIGHT;
   };
 
-  const getFlatIndex = useCallback((targetCategoryIndex: number, targetItemIndex: number): number => {
-    const foundItem = todoStore.computedFlattenedList.find(item => 
-        item.type === 'item' && 
-        item.categoryIndex === targetCategoryIndex && 
-        item.itemIndex === targetItemIndex
-    );
-    return foundItem ? foundItem.flatIndex : -1;
-  }, []);
-
   useEffect(() => {
     if (displayMode === 'tab' && tabHeaderRef.current) {
       const updateScrollPadding = () => {

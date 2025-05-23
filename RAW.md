@@ -149,7 +149,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] 2@@ArSOC move sorting to frontend (natural sorting like 0-1 < 0-2 < 0-10 < 0)
 - [ ] 1 feat: show est time, like @1h; record time?
 
-- [ ] 1 render basic markdown of the content, like bold, italic, code, link, wikilink etc.
+- [ ] 2 render basic markdown of the content, like bold, italic, code, link, wikilink etc.
 - [x] 2@@ArSL8 X check command injection safety
 - [ ] 2 (fancy) show dependency of todos?
 - [x] 2@@AptmE DB instead of json (200KB though)? X - gRPC now
@@ -256,10 +256,11 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
+- [/] 01 fix search bar
+- [ ] 02@Aron2 switch profile in main page
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
 - [ ] 2@ArSPW support uri like unitodo://nanoid/xxx
-- [ ] 1@Aron2 allow for switch profile in main page
 - [ ] 0@AruxC hard: rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
 - [ ] 3@Ar4YD UI: align buttons in config page
 - [ ] 1 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
@@ -267,7 +268,9 @@ The config file is at `~/.config/unitodo/config.toml`.
   - note: nanoid(6) for 37k items; nanoid(7) for 300k items; i will go with 6.
 
 - [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
-- think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
+    - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - [ ] 2 modify hotkey help panel accordingly
 - [ ] 1 add hotkey `c` for change first word (like in vim)
 - [ ] 1 how to debug a tauri app in browser? i want to run it in the browser, for the ease of debugging. but got the following errors (i know `invoke` is a tauri api, but i now want to run it) (maybe you can help me make another `npm run dev:browser` for the ease of debugging)
+- [ ] 2@AuW0Z do not refresh (loadData) when the app is not at the frontmost (to save battery)
+- [ ] 2@Au0oc fix blinking of tab/sec-mode
