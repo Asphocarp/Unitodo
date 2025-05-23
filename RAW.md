@@ -256,7 +256,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 0@AqoSu feat: log or track: log when create/start/finish, est time, time elapsed
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
-- [/] 01 fix search bar
+- [ ] 2 fix search bar lose focus imm after typing
 - [ ] 02@Aron2 switch profile in main page
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window

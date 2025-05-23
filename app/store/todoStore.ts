@@ -250,22 +250,37 @@ class TodoStoreImpl {
   // Computed property for filtered categories
   get filteredCategories(): TodoCategory[] {
     const appConfig = configStore.config; // Access MobX configStore
-    
+    const lowerCaseSearchQuery = this.searchQuery.toLowerCase();
+
     const processedCategories = this.categories.map(category => {
       let processedTodos: TodoItem[];
 
+      // Apply status filter first
       if (this.filter === 'active') {
         processedTodos = category.todos
-          .filter(todo => !isStatusDoneLike(todo.status, appConfig)) // Keep only active items
-          .sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort them: DOING > TODO > OTHER_ACTIVE > Content
+          .filter(todo => !isStatusDoneLike(todo.status, appConfig));
       } else if (this.filter === 'closed') {
         processedTodos = category.todos
-          .filter(todo => isStatusDoneLike(todo.status, appConfig)) // Keep only done-like items
-          .sort((a, b) => compareTodoContentTs(a.content, b.content)); // Sort by content
+          .filter(todo => isStatusDoneLike(todo.status, appConfig));
       } else { // filter === 'all'
-        // Sort all todos in the category by content
-        processedTodos = [...category.todos].sort((a, b) => compareTodoContentTs(a.content, b.content));
+        processedTodos = [...category.todos];
       }
+
+      // Apply search query filter
+      if (lowerCaseSearchQuery) {
+        processedTodos = processedTodos.filter(todo =>
+          (todo.content?.toLowerCase().includes(lowerCaseSearchQuery) ||
+           todo.location?.toLowerCase().includes(lowerCaseSearchQuery))
+        );
+      }
+
+      // Apply sorting based on the original filter type
+      if (this.filter === 'active') {
+        processedTodos.sort((a, b) => compareActiveTodos(a, b, appConfig)); // Sort them: DOING > TODO > OTHER_ACTIVE > Content
+      } else { // 'closed' or 'all' (includes 'all' after search)
+        processedTodos.sort((a, b) => compareTodoContentTs(a.content, b.content)); // Sort by content
+      }
+      
       return { ...category, todos: processedTodos };
     });
 
@@ -292,9 +307,20 @@ class TodoStoreImpl {
   
   get globallySortedAndFilteredTodos(): GlobalTodoItem[] {
     const appConfig = configStore.config;
+    const lowerCaseSearchQuery = this.searchQuery.toLowerCase();
     let allTodos: GlobalTodoItem[] = [];
+
     this.categories.forEach((category, catIdx) => {
       category.todos.forEach((todo, itemIdx) => {
+        // Apply search filter here before pushing to allTodos
+        if (lowerCaseSearchQuery) {
+          if (
+            !todo.content?.toLowerCase().includes(lowerCaseSearchQuery) &&
+            !todo.location?.toLowerCase().includes(lowerCaseSearchQuery)
+          ) {
+            return; // Skip this todo if it doesn't match search query
+          }
+        }
         allTodos.push({
           ...todo,
           originalCategoryIndex: catIdx,
@@ -325,7 +351,7 @@ class TodoStoreImpl {
         });
     }
 
-    // This is for filter === 'all'
+    // This is for filter === 'all' (after search query has been applied)
     // Sort all items by content, then by original order for stability
     return allTodos.sort((a, b) => {
         // Primary sort by content
@@ -570,8 +596,6 @@ class TodoStoreImpl {
 
   setSearchQuery = (query: string) => {
     this.searchQuery = query;
-    // Removed: this._adjustFocusAfterModeOrFilterChange(); 
-    // Focus adjustment should be handled by the component, e.g., on Enter key in search bar.
   }
 
   toggleKeyboardHelp = () => {
