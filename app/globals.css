@@ -256,14 +256,16 @@ body {
 }
 
 .hn-filter-button {
-  font-size: 0.8rem;
   background: var(--notion-bg);
   border: 1px solid var(--notion-border);
-  padding: 0.2rem 0.5rem;
   cursor: pointer;
   border-radius: 0.25rem;
   transition: all 0.15s ease;
   color: var(--notion-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .hn-filter-button:hover {

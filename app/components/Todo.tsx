@@ -460,7 +460,7 @@ const Todo: React.FC = observer(() => {
               value={activeProfileName || ''}
               onChange={(e) => switchActiveProfile(e.target.value)}
               disabled={profilesLoading || todoStore.loading}
-              className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 appearance-none bg-white dark:bg-neutral-800/50 pr-5"
+              className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 appearance-none bg-white dark:bg-neutral-800/50 px-2.5 h-7 pr-7"
               title="Switch Profile (Shift+H/L)"
               style={{ 
                 backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
@@ -474,7 +474,7 @@ const Todo: React.FC = observer(() => {
             </select>
           )}
           <button
-            className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300"
+            className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7 text-xs"
             onClick={() => loadData()}
             title="Refresh data (Ctrl+R)"
           >
@@ -482,7 +482,7 @@ const Todo: React.FC = observer(() => {
           </button>
           
           <button
-            className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
+            className={`hn-filter-button ${displayMode === 'tab' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7 text-xs`}
             onClick={() => toggleDisplayMode()}
             title={`Switch to ${displayMode === 'section' ? 'tab' : displayMode === 'tab' ? 'table' : 'section'} mode (m)`}
           >
@@ -490,7 +490,7 @@ const Todo: React.FC = observer(() => {
           </button>
           
           <button
-            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7"
             title="Toggle dark mode"
             aria-label="Toggle dark mode"
             onClick={() => toggleDarkMode()}
@@ -499,7 +499,7 @@ const Todo: React.FC = observer(() => {
           </button>
           
           <button
-            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7"
             title="Keyboard shortcuts (?)"
             aria-label="Show keyboard shortcuts"
             onClick={() => toggleKeyboardHelp()}
@@ -510,7 +510,7 @@ const Todo: React.FC = observer(() => {
           <Link
             href="config"
             prefetch={false}
-            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300"
+            className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7"
             title="Configure Unitodo"
             aria-label="Configure Unitodo"
           >
@@ -531,21 +531,21 @@ const Todo: React.FC = observer(() => {
         
         <div className="flex ml-2">
           <button 
-            className={`hn-filter-button ${filter === 'all' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300`}
+            className={`hn-filter-button ${filter === 'all' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 px-2.5 h-7 text-xs`}
             onClick={() => setFilter('all')}
             title="All todos (1)"
           >
             All ({totalTodos})
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
+            className={`hn-filter-button ${filter === 'active' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1 px-2.5 h-7 text-xs`}
             onClick={() => setFilter('active')}
             title="Active todos (2)"
           >
             Active ({activeTodos})
           </button>
           <button 
-            className={`hn-filter-button ${filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1`}
+            className={`hn-filter-button ${filter === 'closed' ? 'active' : ''} dark:hover:bg-neutral-700 dark:text-neutral-300 ml-1 px-2.5 h-7 text-xs`}
             onClick={() => setFilter('closed')}
             title="Closed todos (3)"
           >
