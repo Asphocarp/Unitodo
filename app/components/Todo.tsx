@@ -52,7 +52,13 @@ const Todo: React.FC = observer(() => {
   const { 
     config: appConfig, 
     loadActiveProfileAndConfig: loadAppConfig, 
-    initialConfigLoaded 
+    initialConfigLoaded,
+    activeProfileName,
+    availableProfiles,
+    profilesLoading,
+    switchActiveProfile,
+    switchToPreviousProfile, 
+    switchToNextProfile,
   } = configStore;
   
   const { isDarkMode, toggleDarkMode } = darkModeStore;
@@ -134,8 +140,14 @@ const Todo: React.FC = observer(() => {
       if ((e.ctrlKey || e.metaKey || e.altKey) && !(e.ctrlKey && e.key === '/')) return;
 
       switch (e.key) {
-        case 'h': if (!isEditingContext) { e.preventDefault(); navigateTabs('left'); } break;
-        case 'l': if (!isEditingContext) { e.preventDefault(); navigateTabs('right'); } break;
+        case 'H': 
+          if (!isEditingContext && e.shiftKey) { e.preventDefault(); switchToPreviousProfile(); }
+          else if (!isEditingContext) { e.preventDefault(); navigateTabs('left'); }
+          break;
+        case 'L': 
+          if (!isEditingContext && e.shiftKey) { e.preventDefault(); switchToNextProfile(); }
+          else if (!isEditingContext) { e.preventDefault(); navigateTabs('right'); } 
+          break;
         case 'd': 
           if (!isEditingContext) {
             e.preventDefault(); 
@@ -209,7 +221,7 @@ const Todo: React.FC = observer(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal, displayMode, navigateTodos, setFilter, setSearchQuery]);
+  }, [loadData, navigateTabs, toggleDarkMode, toggleKeyboardHelp, toggleDisplayMode, appConfig, loadAppConfig, initialConfigLoaded, openAddTodoModal, displayMode, navigateTodos, setFilter, setSearchQuery, switchToPreviousProfile, switchToNextProfile]);
 
   useEffect(() => {
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
@@ -443,6 +455,24 @@ const Todo: React.FC = observer(() => {
         </div>
         
         <div className="flex items-center gap-2">
+          {availableProfiles.length > 1 && (
+            <select
+              value={activeProfileName || ''}
+              onChange={(e) => switchActiveProfile(e.target.value)}
+              disabled={profilesLoading || todoStore.loading}
+              className="hn-filter-button text-xs dark:hover:bg-neutral-700 dark:text-neutral-300 appearance-none bg-white dark:bg-neutral-800/50 pr-5"
+              title="Switch Profile (Shift+H/L)"
+              style={{ 
+                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                backgroundPosition: 'right 0.2rem center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '1.2em 1.2em',
+                paddingRight: '1.5rem' 
+              }}
+            >
+              {availableProfiles.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+          )}
           <button
             className="hn-filter-button dark:hover:bg-neutral-700 dark:text-neutral-300"
             onClick={() => loadData()}
@@ -603,6 +633,8 @@ const Todo: React.FC = observer(() => {
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">↓/j</kbd> Navigate down 5</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">←</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">h</kbd> Previous tab (Tab mode)</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">→</kbd> / <kbd className="dark:bg-neutral-700 dark:border-neutral-600">l</kbd> Next tab (Tab mode)</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">H</kbd> Previous Profile</div>
+              <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Shift</kbd>+<kbd className="dark:bg-neutral-700 dark:border-neutral-600">L</kbd> Next Profile</div>
               <div><kbd className="dark:bg-neutral-700 dark:border-neutral-600">Esc</kbd> Exit edit mode / Close modal</div>
               
               <div className="col-span-2 font-medium text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 mb-1 border-b dark:border-neutral-700 pb-1">Todo actions (on focused item)</div>

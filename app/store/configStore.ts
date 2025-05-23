@@ -51,6 +51,8 @@ class ConfigStoreImpl {
       addTodoStateSetToCurrentProfile: action,
       updateTodoStateSetInCurrentProfile: action,
       removeTodoStateSetFromCurrentProfile: action,
+      switchToPreviousProfile: action,
+      switchToNextProfile: action,
     });
   }
 
@@ -284,6 +286,24 @@ class ConfigStoreImpl {
       ...this.config,
       todo_states: currentSets.filter((_, i) => i !== index),
     };
+  }
+
+  switchToPreviousProfile = async () => {
+    if (this.isSaving || this.profilesLoading || this.availableProfiles.length < 2 || !this.activeProfileName) return;
+    const currentIndex = this.availableProfiles.indexOf(this.activeProfileName);
+    if (currentIndex === -1) return; // Should not happen if data is consistent
+
+    const newIndex = (currentIndex - 1 + this.availableProfiles.length) % this.availableProfiles.length;
+    await this.switchActiveProfile(this.availableProfiles[newIndex]);
+  }
+
+  switchToNextProfile = async () => {
+    if (this.isSaving || this.profilesLoading || this.availableProfiles.length < 2 || !this.activeProfileName) return;
+    const currentIndex = this.availableProfiles.indexOf(this.activeProfileName);
+    if (currentIndex === -1) return; 
+
+    const newIndex = (currentIndex + 1) % this.availableProfiles.length;
+    await this.switchActiveProfile(this.availableProfiles[newIndex]);
   }
 }
 
