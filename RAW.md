@@ -248,6 +248,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [x] @@AuO3F00 fix sorting (to the old way)
 - [x] @@AuN-50 make `apiCycleTodoState` more general, supporting cycle back, and then add hotkeys 'h' and 'l' in @TodoTable.tsx  for cycle back/forward respectively
 - [x] @@AuP7H0000 fix all fucking annoying re-rendering issues: i cannot type chars in searchbar/addTodoDialog due to constantly re-rendering and rob my focus state and scroll to the item/index; caused by `loadData` in `todoStore.ts` i think. Just find a way to load data, but do not re-render anything if the data is not changed
+- [x] add zoom-in/out hotkey functionality for this tauri app (like in browser, cmd+plus/minus)
 
 - [ ] 2@AptCd even when nothing changed, the updated time should be updated
 - [ ] 2@Aptsh fix: make click on a lexcial editor starts editing
@@ -279,8 +280,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2@Au0oc fix blinking of tab/sec-mode
 - [ ] 1 fancy,hard: show cursor pos in a item content, and support most vim directly (edit like )
 - [ ] 1 fancy,hard: using stuff like Y.js to bi-sync cloud and mobile db of ops; and use fs-events to catch todo changes as diffs
-- [ ] 2 do not collide with other instances of unitodo - backend port (so that i can dev with old version running)
-- [ ] add zoom-in/out hotkey functionality for this tauri app (like in browser, cmd+plus/minus)
+- [ ] 2 currently, the backend port is hardcoded to 50051, so that it can not be used by other instances of unitodo. (you should make this port auto increment, and coordinate with the frontend to use the correct port)
 - [ ] always felt less freedom (like in text editor) when editing in this software, why?
   - [ ] 1. cannot simply open and add todo, to some project => add dropdown&hotkey for selection
   - [ ] 2. cannot simply reorder, fuck any order just put current thing at the top, just apply my fucking custom order => custom order?
