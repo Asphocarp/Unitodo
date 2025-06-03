@@ -280,7 +280,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2@Au0oc fix blinking of tab/sec-mode
 - [ ] 1 fancy,hard: show cursor pos in a item content, and support most vim directly (edit like )
 - [ ] 1 fancy,hard: using stuff like Y.js to bi-sync cloud and mobile db of ops; and use fs-events to catch todo changes as diffs
-- [ ] always felt less freedom (like in text editor) when editing in this software, why?
-  - [ ] 1. cannot simply open and add todo, to some project => add dropdown&hotkey for selection: @Todo.tsx , in @AddTodoModal.tsx  , change the original fixed text for `categoryName` into a dropdown selection field of all existing categorys 
+- always felt less freedom (like in text editor) when editing in this software, why?
+  - [x] 1. cannot simply open and add todo, to some project => add dropdown&hotkey for selection: @Todo.tsx , in @AddTodoModal.tsx  , change the original fixed text for `categoryName` into a dropdown selection field of all existing categorys 
   - [ ] 2. cannot simply reorder, fuck any order just put current thing at the top, just apply my fucking custom order => custom order?
-  - [ ] 3. cannot simply show just one fucking filter, just fucking focus on one (without think about profile or any bullshit)
+  - [ ] 3. cannot simply show just one fucking filter, just fucking focus on one (without think about profile or any bullshit) (but can switch profile via H/L though)
