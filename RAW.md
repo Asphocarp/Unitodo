@@ -13,13 +13,16 @@
 ## story
 
 pain point:
+
 - notion: not hign-performance; bi-sync; vim; (intelligent adding)
 - finally, being able to control your own recommendation system (prompts as recommendation algorithm)
   - When you use any social media, you're not really choosing what you're looking at. You just scroll and the site decides what you're going to look at next.
 
 motivation/insight:
+
 - LLM-friendly, plain-text, vim-able, high-performance, distributed, bi-sync TODO system.
-- LLM has tendency to leave todos/placeholders in codes, like this: 
+- LLM has tendency to leave todos/placeholders in codes, like this:
+
 ```ts
   // ---- Placeholder for YouTube API fetching logic ----
   // This would involve: 
@@ -49,6 +52,7 @@ motivation/insight:
     return
   }
 ```
+
 - therefore, it is natural to let it cook, and aggregate todos later. (besides, rg is fast)
   - ! but: let it register todos after coding is also not that hard...
 
@@ -62,7 +66,6 @@ motivation/insight:
   - focus on so-called `embeded` todos.
   - all-in-one experience.
   - same in: plain-text
-
 
 ## format / parsing
 
@@ -92,7 +95,7 @@ where:
 - `##12` is a unique incremented number id, assigned by unitodo system.
 - Only one of `@fffff`, `#Jl_obVmSA7XCwzp7hkT2r`, `##12` is needed in one line. If more than one is present, the first one will be used.
 - We only match all of above stuff in the-first-word of the line, excluding all leading blanks and `:`.
-- The initial part of the line (e.g., `- [ ] `, `TODO:`, `T0DO`) determines the TODO's current state. These state markers are configurable in `todo_states` in `config.toml`, where each sub-array defines a set of states (e.g., Todo, Doing, Done, Cancelled). <!-- UNITODO_IGNORE_LINE -->
+- The initial part of the line (e.g., `- [ ]`, `TODO:`, `T0DO`) determines the TODO's current state. These state markers are configurable in `todo_states` in `config.toml`, where each sub-array defines a set of states (e.g., Todo, Doing, Done, Cancelled). <!-- UNITODO_IGNORE_LINE -->
 
 ## Best practices
 
@@ -118,7 +121,7 @@ The config file is at `~/.config/unitodo/config.toml`.
 
 ## note
 
-- checkbox style is (by default) designed to match the style listed in https://github.com/AnubisNekhet/AnuPpuccin.
+- checkbox style is (by default) designed to match the style listed in <https://github.com/AnubisNekhet/AnuPpuccin>.
 
 ## NO_RELEASE_UNTIL
 
@@ -257,20 +260,22 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 1@Aq6Ux CI: fix windows linux error caused by drag-feat
 
 - [ ] 2 fix search bar lose focus imm after typing
-- [ ] 02@Aron2 switch profile in main page
+- [x] @@Au07902@Aron2 switch profile in main page
 - [ ] 1@Aq6kT item color (base on git repo or project color)
 - [ ] 1@ArB_8 (hard) fix: align cells in a col when resizing window
 - [ ] 2@ArSPW support uri like unitodo://nanoid/xxx
 - [ ] 0@AruxC hard: rethinking workflow (add to current queue; view on phone; record, track, pause) (maybe note to prd.md)
 - [ ] 3@Ar4YD UI: align buttons in config page
 - [ ] 1 EZ rename to `lemdo`; rename `UNITODO_IGNORE_LINE` to `LEMDO_IGNORE`.
-- [ ] 0 EZ no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp), just use 6-char nanoid as unique id; use @abc(xxx) as fields; remove all fucking timestamp fields stuff from everywhere to simplify all logic; 
+- [ ] 0 EZ no more @shit, simply @created(readable-timestamp) @finished(readable-timestamp), just use 6-char nanoid as unique id; use @abc(xxx) as fields; remove all fucking timestamp fields stuff from everywhere to simplify all logic;
   - note: nanoid(6) for 37k items; nanoid(7) for 300k items; i will go with 6.
 
-- [ ] 3 say in doc: org-mode inspired state management. https://orgmode.org/manual/TODO-Basics.html
-    - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
+- [ ] 3 say in doc: org-mode inspired state management. <https://orgmode.org/manual/TODO-Basics.html>
+  - think: dependency system need external mcp (matching) tool for llm-based agents (just #xxxx is too hard for them to infer)
 - [ ] 2 modify hotkey help panel accordingly
 - [ ] 1 add hotkey `c` for change first word (like in vim)
 - [ ] 1 how to debug a tauri app in browser? i want to run it in the browser, for the ease of debugging. but got the following errors (i know `invoke` is a tauri api, but i now want to run it) (maybe you can help me make another `npm run dev:browser` for the ease of debugging)
 - [ ] 2@AuW0Z do not refresh (loadData) when the app is not at the frontmost (to save battery)
 - [ ] 2@Au0oc fix blinking of tab/sec-mode
+- [ ] 1 fancy,hard: show cursor pos in a item content, and support most vim directly (edit like )
+- [ ] 1 fancy,hard: using stuff like Y.js to bi-sync cloud and mobile db of ops; and use fs-events to catch todo changes as diffs
