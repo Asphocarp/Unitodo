@@ -21,6 +21,9 @@
       ]
     },
     "updater:default",
-    "core:window:default", "core:window:allow-start-dragging"
+    "core:window:default", 
+    "core:window:allow-start-dragging",
+    "core:webview:default",
+    "core:webview:allow-set-webview-zoom"
   ]
 }

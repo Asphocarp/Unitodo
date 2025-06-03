@@ -25,6 +25,7 @@ use crate::AppState; // Assuming AppState is defined in main.rs or another acces
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tonic::Request; // For creating tonic::Request
+use tauri::Manager; // For get_webview_window method
 
 // --- Tauri Commands ---
 #[tauri::command]
@@ -180,6 +181,95 @@ pub async fn delete_profile_command(
 ) -> Result<DeleteProfileResponse, String> {
     let service = MyConfigService { config_state: app_config_state.inner().clone() };
     service.delete_profile(Request::new(DeleteProfileRequest { profile_name })).await.map_err(|s| s.to_string()).map(|r| r.into_inner())
+}
+
+// --- Zoom Commands ---
+const ZOOM_LEVELS: &[f64] = &[0.25, 0.33, 0.50, 0.67, 0.75, 0.80, 0.90, 1.0, 1.10, 1.25, 1.50, 1.75, 2.0, 2.50, 3.0, 4.0, 5.0];
+const DEFAULT_ZOOM_INDEX: usize = 7; // 100% (1.0)
+
+fn find_closest_zoom_index(current_zoom: f64) -> usize {
+    ZOOM_LEVELS
+        .iter()
+        .position(|&level| (level - current_zoom).abs() < 0.01)
+        .unwrap_or_else(|| {
+            // Find closest zoom level if exact match not found
+            ZOOM_LEVELS
+                .iter()
+                .enumerate()
+                .min_by(|(_, &a), (_, &b)| {
+                    (a - current_zoom).abs().partial_cmp(&(b - current_zoom).abs()).unwrap()
+                })
+                .map(|(i, _)| i)
+                .unwrap_or(DEFAULT_ZOOM_INDEX)
+        })
+}
+
+#[tauri::command]
+pub async fn zoom_in(app: tauri::AppHandle) -> Result<(f64, i32), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let state = app.state::<std::sync::Mutex<f64>>();
+        let mut current_zoom = state.lock().unwrap();
+        
+        let current_index = find_closest_zoom_index(*current_zoom);
+        let new_index = (current_index + 1).min(ZOOM_LEVELS.len() - 1);
+        let new_zoom = ZOOM_LEVELS[new_index];
+        
+        *current_zoom = new_zoom;
+        window.set_zoom(new_zoom).map_err(|e| e.to_string())?;
+        
+        let percentage = (new_zoom * 100.0).round() as i32;
+        log::info!("Zoom increased to {}% ({:.2}x)", percentage, new_zoom);
+        Ok((new_zoom, percentage))
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn zoom_out(app: tauri::AppHandle) -> Result<(f64, i32), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let state = app.state::<std::sync::Mutex<f64>>();
+        let mut current_zoom = state.lock().unwrap();
+        
+        let current_index = find_closest_zoom_index(*current_zoom);
+        let new_index = current_index.saturating_sub(1);
+        let new_zoom = ZOOM_LEVELS[new_index];
+        
+        *current_zoom = new_zoom;
+        window.set_zoom(new_zoom).map_err(|e| e.to_string())?;
+        
+        let percentage = (new_zoom * 100.0).round() as i32;
+        log::info!("Zoom decreased to {}% ({:.2}x)", percentage, new_zoom);
+        Ok((new_zoom, percentage))
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn zoom_reset(app: tauri::AppHandle) -> Result<(f64, i32), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let state = app.state::<std::sync::Mutex<f64>>();
+        let mut current_zoom = state.lock().unwrap();
+        let new_zoom = ZOOM_LEVELS[DEFAULT_ZOOM_INDEX]; // 100%
+        
+        *current_zoom = new_zoom;
+        window.set_zoom(new_zoom).map_err(|e| e.to_string())?;
+        
+        let percentage = (new_zoom * 100.0).round() as i32;
+        log::info!("Zoom reset to {}% ({:.2}x)", percentage, new_zoom);
+        Ok((new_zoom, percentage))
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn get_zoom_level(app: tauri::AppHandle) -> Result<(f64, i32), String> {
+    let state = app.state::<std::sync::Mutex<f64>>();
+    let current_zoom = state.lock().unwrap();
+    let percentage = (*current_zoom * 100.0).round() as i32;
+    Ok((*current_zoom, percentage))
 }
 
 

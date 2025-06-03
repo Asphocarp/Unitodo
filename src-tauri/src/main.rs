@@ -120,7 +120,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tauri_builder
         .plugin(tauri_plugin_opener::init())
         .manage(app_config_state) 
-        .manage(app_state)       
+        .manage(app_state)
+        .manage(std::sync::Mutex::new(1.0f64)) // Zoom level state
         .invoke_handler(tauri::generate_handler![
             crate::tauri_commands::get_config_command,
             crate::tauri_commands::update_config_command,
@@ -135,6 +136,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             crate::tauri_commands::list_profiles_command,
             crate::tauri_commands::add_profile_command,
             crate::tauri_commands::delete_profile_command,
+            crate::tauri_commands::zoom_in,
+            crate::tauri_commands::zoom_out,
+            crate::tauri_commands::zoom_reset,
+            crate::tauri_commands::get_zoom_level,
             #[cfg(desktop)]
             crate::tauri_commands::app_updates::fetch_update,
             #[cfg(desktop)]
@@ -156,7 +161,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 log::warn!("[Rust Backend] Failed to acquire read lock on grpc_port during setup emit.");
             }
-            
+
+            log::info!("Zoom commands registered successfully");
             let mut main_window_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
                 .title("Unitodo")
                 .inner_size(1700.0, 1080.0)

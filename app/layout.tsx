@@ -3,6 +3,7 @@ import './globals.css';
 import './styles/fonts.css';
 import { Providers } from './providers';
 import WinTitleBarClient from './components/WinTitleBarClient';
+import { ZoomIndicatorWrapper } from './components/ZoomIndicatorWrapper';
 
 export const metadata: Metadata = {
   title: 'Unitodo',
@@ -27,6 +28,7 @@ export default function RootLayout({
           <div className="electron-content">
             {children}
           </div>
+          <ZoomIndicatorWrapper />
         </Providers>
       </body>
     </html>
