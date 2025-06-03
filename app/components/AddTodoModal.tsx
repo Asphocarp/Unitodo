@@ -67,7 +67,7 @@ const AddTodoModal: React.FC<AddTodoModalProps> = observer(({
   
   return (
     <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg shadow-xl max-w-sm w-full mx-4 border dark:border-neutral-700" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg shadow-xl max-w-2xl w-full mx-4 border dark:border-neutral-700" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-medium">Add Todo</h3>
           <button 
@@ -115,7 +115,7 @@ const AddTodoModal: React.FC<AddTodoModalProps> = observer(({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 text-sm border border-neutral-300 dark:border-neutral-600 rounded 
+              className="flex-1 py-2 text-sm border border-subtle-color dark:border-neutral-600 rounded 
                          hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
             >
               Cancel
@@ -123,8 +123,8 @@ const AddTodoModal: React.FC<AddTodoModalProps> = observer(({
             <button
               type="submit"
               disabled={!todoText.trim() || !selectedCategory}
-              className="flex-1 py-2 text-sm bg-accent-color hover:bg-accent-color/90 text-white rounded 
-                         transition-colors disabled:opacity-50"
+              className="flex-1 py-2 text-sm bg-accent-color hover:bg-accent-color/90 rounded 
+                         transition-colors disabled:opacity-50 border border-accent-color"
             >
               Add
             </button>
