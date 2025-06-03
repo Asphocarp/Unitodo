@@ -279,3 +279,4 @@ The config file is at `~/.config/unitodo/config.toml`.
 - [ ] 2@Au0oc fix blinking of tab/sec-mode
 - [ ] 1 fancy,hard: show cursor pos in a item content, and support most vim directly (edit like )
 - [ ] 1 fancy,hard: using stuff like Y.js to bi-sync cloud and mobile db of ops; and use fs-events to catch todo changes as diffs
+- [ ] 2 do not collide with other instances of unitodo - backend port (so that i can dev with old version running)
