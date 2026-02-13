@@ -31,7 +31,7 @@
     "@tauri-apps/plugin-opener": "^2.2.6",
     "@tauri-apps/plugin-updater": "^2.2.0",
     "@types/lodash": "^4.17.16",
-    "axios": "^1.6.5",
+    "axios": "^1.13.5",
     "date-fns": "^4.1.0",
     "google-protobuf": "^3.21.2",
     "lexical": "^0.31.0",
